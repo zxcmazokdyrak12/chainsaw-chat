@@ -7,7 +7,7 @@ const socket = io('http://localhost:3001')
 const CHAINSAW_SFX = '/chainsaw.mp3'
 const CHAINSAW_IMG = '/hand.png'
 const SFX_WORDS = ['VROOM!', 'SLASH!', 'BANG!', 'GRAAA!', 'DOOOM!', 'GRIND!']
-const CUTE_WORDS = ['мило', 'милый', 'милая', 'люблю', 'любовь', 'спасибо', 'нежно', 'cute', 'love', 'sweet', 'aww', '❤️', '🥺', '💕', '😍', '🐾']
+const CUTE_WORDS = ['honey','baby','darling','sweetie','angel','sunshine','bunny','kitty', 'cute', 'love', 'sweet', 'aww', '❤️', '🥺', '💕', '😍', '🐾']
 
 const LIGHT = {
   appBg: '#f0ebe0', headerBg: '#e8e3d8', headerBorder: '#111',
