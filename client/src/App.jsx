@@ -2,7 +2,9 @@ import { useState, useEffect, useRef } from 'react'
 import { io } from 'socket.io-client'
 import { motion, AnimatePresence } from 'framer-motion'
 
-const socket = io('https://chainsaw-chat.onrender.com ')
+const socket = io('https://chainsaw-chat.onrender.com', {
+  transports: ['websocket', 'polling']
+})
 
 const CHAINSAW_SFX = '/chainsaw.mp3'
 const CHAINSAW_IMG = '/hand.png'
