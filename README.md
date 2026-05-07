@@ -61,7 +61,7 @@ Denji, Aki, Makima, and Reze sit on top of the nav icons. Active tab — charact
 ### 🐾 Easter Eggs
 
 - **🪚 CAPS-LOCK chainsaw** — writing in ALL CAPS has a 10% chance of triggering a chainsaw revving sound effect
-- **❤️ Pochita love trigger** — typing "love", "cute", "люблю", "мило" or sending ❤️ has a 40% chance of making Pochita leap from the bottom of the screen with a fountain of hand-drawn hearts
+- **❤️ Pochita love trigger** — typing 'honey','baby','darling', 'cute', 'love', 'sweet', 'aww', '🥺', '💕', '😍', '🐾' or sending ❤️ has a 40% chance of making Pochita leap from the bottom of the screen with a fountain of hand-drawn hearts
 
 ---
 
