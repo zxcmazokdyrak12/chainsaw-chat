@@ -6,7 +6,7 @@ A messenger set in the "Chainsaw Man" universe, created for those who appreciate
 
 | Start Screen | Login Screen |
 | :---: | :---: |
-| ![Start Screen](start_engine.jpg) | ![Login Screen](login_screen.jpg) |
+| ![Start Screen](start_engine.png) | ![Login Screen](login_screen.png) |
 *Current UI Concept: Minimalist "Start Engine" and Character-based Login*
 
 ## 🛠 Tech Stack
