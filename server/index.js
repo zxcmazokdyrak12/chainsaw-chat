@@ -11,7 +11,7 @@ const io = new Server(httpServer, {
   cors: { origin: '*', methods: ['GET', 'POST'] }
 })
 
-// Базовые комнаты + динамически созданные
+// Basic rooms + dynamically generated
 const rooms = {
   'general': { name: '# GENERAL', history: [], createdBy: 'system', code: 'GENERAL1' },
   'devils':  { name: '# DEVILS',  history: [], createdBy: 'system', code: 'DEVILS00' },
@@ -21,15 +21,15 @@ const rooms = {
 
 const typingUsers = {}
 
-// Генератор кода комнаты — рандомные слоги, читаемые, 8 символов
+// Room Code Generator - Random Syllables, Readable, 8 Characters
 const SYLLABLES = ['KAI','ZEN','RYU','KEN','MAI','SHI','DEN','AKI','REZ','POW','CUT','SAW','DEV','HUN','CHI','BLO']
 
 const generateCode = () => {
   const a = SYLLABLES[Math.floor(Math.random() * SYLLABLES.length)]
   const b = SYLLABLES[Math.floor(Math.random() * SYLLABLES.length)]
-  // Добавляем цифру чтобы гарантировать уникальность
+  // We add a number to guarantee uniqueness.
   const n = Math.floor(Math.random() * 99).toString().padStart(2, '0')
-  return `${a}${b}${n}` // например: KAIRYU42
+  return `${a}${b}${n}` // example: KAIRYU42
 }
 
 const getRoomsList = () =>
@@ -42,11 +42,11 @@ const getRoomsList = () =>
   }))
 
 io.on('connection', (socket) => {
-  console.log('подключился:', socket.id)
+  console.log('connected:', socket.id)
 
   socket.emit('rooms_list', getRoomsList())
 
-  // Создать новую комнату
+  // Create a new room
   socket.on('create_room', ({ username, roomName }) => {
     const code = generateCode()
     const id   = code.toLowerCase()
@@ -61,28 +61,28 @@ io.on('connection', (socket) => {
       code,
     }
 
-    // Рассылаем обновлённый список всем
+    // We are sending out the updated list to everyone.
     io.emit('rooms_list', getRoomsList())
-    // Говорим создателю код его комнаты
+    // We tell the creator the code for his room
     socket.emit('room_created', { id, code, name })
 
-    console.log(`${username} создал комнату ${name} (${code})`)
+    console.log(`${username} created the room ${name} (${code})`)
   })
 
-  // Войти по коду
+  // join with code
   socket.on('join_by_code', ({ code, username }) => {
     const entry = Object.entries(rooms).find(
       ([, r]) => r.code.toUpperCase() === code.toUpperCase()
     )
     if (!entry) {
-      socket.emit('join_error', 'Комната не найдена')
+      socket.emit('join_error', 'room not found')
       return
     }
     const [roomId] = entry
     socket.emit('join_by_code_success', { roomId })
   })
 
-  // Войти в комнату
+  // join the room
   socket.on('join_room', ({ roomId, username }) => {
     Object.keys(rooms).forEach(id => socket.leave(id))
     socket.join(roomId)
@@ -93,7 +93,7 @@ io.on('connection', (socket) => {
     socket.to(roomId).emit('user_joined', { username, roomId })
   })
 
-  // Сообщение
+  // message
   socket.on('send_message', (data) => {
     const { roomId, username, content, type, audioData } = data
     if (!rooms[roomId]) return
@@ -135,8 +135,13 @@ io.on('connection', (socket) => {
       delete typingUsers[roomId][socket.id]
       socket.to(roomId).emit('typing_update', Object.values(typingUsers[roomId]))
     }
-    console.log('отключился:', socket.id)
+    console.log('disconected:', socket.id)
   })
 })
 
-httpServer.listen(3001, () => console.log('Сервер: http://localhost:3001'))
+
+const PORT = process.env.PORT || 3001; 
+
+httpServer.listen(PORT, '0.0.0.0', () => {
+  console.log(`The server is running on port: ${PORT}`);
+});

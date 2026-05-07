@@ -44,7 +44,7 @@ export default function App() {
   const [newRoomName, setNewRoomName]       = useState('')
   const [joinCode, setJoinCode]             = useState('')
   const [joinError, setJoinError]           = useState('')
-  const [createdCode, setCreatedCode]       = useState('')  // показываем код после создания
+  const [createdCode, setCreatedCode]       = useState('')  // We show the code after creation
   const [isRecording, setIsRecording]       = useState(false)
   const mediaRecorder = useRef(null)
   const audioChunks   = useRef([])
@@ -73,8 +73,8 @@ export default function App() {
       triggerPochita(msg.content)
     })
     socket.on('room_created', ({ id, code, name }) => {
-  setCreatedCode(code)   // показываем код пользователю
-  joinRoom(id)           // сразу заходим
+  setCreatedCode(code)   // show the code to the user
+  joinRoom(id)           // let's go straight in
   setShowCreateRoom(false)
   setNewRoomName('')
   })
@@ -170,7 +170,7 @@ export default function App() {
       const blob = new Blob(audioChunks.current, { type: 'audio/webm' })
       const reader = new FileReader()
       reader.onloadend = () => {
-        // Отправляем как base64
+        // send as base64
         socket.emit('send_message', {
           roomId: currentRoom,
           username,
@@ -203,7 +203,7 @@ const joinByCode = () => {
   if (joinCode.trim().length < 6) return
   socket.emit('join_by_code', { code: joinCode.trim(), username })
 }
-  // ─── ЭКРАН ВХОДА ─────────────────────────────────────────
+  // ─── LOGIN SCREEN ─────────────────────────────────────────
   if (phase === 'intro' || phase === 'slashing') {
     return (
       <div style={{ height:'100vh', background:'#000', display:'flex', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden' }}>
@@ -224,7 +224,7 @@ const joinByCode = () => {
     )
   }
 
-  // ─── ЭКРАН НИКНЕЙМА ──────────────────────────────────────
+  // ─── NICKNAME SCREEN ──────────────────────────────────────
   if (phase === 'username') {
     return (
       <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} style={{ height:'100vh', background:'#0d0d0d', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:'24px', fontFamily:'BlambotClassic, sans-serif' }}>
@@ -255,7 +255,7 @@ const joinByCode = () => {
     )
   }
 
-  // ─── ЧАТ ─────────────────────────────────────────────────
+  // ─── CHAT ─────────────────────────────────────────────────
   return (
     <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} style={{ display:'flex', flexDirection:'column', height:'100vh', background: T.appBg, fontFamily:'BlambotClassic, "Arial Narrow", sans-serif', position:'relative', overflow:'hidden', backgroundImage:`radial-gradient(circle, ${T.halftone} 1px, transparent 1px)`, backgroundSize:'10px 10px', transition:'background 0.4s' }}>
 
@@ -278,7 +278,7 @@ const joinByCode = () => {
           </div>
         </div>
 
-        {/* Навигация */}
+        {/* Navigation */}
         <div style={{ display:'flex', justifyContent:'space-around', background: T.headerBg, padding:'0 8px 8px' }}>
           {[
             { id:'chat',     icon:'/icon_chat.png',     label:'CHATS',    img:'/denji.png'  },
@@ -301,11 +301,11 @@ const joinByCode = () => {
         </div>
       </div>
 
-      {/* ─── ВКЛАДКА: ЧАТ ─── */}
+      {/* ─── TAB: CHAT ─── */}
       {activeTab === 'chat' && (
         <div style={{ display:'flex', flex:1, overflow:'hidden' }}>
 
-          {/* Сайдбар комнат */}
+          {/* Sidebar rooms */}
           <div style={{ width:'155px', background: T.sidebarBg, borderRight:`3px solid ${T.sidebarBorder}`, display:'flex', flexDirection:'column', flexShrink:0, overflowY:'auto' }}>
             <div style={{ padding:'8px 12px', fontSize:'10px', letterSpacing:'2px', color: theme==='light' ? '#999' : '#555', borderBottom:`2px solid ${T.sidebarBorder}`, fontFamily:'BlambotClassic, sans-serif' }}>
               ROOMS
@@ -320,7 +320,7 @@ const joinByCode = () => {
             ))}
           </div>
 
-          {/* Сообщения */}
+          {/* Messages */}
           <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
             <div style={{ flex:1, overflowY:'auto', padding:'16px 24px', display:'flex', flexDirection:'column', gap:'10px' }}>
               <AnimatePresence>
@@ -328,7 +328,7 @@ const joinByCode = () => {
                   if (msg.system) return (
                     <motion.div key={msg.id} initial={{ opacity:0 }} animate={{ opacity:1 }} style={{ textAlign:'center', fontSize:'11px', color: theme==='light' ? '#999' : '#555', fontFamily:"'AnimeAce', sans-serif", letterSpacing:'1px', padding:'4px 0' }}>
                       {msg.content}
-                      {/* Контент сообщения */}
+                      {/* Message Content */}
 {msg.type === 'audio' && msg.audioData ? (
   <audio
     controls
@@ -389,7 +389,7 @@ const joinByCode = () => {
               <div ref={bottomRef} />
             </div>
 
-            {/* Инпут */}
+            {/* input */}
             
             <div style={{ padding:'10px 16px', background: T.inputZoneBg, borderTop:`4px solid ${T.inputBorder}`, display:'flex', gap:'10px', transition:'background 0.4s' }}>
               <motion.button
@@ -425,11 +425,11 @@ const joinByCode = () => {
         </div>
       )}
 
-      {/* ─── ВКЛАДКА: КОМНАТЫ ─── */}
+      {/* ─── TAB: ROOMS ─── */}
       {activeTab === 'rooms' && (
   <div style={{ flex:1, padding:'20px', overflowY:'auto' }}>
 
-    {/* Показываем код созданной комнаты */}
+    {/* show the code of the created room */}
     {createdCode && (
       <motion.div
         initial={{ opacity:0, y:-10 }}
@@ -450,7 +450,7 @@ const joinByCode = () => {
       </motion.div>
     )}
 
-    {/* Кнопки создать / войти по коду */}
+    {/* Create/Login with Code buttons */}
     <div style={{ display:'flex', gap:'12px', marginBottom:'24px' }}>
       <motion.button
         whileHover={{ skewX:-3 }} whileTap={{ scale:0.97 }}
@@ -468,7 +468,7 @@ const joinByCode = () => {
       </motion.button>
     </div>
 
-    {/* Форма создания */}
+    {/* Creation form */}
     <AnimatePresence>
       {showCreateRoom && (
         <motion.div initial={{ opacity:0, height:0 }} animate={{ opacity:1, height:'auto' }} exit={{ opacity:0, height:0 }} style={{ marginBottom:'20px', overflow:'hidden' }}>
@@ -489,7 +489,7 @@ const joinByCode = () => {
       )}
     </AnimatePresence>
 
-    {/* Форма входа по коду */}
+    {/* Login form by code */}
     <AnimatePresence>
       {showJoinByCode && (
         <motion.div initial={{ opacity:0, height:0 }} animate={{ opacity:1, height:'auto' }} exit={{ opacity:0, height:0 }} style={{ marginBottom:'20px', overflow:'hidden' }}>
@@ -517,7 +517,7 @@ const joinByCode = () => {
       )}
     </AnimatePresence>
 
-    {/* Список комнат */}
+    {/* List of rooms */}
     <div style={{ display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:'12px' }}>
       {rooms.map(room => (
         <motion.button key={room.id} whileHover={{ scale:1.02, skewX:-2 }} whileTap={{ scale:0.97 }} onClick={() => { joinRoom(room.id); setActiveTab('chat') }} style={{ padding:'16px', background: currentRoom===room.id ? (theme==='light' ? '#111' : '#fff') : 'transparent', color: currentRoom===room.id ? (theme==='light' ? '#fff' : '#111') : T.titleColor, border:`3px solid ${T.headerBorder}`, cursor:'pointer', fontFamily:'Impact, sans-serif', fontSize:'15px', letterSpacing:'1px', textAlign:'left', boxShadow: T.shadow, transition:'all 0.2s', clipPath:'polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)' }}>
@@ -531,7 +531,7 @@ const joinByCode = () => {
   </div>
 )}
 
-      {/* ─── ВКЛАДКА: НАСТРОЙКИ ─── */}
+      {/* ─── TAB: SETTINGS ─── */}
       {activeTab === 'settings' && (
         <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:'16px' }}>
           <img src="/makima.png" style={{ height:'160px', opacity:0.4 }} />
@@ -539,7 +539,7 @@ const joinByCode = () => {
         </div>
       )}
 
-      {/* ─── ВКЛАДКА: ПРОФИЛЬ ─── */}
+      {/* ─── TAB: PROFILE ─── */}
       {activeTab === 'profile' && (
         <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:'20px' }}>
           <img src="/reze.png" style={{ height:'140px', objectFit:'contain' }} />
@@ -552,7 +552,7 @@ const joinByCode = () => {
         </div>
       )}
 
-      {/* ─── ПОЧИТА + СЕРДЕЧКИ ─── */}
+      {/* ─── POCHITA + HEARTS ─── */}
       <AnimatePresence>
         {pochitaVisible && (
           <>
