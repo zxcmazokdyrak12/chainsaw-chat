@@ -1,0 +1,38 @@
+@font-face {
+  font-family: 'BlambotClassic';
+  src: url('/fonts/Chainsaw Man/Blambot Classic BB.ttf') format('truetype');
+  font-weight: normal;
+}
+
+@font-face {
+  font-family: 'BlambotClassic';
+  src: url('/fonts/Chainsaw Man/Blambot Classic BB W00 Bold.ttf') format('truetype');
+  font-weight: bold;
+}
+
+@font-face {
+  font-family: 'Broadband';
+  src: url('/fonts/Chainsaw Man/Broadband-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'CCDoohickey';
+  src: url('/fonts/Chainsaw Man/CCDoohickey.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'DeathRattle';
+  src: url('/fonts/Common Manga Fonts/deathrattlebb_reg.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'AnimeAce';
+  src: url('/fonts/Common Manga Fonts/animeace2_reg.ttf') format('truetype');
+  font-weight: normal;
+}
+
+@font-face {
+  font-family: 'AnimeAce';
+  src: url('/fonts/Common Manga Fonts/animeace2_bld.ttf') format('truetype');
+  font-weight: bold;
+}
