@@ -5,6 +5,7 @@ import cors from 'cors'
 
 const app = express()
 app.use(cors())
+app.get('/ping', (req, res) => res.send('ok'))
 
 const httpServer = createServer(app)
 const io = new Server(httpServer, {
