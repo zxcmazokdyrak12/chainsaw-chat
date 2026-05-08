@@ -8,7 +8,7 @@
 
 | Start Screen | Login Screen |
 |---|---|
-| ![Start Screen](client/public/start_engine.png) | ![Login Screen](client/public/login_screen.png) |
+| ![Start Screen](client/public/start_engine.png) | ![Login Screen](client/public/login_screen1.png) |
 
 ---
 
