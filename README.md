@@ -116,11 +116,11 @@ chainsaw-chat/
 
 ## 🛤 Road Map
 
-- [ ] Database integration (MongoDB/PostgreSQL) for persistent message history
+- [x] Database integration (MongoDB/PostgreSQL) for persistent message history
 - [ ] Video messages via WebRTC
 - [ ] Mobile-responsive UI improvements
 - [ ] Push notifications
-- [ ] User avatars and profile customization
+- [x] User avatars and profile customization
 - [ ] Message reactions
 
 ---
