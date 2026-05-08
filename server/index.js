@@ -7,24 +7,28 @@ import 'dotenv/config'
 
 const { Pool } = pg
 
-// Подключение к PostgreSQL
+// connect to PostgreSQL
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 })
 
-// Создаём таблицы если их нет
-// Это выполняется один раз при старте сервера
 async function initDB() {
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS rooms (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      code TEXT UNIQUE NOT NULL,
-      created_by TEXT,
-      created_at TIMESTAMP DEFAULT NOW()
-    )
-  `)
+  CREATE TABLE IF NOT EXISTS messages (
+    id BIGINT PRIMARY KEY,
+    room_id TEXT REFERENCES rooms(id),
+    username TEXT,
+    content TEXT,
+    type TEXT DEFAULT 'text',
+    audio_data TEXT,
+    avatar TEXT,
+    time TEXT,
+    rotate TEXT,
+    system BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT NOW()
+  )
+`)
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS messages (
@@ -41,7 +45,7 @@ async function initDB() {
     )
   `)
 
-  // Создаём базовые комнаты если их ещё нет
+  // basic rooms
   const baseRooms = [
     { id: 'general', name: '# GENERAL', code: 'GENERAL1', created_by: 'system' },
     { id: 'devils',  name: '# DEVILS',  code: 'DEVILS00', created_by: 'system' },
@@ -51,13 +55,13 @@ async function initDB() {
 
   for (const room of baseRooms) {
     await pool.query(`
-      INSERT INTO rooms (id, name, code, created_by)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO messages (id, room_id, username, content, type, audio_data, time, rotate, system, avatar)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       ON CONFLICT (id) DO NOTHING
-    `, [room.id, room.name, room.code, room.created_by])
+    `, [room.id, room.name, room.code, room.created_by, message.avatar])
   }
 
-  console.log('БД готова')
+  console.log('db ready')
 }
 
 const app = express()
@@ -81,7 +85,7 @@ const generateCode = () => {
   return `${a}${b}${n}`
 }
 
-// Получить список комнат с количеством сообщений
+// get a room list count with messages
 async function getRoomsList() {
   const result = await pool.query(`
     SELECT r.id, r.name, r.code, r.created_by,
@@ -100,7 +104,7 @@ async function getRoomsList() {
   }))
 }
 
-// Получить последние 100 сообщений комнаты
+// get a 100 last messages
 async function getRoomHistory(roomId) {
   const result = await pool.query(`
     SELECT * FROM messages
@@ -123,13 +127,13 @@ async function getRoomHistory(roomId) {
 }
 
 io.on('connection', async (socket) => {
-  console.log('подключился:', socket.id)
+  console.log('connected:', socket.id)
 
-  // Отдаём список комнат
+  // rooms list
   const roomsList = await getRoomsList()
   socket.emit('rooms_list', roomsList)
 
-  // Создать комнату
+  // create room
   socket.on('create_room', async ({ username, roomName }) => {
     const code = generateCode()
     const id   = code.toLowerCase()
@@ -147,7 +151,7 @@ io.on('connection', async (socket) => {
     socket.emit('room_created', { id, code, name })
   })
 
-  // Войти по коду
+  // join with code
   socket.on('join_by_code', async ({ code, username }) => {
     const result = await pool.query(
       'SELECT * FROM rooms WHERE UPPER(code) = UPPER($1)',
@@ -160,7 +164,7 @@ io.on('connection', async (socket) => {
     socket.emit('join_by_code_success', { roomId: result.rows[0].id })
   })
 
-  // Войти в комнату
+  // join the room
   socket.on('join_room', async ({ roomId, username }) => {
     Object.keys(typingUsers).forEach(room => {
       if (typingUsers[room]) delete typingUsers[room][socket.id]
@@ -173,14 +177,14 @@ io.on('connection', async (socket) => {
     socket.data.currentRoom = roomId
     socket.data.username = username
 
-    // Отдаём историю из БД
+    // give a history for db
     const history = await getRoomHistory(roomId)
     socket.emit('room_history', history)
 
     socket.to(roomId).emit('user_joined', { username, roomId })
   })
 
-  // Отправить сообщение
+  // send a message
   socket.on('send_message', async (data) => {
     const { roomId, username, content, type, audioData } = data
 
@@ -190,13 +194,14 @@ io.on('connection', async (socket) => {
       content: content || '',
       type: type || 'text',
       audioData: audioData || null,
+      avatar: data.avatar || null,
       roomId,
       time: new Date().toLocaleTimeString('ru', { hour:'2-digit', minute:'2-digit' }),
       rotate: (Math.random() * 4 - 2).toFixed(2),
       system: false,
     }
 
-    // Сохраняем в БД
+    // save in db
     await pool.query(`
       INSERT INTO messages (id, room_id, username, content, type, audio_data, time, rotate, system)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -229,11 +234,11 @@ io.on('connection', async (socket) => {
       delete typingUsers[roomId][socket.id]
       socket.to(roomId).emit('typing_update', Object.values(typingUsers[roomId]))
     }
-    console.log('отключился:', socket.id)
+    console.log('diconected:', socket.id)
   })
 })
 
-// Запускаем сервер только после инициализации БД
+// start server after db
 initDB().then(() => {
   const PORT = process.env.PORT || 3001
   httpServer.listen(PORT, () => console.log(`Сервер: http://localhost:${PORT}`))

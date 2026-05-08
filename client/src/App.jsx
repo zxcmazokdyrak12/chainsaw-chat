@@ -10,6 +10,29 @@ const CHAINSAW_SFX = '/chainsaw.mp3'
 const CHAINSAW_IMG = '/hand.png'
 const SFX_WORDS = ['VROOM!', 'SLASH!', 'BANG!', 'GRAAA!', 'DOOOM!', 'GRIND!']
 const CUTE_WORDS = ['honey','baby','darling','sweetie','angel','sunshine','bunny','kitty', 'cute', 'love', 'sweet', 'aww', '❤️', '🥺', '💕', '😍', '🐾']
+const AVATARS = [
+  { id: 'denji',    name: 'Denji',         src: '/avatars/avatar_denji.png'    },
+  { id: 'power',    name: 'Power',         src: '/avatars/avatar_power.png'    },
+  { id: 'makima',   name: 'Makima',        src: '/avatars/avatar_makima2.png'  },
+  { id: 'aki',      name: 'Aki',           src: '/avatars/avatar_aki2.png'     },
+  { id: 'reze',     name: 'Reze',          src: '/avatars/avatar_reze2.png'    },
+  { id: 'himeno',   name: 'Himeno',        src: '/avatars/avatar_himeno.png'   },
+  { id: 'kishibe',  name: 'Kishibe',       src: '/avatars/avatar_kishibe.png'  },
+  { id: 'kobeni',   name: 'Kobeni',        src: '/avatars/avatar_kobeni.png'   },
+  { id: 'asa',      name: 'Asa Mitaka',    src: '/avatars/avatar_asa.png'      },
+  { id: 'quanxi',   name: 'Quanxi',        src: '/avatars/avatar_quanxi.png'   },
+  { id: 'nayuta',   name: 'Nayuta',        src: '/avatars/avatar_nayuta.png'   },
+  { id: 'yoru',     name: 'Yoru',          src: '/avatars/avatar_yoru.png'     },
+  { id: 'cosmo',    name: 'Cosmo',         src: '/avatars/avatar_cosmo.png'    },
+  { id: 'beam',     name: 'Beam',          src: '/avatars/avatar_beam.png'     },
+  { id: 'yoshida',  name: 'Yoshida',       src: '/avatars/avatar_yoshida.png'  },
+  { id: 'tenshi',   name: 'Tenshi',        src: '/avatars/avatar_tenshi.png'   },
+  { id: 'pingtsi',  name: 'Pingtsi',       src: '/avatars/avatar_pingtsi.png'  },
+  { id: 'sawatari', name: 'Sawatari',      src: '/avatars/avatar_sawatari.png' },
+  { id: 'kiga',     name: 'Kiga',          src: '/avatars/avatar_kiga.png'     },
+  { id: 'tendou',   name: 'Tendou',        src: '/avatars/avatar_tendou.png'   },
+  { id: 'pochita',  name: 'Pochita',       src: '/pochita.png'                 },
+]
 
 const LIGHT = {
   appBg: '#f0ebe0', headerBg: '#e8e3d8', headerBorder: '#111',
@@ -50,6 +73,8 @@ export default function App() {
   const [isRecording, setIsRecording]       = useState(false)
   const mediaRecorder = useRef(null)
   const audioChunks   = useRef([])
+  const [avatar, setAvatar] = useState(AVATARS[0])
+  
 
   const T = theme === 'light' ? LIGHT : DARK
 
@@ -92,19 +117,19 @@ export default function App() {
   })
     socket.on('typing_update', (users) => setTypingUsers(users))
     socket.on('user_joined', ({ username: who }) => {
-      setMessages(p => [...p, {
-        id: Date.now(), system: true,
-        content: `${who} joined the room`,
-        time: new Date().toLocaleTimeString('ru', { hour:'2-digit', minute:'2-digit' })
-      }])
-    })
+  setMessages(p => [...p, {
+    id: Date.now(), system: true,
+    content: `${who} joined the room`,
+    time: new Date().toLocaleTimeString('ru', { hour:'2-digit', minute:'2-digit' })
+  }])
+})
     return () => {
-      socket.off('rooms_list')
-      socket.off('room_history')
-      socket.off('receive_message')
-      socket.off('typing_update')
-      socket.off('user_joined')
-    }
+  socket.off('rooms_list')
+  socket.off('room_history')
+  socket.off('receive_message')
+  socket.off('typing_update')
+  socket.off('user_joined')
+}
   }, [])
 
   useEffect(() => {
@@ -112,21 +137,21 @@ export default function App() {
   }, [messages, typingUsers])
 
   const joinRoom = (roomId) => {
-    setCurrentRoom(roomId)
-    setMessages([])
-    setTypingUsers([])
-    socket.emit('join_room', { roomId, username })
-  }
+  setCurrentRoom(roomId)
+  setMessages([])
+  setTypingUsers([])
+  socket.emit('join_room', { roomId, username, avatar: avatar.src })
+}
 
   const handleSetUsername = () => {
-    if (usernameInput.trim().length < 2) return
-    const name = usernameInput.trim().toUpperCase()
-    setUsername(name)
-    setPhase('chat')
-    setTimeout(() => {
-      socket.emit('join_room', { roomId: 'general', username: name })
-    }, 100)
-  }
+  if (usernameInput.trim().length < 2) return
+  const name = usernameInput.trim().toUpperCase()
+  setUsername(name)
+  setPhase('chat')
+  setTimeout(() => {
+    socket.emit('join_room', { roomId: 'general', username: name, avatar: avatar.src })
+  }, 100)
+}
 
   const handleStart = () => {
     const audio = new Audio(CHAINSAW_SFX)
@@ -145,7 +170,7 @@ export default function App() {
       audio.volume = 0.4
       audio.play().catch(() => {})
     }
-    socket.emit('send_message', { roomId: currentRoom, username, content: input.trim() })
+    socket.emit('send_message', { roomId: currentRoom, username, content: input.trim(), avatar: avatar.src })
     socket.emit('typing_stop', { roomId: currentRoom })
     setInput('')
   }
@@ -228,40 +253,79 @@ const joinByCode = () => {
 
   // ─── NICKNAME SCREEN ──────────────────────────────────────
   if (phase === 'username') {
-    return (
-      <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} style={{ height:'100vh', background:'#0d0d0d', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:'24px', fontFamily:'BlambotClassic, sans-serif' }}>
-        <h1 style={{ fontSize:'42px', color:'#fff', letterSpacing:'4px', textShadow:'4px 4px 0 #cc2200', margin:0 }}>
-          CHAINSAW <span style={{ color:'#cc2200' }}>CHAT</span>
-        </h1>
-        <p style={{ color:'#555', fontSize:'12px', letterSpacing:'3px', margin:0 }}>WHAT'S YOUR NICKNAME?</p>
-        <div style={{ display:'flex', flexDirection:'column', gap:'12px', width:'300px' }}>
-          <input
-            style={{ padding:'14px 20px', background:'#1a1a1a', border:'3px solid #fff', color:'#fff', fontSize:'18px', outline:'none', fontFamily:'BlambotClassic, sans-serif', letterSpacing:'2px', textTransform:'uppercase', clipPath:'polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)', textAlign:'center' }}
-            placeholder="NICKNAME...  "
-            maxLength={14}
-            value={usernameInput}
-            onChange={e => setUsernameInput(e.target.value.toUpperCase())}
-            onKeyDown={e => e.key === 'Enter' && handleSetUsername()}
-            autoFocus
-          />
-          <motion.button whileTap={{ scale:0.95 }} whileHover={{ skewX:-5 }} onClick={handleSetUsername} style={{ padding:'14px', background: usernameInput.trim().length >= 2 ? '#cc2200' : '#333', color:'#fff', border:'none', fontFamily:'BlambotClassic, sans-serif', fontSize:'18px', letterSpacing:'3px', cursor: usernameInput.trim().length >= 2 ? 'pointer' : 'default', clipPath:'polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)', transition:'background 0.2s' }}>
-            ENTER ⛓
-          </motion.button>
-        </div>
-        <div style={{ display:'flex', gap:'12px', marginTop:'8px' }}>
-          {['/denji.png','/aki.png','/makima.png','/reze.png'].map((img, i) => (
-            <motion.img key={i} src={img} initial={{ y:20, opacity:0 }} animate={{ y:0, opacity:1 }} transition={{ delay:i*0.1, type:'spring' }} style={{ height:'70px', objectFit:'contain', filter:'grayscale(30%)' }} />
-          ))}
-        </div>
-      </motion.div>
-    )
-  }
+  return (
+    <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} style={{ height:'100vh', background:'#0d0d0d', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:'20px', fontFamily:'BlambotClassic, sans-serif', overflowY:'auto', padding:'20px' }}>
+      
+      <h1 style={{ fontSize:'36px', color:'#fff', letterSpacing:'4px', textShadow:'4px 4px 0 #cc2200', margin:0 }}>
+        CHAINSAW <span style={{ color:'#cc2200' }}>CHAT</span>
+      </h1>
+
+      {/* Avatar */}
+      <div style={{ position:'relative' }}>
+        <img src={avatar.src} style={{ width:'100px', height:'100px', objectFit:'cover', borderRadius:'50%', border:'3px solid #cc2200', boxShadow:'0 0 20px rgba(204,34,0,0.5)' }} />
+        <div style={{ position:'absolute', bottom:'-4px', right:'-4px', background:'#cc2200', borderRadius:'50%', width:'24px', height:'24px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'12px' }}>✓</div>
+      </div>
+
+      <p style={{ color:'#555', fontSize:'11px', letterSpacing:'3px', margin:0 }}>CHOOSE YOUR CHARACTER</p>
+
+      {/* Avatars */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(7, 1fr)', gap:'8px', maxWidth:'420px' }}>
+        {AVATARS.map(av => (
+          <motion.div
+            key={av.id}
+            whileHover={{ scale:1.1 }}
+            whileTap={{ scale:0.95 }}
+            onClick={() => setAvatar(av)}
+            style={{ cursor:'pointer', position:'relative' }}
+            title={av.name}
+          >
+            <img
+              src={av.src}
+              style={{
+                width:'52px', height:'52px',
+                objectFit:'cover', borderRadius:'50%',
+                border: avatar.id === av.id ? '3px solid #cc2200' : '2px solid #333',
+                filter: avatar.id === av.id ? 'none' : 'grayscale(60%) brightness(0.7)',
+                transition:'all 0.2s',
+              }}
+            />
+            {avatar.id === av.id && (
+              <div style={{ position:'absolute', inset:0, borderRadius:'50%', border:'2px solid #cc2200', boxShadow:'0 0 8px rgba(204,34,0,0.6)' }} />
+            )}
+          </motion.div>
+        ))}
+      </div>
+
+      <p style={{ color:'#555', fontSize:'11px', letterSpacing:'3px', margin:0 }}>WHAT'S YOUR NICKNAME?</p>
+
+      {/* Nickname input */}
+      <div style={{ display:'flex', flexDirection:'column', gap:'10px', width:'280px' }}>
+        <input
+          style={{ padding:'12px 20px', background:'#1a1a1a', border:'3px solid #fff', color:'#fff', fontSize:'16px', outline:'none', fontFamily:'BlambotClassic, sans-serif', letterSpacing:'2px', textTransform:'uppercase', clipPath:'polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)', textAlign:'center' }}
+          placeholder="NICKNAME..."
+          maxLength={14}
+          value={usernameInput}
+          onChange={e => setUsernameInput(e.target.value.toUpperCase())}
+          onKeyDown={e => e.key === 'Enter' && handleSetUsername()}
+          autoFocus
+        />
+        <motion.button
+          whileTap={{ scale:0.95 }} whileHover={{ skewX:-5 }}
+          onClick={handleSetUsername}
+          style={{ padding:'12px', background: usernameInput.trim().length >= 2 ? '#cc2200' : '#333', color:'#fff', border:'none', fontFamily:'BlambotClassic, sans-serif', fontSize:'16px', letterSpacing:'3px', cursor: usernameInput.trim().length >= 2 ? 'pointer' : 'default', clipPath:'polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)', transition:'background 0.2s' }}
+        >
+          ENTER ⛓
+        </motion.button>
+      </div>
+    </motion.div>
+  )
+}
 
   // ─── CHAT ─────────────────────────────────────────────────
   return (
     <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} style={{ display:'flex', flexDirection:'column', height:'100vh', background: T.appBg, fontFamily:'BlambotClassic, "Arial Narrow", sans-serif', position:'relative', overflow:'hidden', backgroundImage:`radial-gradient(circle, ${T.halftone} 1px, transparent 1px)`, backgroundSize:'10px 10px', transition:'background 0.4s' }}>
 
-      {/* Шапка */}
+      {/* top */}
       <div style={{ background: T.headerBg, borderBottom:`4px solid ${T.headerBorder}`, boxShadow: T.shadow, position:'relative', zIndex:10, transition:'background 0.4s' }}>
         <div style={{ padding:'8px 16px', display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom:`2px solid ${T.headerBorder}` }}>
           <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
@@ -353,8 +417,12 @@ const joinByCode = () => {
                         <span style={{ fontFamily:"'CCDoohickey', BlambotClassic, sans-serif", fontSize:'13px', fontWeight:900, fontStyle:'italic', color: T.sfxColor, letterSpacing:'1px', paddingLeft: isOwn ? 0 : '14px', paddingRight: isOwn ? '14px' : 0 }}>
                           {SFX_WORDS[index % SFX_WORDS.length]}
                         </span>
-                        <span style={{ fontSize:'10px', letterSpacing:'2px', color: isOwn ? (theme==='light' ? '#666' : '#555') : T.nameColor, paddingLeft: isOwn ? 0 : '14px', paddingRight: isOwn ? '14px' : 0, fontFamily:"'AnimeAce', sans-serif" }}>
+                       <span style={{ fontSize:'10px', letterSpacing:'2px', color: isOwn ? (theme==='light' ? '#666' : '#555') : T.nameColor, paddingLeft: isOwn ? 0 : '4px', paddingRight: isOwn ? '4px' : 0, fontFamily:"'AnimeAce', sans-serif", display:'flex', alignItems:'center', gap:'6px', flexDirection: isOwn ? 'row-reverse' : 'row' }}>
+                                      {msg.avatar && (
+                                   <img src={msg.avatar} style={{ width:'22px', height:'22px', borderRadius:'50%', objectFit:'cover', border:`1px solid ${theme==='light' ? '#111' : '#fff'}` }} />
+                                       )}
                           {msg.username} · {msg.time}
+
                         </span>
                         <div style={{ position:'relative' }}>
                           <div style={{ position:'absolute', bottom:'20px', ...(isOwn ? { right:'-18px', borderTop:'10px solid transparent', borderBottom:'10px solid transparent', borderLeft:`18px solid ${theme==='dark' ? '#fff' : '#111'}` } : { left:'-18px', borderTop:'10px solid transparent', borderBottom:'10px solid transparent', borderRight:`18px solid ${theme==='dark' ? '#fff' : '#111'}` }), zIndex:2 }} />
@@ -543,16 +611,17 @@ const joinByCode = () => {
 
       {/* ─── TAB: PROFILE ─── */}
       {activeTab === 'profile' && (
-        <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:'20px' }}>
-          <img src="/reze.png" style={{ height:'140px', objectFit:'contain' }} />
-          <div style={{ fontFamily:'BlambotClassic, sans-serif', textAlign:'center', color: T.titleColor }}>
-            <div style={{ fontSize:'28px', letterSpacing:'3px' }}>{username}</div>
-            <div style={{ fontSize:'12px', opacity:0.5, marginTop:'8px', fontFamily:"'AnimeAce', sans-serif" }}>
-              {rooms.find(r=>r.id===currentRoom)?.name}
-            </div>
-          </div>
-        </div>
-      )}
+  <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:'20px' }}>
+    <img src={avatar.src} style={{ height:'160px', width:'160px', objectFit:'cover', borderRadius:'50%', border:'4px solid #cc2200', boxShadow:'0 0 30px rgba(204,34,0,0.4)' }} />
+    <div style={{ fontFamily:'BlambotClassic, sans-serif', textAlign:'center', color: T.titleColor }}>
+      <div style={{ fontSize:'28px', letterSpacing:'3px' }}>{username}</div>
+      <div style={{ fontSize:'13px', color:'#cc2200', marginTop:'4px', letterSpacing:'2px' }}>{avatar.name}</div>
+      <div style={{ fontSize:'12px', opacity:0.5, marginTop:'8px', fontFamily:"'AnimeAce', sans-serif" }}>
+        {rooms.find(r=>r.id===currentRoom)?.name}
+      </div>
+    </div>
+  </div>
+)}
 
       {/* ─── POCHITA + HEARTS ─── */}
       <AnimatePresence>
