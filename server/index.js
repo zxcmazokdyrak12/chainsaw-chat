@@ -2,33 +2,46 @@ import express from 'express'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
 import cors from 'cors'
+import helmet from 'helmet'
+import rateLimit from 'express-rate-limit'
+import passport from 'passport'
+import { Strategy as GitHubStrategy } from 'passport-github2'
+import { Strategy as GoogleStrategy } from 'passport-google-oauth20'
+import session from 'express-session'
+import jwt from 'jsonwebtoken'
 import pg from 'pg'
 import 'dotenv/config'
 
 const { Pool } = pg
-
-// connect to PostgreSQL
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 })
 
 async function initDB() {
+  // users list
   await pool.query(`
-  CREATE TABLE IF NOT EXISTS messages (
-    id BIGINT PRIMARY KEY,
-    room_id TEXT REFERENCES rooms(id),
-    username TEXT,
-    content TEXT,
-    type TEXT DEFAULT 'text',
-    audio_data TEXT,
-    avatar TEXT,
-    time TEXT,
-    rotate TEXT,
-    system BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT NOW()
-  )
-`)
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      provider TEXT NOT NULL,
+      provider_id TEXT NOT NULL,
+      username TEXT NOT NULL,
+      avatar TEXT,
+      email TEXT,
+      created_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE(provider, provider_id)
+    )
+  `)
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS rooms (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      code TEXT UNIQUE NOT NULL,
+      created_by TEXT,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `)
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS messages (
@@ -38,6 +51,7 @@ async function initDB() {
       content TEXT,
       type TEXT DEFAULT 'text',
       audio_data TEXT,
+      avatar TEXT,
       time TEXT,
       rotate TEXT,
       system BOOLEAN DEFAULT FALSE,
@@ -45,39 +59,152 @@ async function initDB() {
     )
   `)
 
-  // basic rooms
   const baseRooms = [
-    { id: 'general', name: '# GENERAL', code: 'GENERAL1', created_by: 'system' },
-    { id: 'devils',  name: '# DEVILS',  code: 'DEVILS00', created_by: 'system' },
-    { id: 'hunters', name: '# HUNTERS', code: 'HUNTERS0', created_by: 'system' },
-    { id: 'pochita', name: '# POCHITA', code: 'POCHITA0', created_by: 'system' },
+    { id: 'general', name: '# GENERAL', code: 'GENERAL1' },
+    { id: 'devils',  name: '# DEVILS',  code: 'DEVILS00' },
+    { id: 'hunters', name: '# HUNTERS', code: 'HUNTERS0' },
+    { id: 'pochita', name: '# POCHITA', code: 'POCHITA0' },
   ]
 
   for (const room of baseRooms) {
     await pool.query(`
-      INSERT INTO messages (id, room_id, username, content, type, audio_data, time, rotate, system, avatar)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      INSERT INTO rooms (id, name, code, created_by)
+      VALUES ($1, $2, $3, 'system')
       ON CONFLICT (id) DO NOTHING
-    `, [room.id, room.name, room.code, room.created_by, message.avatar])
+    `, [room.id, room.name, room.code])
   }
 
-  console.log('db ready')
+  console.log('DB is ready')
 }
 
 const app = express()
-app.use(cors())
 
+app.use(cors({
+  origin: process.env.CLIENT_URL,
+  credentials: true
+}))
+app.use(helmet())
+app.use(rateLimit({ windowMs: 60000, max: 100 }))
+app.use(express.json())
+app.use(session({
+  secret: process.env.JWT_SECRET,
+  resave: false,
+  saveUninitialized: false,
+}))
+app.use(passport.initialize())
+app.use(passport.session())
+
+// ── Passport: saving/recovery user ──
+passport.serializeUser((user, done) => done(null, user))
+passport.deserializeUser((user, done) => done(null, user))
+
+// ── GitHub Strategy ──────────────────────────────
+passport.use(new GitHubStrategy({
+  clientID:     process.env.GITHUB_CLIENT_ID,
+  clientSecret: process.env.GITHUB_CLIENT_SECRET,
+  callbackURL:  'https://chainsaw-chat.onrender.com/auth/github/callback',
+}, async (accessToken, refreshToken, profile, done) => {
+  try {
+    const result = await pool.query(`
+      INSERT INTO users (provider, provider_id, username, avatar, email)
+      VALUES ($1, $2, $3, $4, $5)
+      ON CONFLICT (provider, provider_id)
+      DO UPDATE SET username = $3, avatar = $4
+      RETURNING *
+    `, [
+      'github',
+      profile.id,
+      profile.displayName || profile.username,
+      profile.photos?.[0]?.value || null,
+      profile.emails?.[0]?.value || null,
+    ])
+    return done(null, result.rows[0])
+  } catch (err) {
+    return done(err)
+  }
+}))
+
+// ── Google Strategy ──────────────────────────────
+passport.use(new GoogleStrategy({
+  clientID:     process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  callbackURL:  'https://chainsaw-chat.onrender.com/auth/google/callback',
+}, async (accessToken, refreshToken, profile, done) => {
+  try {
+    const result = await pool.query(`
+      INSERT INTO users (provider, provider_id, username, avatar, email)
+      VALUES ($1, $2, $3, $4, $5)
+      ON CONFLICT (provider, provider_id)
+      DO UPDATE SET username = $3, avatar = $4
+      RETURNING *
+    `, [
+      'google',
+      profile.id,
+      profile.displayName,
+      profile.photos?.[0]?.value || null,
+      profile.emails?.[0]?.value || null,
+    ])
+    return done(null, result.rows[0])
+  } catch (err) {
+    return done(err)
+  }
+}))
+
+// ── Auth routes ──────────────────────────────────
 app.get('/ping', (req, res) => res.send('ok'))
 
+// GitHub
+app.get('/auth/github',
+  passport.authenticate('github', { scope: ['user:email'] })
+)
+app.get('/auth/github/callback',
+  passport.authenticate('github', { failureRedirect: `${process.env.CLIENT_URL}?error=auth` }),
+  (req, res) => {
+    const token = jwt.sign(req.user, process.env.JWT_SECRET, { expiresIn: '7d' })
+    // 
+    res.redirect(`${process.env.CLIENT_URL}?token=${token}`)
+  }
+)
+
+// Google
+app.get('/auth/google',
+  passport.authenticate('google', { scope: ['profile', 'email'] })
+)
+app.get('/auth/google/callback',
+  passport.authenticate('google', { failureRedirect: `${process.env.CLIENT_URL}?error=auth` }),
+  (req, res) => {
+    const token = jwt.sign(req.user, process.env.JWT_SECRET, { expiresIn: '7d' })
+    res.redirect(`${process.env.CLIENT_URL}?token=${token}`)
+  }
+)
+
+// token check — front calling on load
+app.get('/auth/me', (req, res) => {
+  const authHeader = req.headers.authorization
+  if (!authHeader) return res.status(401).json({ error: 'No token' })
+
+  const token = authHeader.split(' ')[1]
+  try {
+    const user = jwt.verify(token, process.env.JWT_SECRET)
+    res.json(user)
+  } catch {
+    res.status(401).json({ error: 'Invalid token' })
+  }
+})
+
+// ── Socket.io ────────────────────────────────────
 const httpServer = createServer(app)
 const io = new Server(httpServer, {
-  cors: { origin: '*', methods: ['GET', 'POST'] }
+  cors: {
+    origin: process.env.CLIENT_URL,
+    methods: ['GET', 'POST'],
+    credentials: true,
+  }
 })
 
 const typingUsers = {}
 
 const SYLLABLES = ['KAI','ZEN','RYU','KEN','MAI','SHI','DEN','AKI','REZ','POW','CUT','SAW','DEV','HUN','CHI','BLO']
-
 const generateCode = () => {
   const a = SYLLABLES[Math.floor(Math.random() * SYLLABLES.length)]
   const b = SYLLABLES[Math.floor(Math.random() * SYLLABLES.length)]
@@ -85,77 +212,54 @@ const generateCode = () => {
   return `${a}${b}${n}`
 }
 
-// get a room list count with messages
 async function getRoomsList() {
   const result = await pool.query(`
-    SELECT r.id, r.name, r.code, r.created_by,
-           COUNT(m.id) as count
+    SELECT r.id, r.name, r.code, r.created_by, COUNT(m.id) as count
     FROM rooms r
     LEFT JOIN messages m ON m.room_id = r.id
     GROUP BY r.id, r.name, r.code, r.created_by
     ORDER BY r.created_at ASC
   `)
   return result.rows.map(r => ({
-    id: r.id,
-    name: r.name,
-    code: r.code,
-    createdBy: r.created_by,
-    count: parseInt(r.count)
+    id: r.id, name: r.name, code: r.code,
+    createdBy: r.created_by, count: parseInt(r.count)
   }))
 }
 
-// get a 100 last messages
 async function getRoomHistory(roomId) {
   const result = await pool.query(`
-    SELECT * FROM messages
-    WHERE room_id = $1
-    ORDER BY created_at ASC
-    LIMIT 100
+    SELECT * FROM messages WHERE room_id = $1
+    ORDER BY created_at ASC LIMIT 100
   `, [roomId])
-
   return result.rows.map(r => ({
-    id: r.id,
-    username: r.username,
-    content: r.content,
-    type: r.type,
-    audioData: r.audio_data,
-    time: r.time,
-    rotate: r.rotate,
-    system: r.system,
-    roomId: r.room_id,
+    id: r.id, username: r.username, content: r.content,
+    type: r.type, audioData: r.audio_data, avatar: r.avatar,
+    time: r.time, rotate: r.rotate, system: r.system, roomId: r.room_id,
   }))
 }
 
 io.on('connection', async (socket) => {
-  console.log('connected:', socket.id)
+  console.log('подключился:', socket.id)
 
-  // rooms list
   const roomsList = await getRoomsList()
   socket.emit('rooms_list', roomsList)
 
-  // create room
   socket.on('create_room', async ({ username, roomName }) => {
     const code = generateCode()
-    const id   = code.toLowerCase()
-    const name = roomName
-      ? `# ${roomName.toUpperCase().slice(0, 16)}`
-      : `# ROOM-${code}`
-
-    await pool.query(`
-      INSERT INTO rooms (id, name, code, created_by)
-      VALUES ($1, $2, $3, $4)
-    `, [id, name, code, username])
-
-    const roomsList = await getRoomsList()
-    io.emit('rooms_list', roomsList)
+    const id = code.toLowerCase()
+    const name = roomName ? `# ${roomName.toUpperCase().slice(0,16)}` : `# ROOM-${code}`
+    await pool.query(
+      'INSERT INTO rooms (id, name, code, created_by) VALUES ($1,$2,$3,$4)',
+      [id, name, code, username]
+    )
+    const list = await getRoomsList()
+    io.emit('rooms_list', list)
     socket.emit('room_created', { id, code, name })
   })
 
-  // join with code
   socket.on('join_by_code', async ({ code, username }) => {
     const result = await pool.query(
-      'SELECT * FROM rooms WHERE UPPER(code) = UPPER($1)',
-      [code]
+      'SELECT * FROM rooms WHERE UPPER(code) = UPPER($1)', [code]
     )
     if (result.rows.length === 0) {
       socket.emit('join_error', 'Room not found')
@@ -164,57 +268,51 @@ io.on('connection', async (socket) => {
     socket.emit('join_by_code_success', { roomId: result.rows[0].id })
   })
 
-  // join the room
   socket.on('join_room', async ({ roomId, username }) => {
-    Object.keys(typingUsers).forEach(room => {
-      if (typingUsers[room]) delete typingUsers[room][socket.id]
-    })
-    socket.rooms.forEach(room => {
-      if (room !== socket.id) socket.leave(room)
-    })
-
+    socket.rooms.forEach(room => { if (room !== socket.id) socket.leave(room) })
     socket.join(roomId)
     socket.data.currentRoom = roomId
     socket.data.username = username
-
-    // give a history for db
     const history = await getRoomHistory(roomId)
     socket.emit('room_history', history)
-
     socket.to(roomId).emit('user_joined', { username, roomId })
   })
 
-  // send a message
   socket.on('send_message', async (data) => {
-    const { roomId, username, content, type, audioData } = data
+    const { roomId, username, content, type, audioData, avatar } = data
+
+    // Rate limit — 30 per minute
+    if (!socket.data.msgCount) socket.data.msgCount = 0
+    if (!socket.data.msgReset) socket.data.msgReset = Date.now()
+    if (Date.now() - socket.data.msgReset > 60000) {
+      socket.data.msgCount = 0
+      socket.data.msgReset = Date.now()
+    }
+    socket.data.msgCount++
+    if (socket.data.msgCount > 30) {
+      socket.emit('rate_limited', 'Too many messages, wait a minute')
+      return
+    }
 
     const message = {
-      id: Date.now(),
-      username,
-      content: content || '',
-      type: type || 'text',
-      audioData: audioData || null,
-      avatar: data.avatar || null,
-      roomId,
+      id: Date.now(), username, content: content || '',
+      type: type || 'text', audioData: audioData || null,
+      avatar: avatar || null, roomId,
       time: new Date().toLocaleTimeString('ru', { hour:'2-digit', minute:'2-digit' }),
       rotate: (Math.random() * 4 - 2).toFixed(2),
       system: false,
     }
 
-    // save in db
     await pool.query(`
-      INSERT INTO messages (id, room_id, username, content, type, audio_data, time, rotate, system)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-    `, [
-      message.id, message.roomId, message.username,
-      message.content, message.type, message.audioData,
-      message.time, message.rotate, message.system
-    ])
+      INSERT INTO messages (id, room_id, username, content, type, audio_data, avatar, time, rotate, system)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+    `, [message.id, message.roomId, message.username, message.content,
+        message.type, message.audioData, message.avatar,
+        message.time, message.rotate, message.system])
 
     io.to(roomId).emit('receive_message', message)
   })
 
-  // Typing
   socket.on('typing_start', ({ roomId, username }) => {
     if (!typingUsers[roomId]) typingUsers[roomId] = {}
     typingUsers[roomId][socket.id] = username
@@ -234,12 +332,11 @@ io.on('connection', async (socket) => {
       delete typingUsers[roomId][socket.id]
       socket.to(roomId).emit('typing_update', Object.values(typingUsers[roomId]))
     }
-    console.log('diconected:', socket.id)
+    console.log('отключился:', socket.id)
   })
 })
 
-// start server after db
 initDB().then(() => {
   const PORT = process.env.PORT || 3001
-  httpServer.listen(PORT, () => console.log(`Сервер: http://localhost:${PORT}`))
+  httpServer.listen(PORT, () => console.log(`server: http://localhost:${PORT}`))
 })
