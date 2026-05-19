@@ -687,8 +687,8 @@ const joinByCode = () => {
         </div>
       )}
 
-      {/* ─── TAB: PROFILE ─── */}
-      {activeTab === 'profile' && (
+     {/* ─── TAB: PROFILE ─── */}
+{activeTab === 'profile' && (
   <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:'20px' }}>
     <img src={avatar.src} style={{ height:'160px', width:'160px', objectFit:'cover', borderRadius:'50%', border:'4px solid #cc2200', boxShadow:'0 0 30px rgba(204,34,0,0.4)' }} />
     <div style={{ fontFamily:'BlambotClassic, sans-serif', textAlign:'center', color: T.titleColor }}>
@@ -698,6 +698,35 @@ const joinByCode = () => {
         {rooms.find(r=>r.id===currentRoom)?.name}
       </div>
     </div>
+
+    {/* КНОПКА ВЫХОДА ДЛЯ БАТИ */}
+    <button 
+      onClick={() => {
+        localStorage.removeItem('token');
+        document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        window.location.href = '/';
+      }}
+      style={{
+        marginTop: '10px',
+        padding: '10px 24px',
+        backgroundColor: '#cc2200', // Твой фирменный красный цвет из профиля!
+        color: '#fff',
+        border: '3px solid #000',
+        fontFamily: 'BlambotClassic, sans-serif',
+        fontSize: '14px',
+        letterSpacing: '2px',
+        cursor: 'pointer',
+        fontWeight: 'bold',
+        boxShadow: '4px 4px 0px #000',
+        transition: 'all 0.1s ease'
+      }}
+      onMouseDown={(e) => e.currentTarget.style.transform = 'translate(2px, 2px)'}
+      onMouseUp={(e) => e.currentTarget.style.transform = 'none'}
+      onMouseLeave={(e) => e.currentTarget.style.transform = 'none'}
+    >
+      LOG OUT 🌸
+    </button>
+
   </div>
 )}
 
