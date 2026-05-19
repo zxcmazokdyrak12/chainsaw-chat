@@ -6,8 +6,8 @@
 
 ## 🖼️ Preview
 
-| Start Screen | Chat Interface |
-|---|---|
+| Start Screen | Login Screen | Chat Interface (Manga-Style UI) |
+|---|---|---|
 | ![Start Screen](client/public/start_engine.png) | ![Login Screen](client/public/login_screen.png) | ![Chat Interface](client/public/chat_screen.png) |
 
 ---
