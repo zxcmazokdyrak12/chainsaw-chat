@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
@@ -10,7 +11,7 @@ import { Strategy as GoogleStrategy } from 'passport-google-oauth20'
 import session from 'express-session'
 import jwt from 'jsonwebtoken'
 import pg from 'pg'
-import 'dotenv/config'
+
 
 const { Pool } = pg
 const pool = new Pool({
@@ -87,7 +88,7 @@ app.use(helmet())
 app.use(rateLimit({ windowMs: 60000, max: 100 }))
 app.use(express.json())
 app.use(session({
-  secret: process.env.JWT_SECRET,
+  secret: process.env.JWT_SECRET || 'CHAINSAW_REZE_DENJI_LOVE_2025',
   resave: false,
   saveUninitialized: false,
 }))
