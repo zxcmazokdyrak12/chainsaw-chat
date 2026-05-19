@@ -17,8 +17,8 @@
 - **Frontend:** React (Vite) + JavaScript
 - **Styling & Animation:** Framer Motion + custom inline styles
 - **Deployment:** Vercel (Frontend) + Render (Backend)
-- **Backend:** Node.js + Express + **TypeScript**
-- **Database & ORM:** **Neon (Serverless PostgreSQL)** + **Prisma ORM**
+- **Backend(Planning TS):** Node.js + Express + **TypeScript**
+- **Database & ORM(Planning Prisma):** **Neon (Serverless PostgreSQL)** + **Prisma ORM**
 - **Authentication:** **OAuth 2.0 (Google & GitHub)** via Passport.js + JWT Session Management
 - **Real-time:** Socket.io (WebSocket)
 - **Audio:** MediaRecorder API
@@ -142,9 +142,9 @@ chainsaw-chat/
 
     [x] Database integration (Neon Serverless PostgreSQL)
 
-    [x] Prisma ORM configuration
+    [ ] Prisma ORM configuration
 
-    [x] TypeScript backend migration
+    [ ] TypeScript backend migration
 
     [x] Google & GitHub OAuth 2.0 Integration
 
