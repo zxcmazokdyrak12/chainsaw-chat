@@ -22,16 +22,17 @@ const pool = new Pool({
 async function initDB() {
   // users list
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS users (
-      id SERIAL PRIMARY KEY,
-      provider TEXT NOT NULL,
-      provider_id TEXT NOT NULL,
-      username TEXT NOT NULL,
-      avatar TEXT,
-      email TEXT,
-      created_at TIMESTAMP DEFAULT NOW(),
-      UNIQUE(provider, provider_id)
-    )
+    // Было: CREATE TABLE IF NOT EXISTS users (
+CREATE TABLE IF NOT EXISTS chat_users (
+  id SERIAL PRIMARY KEY,
+  provider TEXT NOT NULL,
+  provider_id TEXT NOT NULL,
+  username TEXT NOT NULL,
+  avatar TEXT,
+  email TEXT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(provider, provider_id)
+)
   `)
 
   await pool.query(`
@@ -108,7 +109,7 @@ passport.use(new GitHubStrategy({
   try {
     // Твои 5 строчек запроса остаются как есть!
     const result = await pool.query(`
-      INSERT INTO users (provider, provider_id, username, avatar, email)
+      INSERT INTO chat_users (provider, provider_id, username, avatar, email)
       VALUES ($1, $2, $3, $4, $5)
       ON CONFLICT (provider, provider_id)
       DO UPDATE SET username = $3, avatar = $4
@@ -144,7 +145,7 @@ passport.use(new GoogleStrategy({
 }, async (accessToken, refreshToken, profile, done) => {
   try {
     const result = await pool.query(`
-      INSERT INTO users (provider, provider_id, username, avatar, email)
+      INSERT INTO chat_users (provider, provider_id, username, avatar, email)
       VALUES ($1, $2, $3, $4, $5)
       ON CONFLICT (provider, provider_id)
       DO UPDATE SET username = $3, avatar = $4
