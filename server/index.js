@@ -22,17 +22,16 @@ const pool = new Pool({
 async function initDB() {
   // users list
   await pool.query(`
-    // Было: CREATE TABLE IF NOT EXISTS users (
-CREATE TABLE IF NOT EXISTS chat_users (
-  id SERIAL PRIMARY KEY,
-  provider TEXT NOT NULL,
-  provider_id TEXT NOT NULL,
-  username TEXT NOT NULL,
-  avatar TEXT,
-  email TEXT,
-  created_at TIMESTAMP DEFAULT NOW(),
-  UNIQUE(provider, provider_id)
-)
+    CREATE TABLE IF NOT EXISTS chat_users (
+      id SERIAL PRIMARY KEY,
+      provider TEXT NOT NULL,
+      provider_id TEXT NOT NULL,
+      username TEXT NOT NULL,
+      avatar TEXT,
+      email TEXT,
+      created_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE(provider, provider_id)
+    )
   `)
 
   await pool.query(`
