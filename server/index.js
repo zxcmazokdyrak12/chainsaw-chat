@@ -106,6 +106,7 @@ passport.use(new GitHubStrategy({
   callbackURL:  'https://chainsaw-chat.onrender.com/auth/github/callback',
 }, async (accessToken, refreshToken, profile, done) => {
   try {
+    // Твои 5 строчек запроса остаются как есть!
     const result = await pool.query(`
       INSERT INTO users (provider, provider_id, username, avatar, email)
       VALUES ($1, $2, $3, $4, $5)
@@ -119,7 +120,17 @@ passport.use(new GitHubStrategy({
       profile.photos?.[0]?.value || null,
       profile.emails?.[0]?.value || null,
     ])
-    return done(null, result.rows[0])
+
+    // ВОТ ТУТ ИСПРАВЛЕНИЕ:
+    // Вместо done(null, result.rows[0]) делаем безопасный плоский объект
+    const user = {
+      id: result.rows[0].id,
+      username: result.rows[0].username,
+      avatar: result.rows[0].avatar,
+      email: result.rows[0].email
+    }
+
+    return done(null, user) // Передаем очищенный объект
   } catch (err) {
     return done(err)
   }
@@ -145,7 +156,16 @@ passport.use(new GoogleStrategy({
       profile.photos?.[0]?.value || null,
       profile.emails?.[0]?.value || null,
     ])
-    return done(null, result.rows[0])
+
+    // И ЗДЕСЬ ТОЖЕ ОЧИЩАЕМ:
+    const user = {
+      id: result.rows[0].id,
+      username: result.rows[0].username,
+      avatar: result.rows[0].avatar,
+      email: result.rows[0].email
+    }
+
+    return done(null, user)
   } catch (err) {
     return done(err)
   }
@@ -161,11 +181,18 @@ app.get('/auth/github',
 app.get('/auth/github/callback',
   passport.authenticate('github', { failureRedirect: `${process.env.CLIENT_URL}?error=auth` }),
   (req, res) => {
-    const token = jwt.sign(req.user, process.env.JWT_SECRET, { expiresIn: '7d' })
-    // 
-    res.redirect(`${process.env.CLIENT_URL}?token=${token}`)
+    // Явно собираем только плоские данные, без объектов дат и скрытых свойств
+    const payload = {
+      id: req.user.id,
+      username: req.user.username,
+      avatar: req.user.avatar,
+      email: req.user.email
+    };
+    
+    const token = jwt.sign(payload, process.env.JWT_SECRET || 'CHAINSAW_REZE_DENJI_LOVE_2025', { expiresIn: '7d' });
+    res.redirect(`${process.env.CLIENT_URL}?token=${token}`);
   }
-)
+);
 
 // Google
 app.get('/auth/google',
@@ -174,10 +201,17 @@ app.get('/auth/google',
 app.get('/auth/google/callback',
   passport.authenticate('google', { failureRedirect: `${process.env.CLIENT_URL}?error=auth` }),
   (req, res) => {
-    const token = jwt.sign(req.user, process.env.JWT_SECRET, { expiresIn: '7d' })
-    res.redirect(`${process.env.CLIENT_URL}?token=${token}`)
+    const payload = {
+      id: req.user.id,
+      username: req.user.username,
+      avatar: req.user.avatar,
+      email: req.user.email
+    };
+
+    const token = jwt.sign(payload, process.env.JWT_SECRET || 'CHAINSAW_REZE_DENJI_LOVE_2025', { expiresIn: '7d' });
+    res.redirect(`${process.env.CLIENT_URL}?token=${token}`);
   }
-)
+);
 
 // token check — front calling on load
 app.get('/auth/me', (req, res) => {
