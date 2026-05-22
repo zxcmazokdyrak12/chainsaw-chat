@@ -699,7 +699,7 @@ const joinByCode = () => {
       </div>
     </div>
 
-    {/* КНОПКА ВЫХОДА ДЛЯ БАТИ */}
+    {/* LOG OUT FOR DADDY */}
     <button 
       onClick={() => {
         localStorage.removeItem('token');

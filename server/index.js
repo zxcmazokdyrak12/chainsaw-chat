@@ -338,12 +338,20 @@ io.on('connection', async (socket) => {
       system: false,
     }
 
-    await pool.query(`
-      INSERT INTO messages (id, room_id, username, content, type, audio_data, avatar, time, rotate, system)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-    `, [message.id, message.roomId, message.username, message.content,
-        message.type, message.audioData, message.avatar,
-        message.time, message.rotate, message.system])
+        await pool.query(`
+      INSERT INTO messages (id, room_id, username, content, type, audio_data, time, rotate, system)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    `, [
+      message.id, 
+      message.roomId, 
+      message.username, 
+      message.content,
+      message.type, 
+      message.audioData, 
+      message.time, 
+      message.rotate, 
+      message.system
+    ])
 
     io.to(roomId).emit('receive_message', message)
   })
