@@ -74,6 +74,7 @@ export default function App() {
   const mediaRecorder = useRef(null)
   const audioChunks   = useRef([])
   const [avatar, setAvatar] = useState(AVATARS[0])
+  const [contextMenu, setContextMenu] = useState(null)
   
   
   const T = theme === 'light' ? LIGHT : DARK
@@ -497,6 +498,17 @@ const joinByCode = () => {
 
                         </span>
                         <div style={{ position:'relative' }}>
+                          <div 
+                         style={{ position:'relative', cursor: 'context-menu' }}
+                          onContextMenu={(e) => {
+                        e.preventDefault();
+                        setContextMenu({ 
+                         x: e.clientX, 
+                          y: e.clientY, 
+                           msg: msg // передаем всё сообщение в контекст
+                              });
+                             }}
+                              ></div>
                           <div style={{ position:'absolute', bottom:'20px', ...(isOwn ? { right:'-18px', borderTop:'10px solid transparent', borderBottom:'10px solid transparent', borderLeft:`18px solid ${theme==='dark' ? '#fff' : '#111'}` } : { left:'-18px', borderTop:'10px solid transparent', borderBottom:'10px solid transparent', borderRight:`18px solid ${theme==='dark' ? '#fff' : '#111'}` }), zIndex:2 }} />
                           <div style={{ position:'absolute', bottom:'22px', ...(isOwn ? { right:'-13px', borderTop:'8px solid transparent', borderBottom:'8px solid transparent', borderLeft:`14px solid ${theme==='dark' ? '#222' : '#fff'}` } : { left:'-13px', borderTop:'8px solid transparent', borderBottom:'8px solid transparent', borderRight:`14px solid ${theme==='dark' ? '#222' : '#fff'}` }), zIndex:3 }} />
                           <div style={{ position:'relative', maxWidth:'240px', padding:'14px 18px 18px 18px', borderRadius: isOwn ? '50% 50% 20% 50% / 50% 50% 50% 20%' : '50% 50% 50% 20% / 50% 50% 20% 50%', background: theme==='dark' ? '#222' : '#fff', border:`3px solid ${theme==='dark' ? '#fff' : '#111'}`, boxShadow: isOwn ? (theme==='dark' ? '3px 3px 0 #fff' : '3px 3px 0 #111') : (theme==='dark' ? '-3px 3px 0 #fff' : '-3px 3px 0 #111'), color: theme==='dark' ? '#fff' : '#111', fontSize: isShout ? '17px' : '14px', fontWeight: isShout ? 900 : 'normal', fontFamily: isShout ? "'DeathRattle', sans-serif" : "'BlambotClassic', sans-serif", letterSpacing: isShout ? '2px' : 'normal', lineHeight:'1.5', wordBreak:'break-word', overflowWrap:'break-word', transition:'background 0.3s' }}>
