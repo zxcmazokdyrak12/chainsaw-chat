@@ -396,12 +396,30 @@ io.on('connection', async (socket) => {
     }
   })
 
-  socket.on('disconnect', () => {
-    const roomId = socket.data.currentRoom
-    if (roomId && typingUsers[roomId]) {
-      delete typingUsers[roomId][socket.id]
-      socket.to(roomId).emit('typing_update', Object.values(typingUsers[roomId]))
+  socket.on('disconnect', async () => {
+  // 1. Сначала отрабатывает твоя логика для статуса "печатает"
+  const roomId = socket.data.currentRoom
+  if (roomId && typingUsers[roomId]) {
+    delete typingUsers[roomId][socket.id]
+    socket.to(roomId).emit('typing_update', Object.values(typingUsers[roomId]))
+  }
+  const user = socket.data.user || socket.user;
+
+  const isGuest = !user || (!user.github_id && !user.google_id && !user.githubId && !user.googleId);
+  if (isGuest && user && user.username) {
+    try {
+      await pool.query(
+        'DELETE FROM room_members WHERE username = $1',
+        [user.username]
+      );
+      console.log(`[Disconnect] Гость ${user.username} удален из всех комнат.`);
+    } catch (err) {
+      console.error('[Disconnect] Ошибка удаления гостя из room_members:', err);
     }
+  } else if (user) {
+    console.log(`[Disconnect] Пользователь ${user.username} (OAuth) вышел из сети. Комнаты сохранены.`);
+  }
+ 
     console.log('отключился:', socket.id)
   })
 })
