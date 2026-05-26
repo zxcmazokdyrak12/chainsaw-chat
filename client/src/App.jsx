@@ -472,16 +472,6 @@ const joinByCode = () => {
                   if (msg.system) return (
                     <motion.div key={msg.id} initial={{ opacity:0 }} animate={{ opacity:1 }} style={{ textAlign:'center', fontSize:'11px', color: theme==='light' ? '#999' : '#555', fontFamily:"'AnimeAce', sans-serif", letterSpacing:'1px', padding:'4px 0' }}>
                       {msg.content}
-                      {/* Message Content */}
-{msg.type === 'audio' && msg.audioData ? (
-  <audio
-    controls
-    src={msg.audioData}
-    style={{ width:'100%', maxWidth:'220px', marginTop:'4px', filter: theme==='dark' ? 'invert(1)' : 'none' }}
-  />
-) : (
-  msg.content
-)}
                     </motion.div>
                   )
 
@@ -506,9 +496,19 @@ const joinByCode = () => {
                           <div style={{ position:'absolute', bottom:'20px', ...(isOwn ? { right:'-18px', borderTop:'10px solid transparent', borderBottom:'10px solid transparent', borderLeft:`18px solid ${theme==='dark' ? '#fff' : '#111'}` } : { left:'-18px', borderTop:'10px solid transparent', borderBottom:'10px solid transparent', borderRight:`18px solid ${theme==='dark' ? '#fff' : '#111'}` }), zIndex:2 }} />
                           <div style={{ position:'absolute', bottom:'22px', ...(isOwn ? { right:'-13px', borderTop:'8px solid transparent', borderBottom:'8px solid transparent', borderLeft:`14px solid ${theme==='dark' ? '#222' : '#fff'}` } : { left:'-13px', borderTop:'8px solid transparent', borderBottom:'8px solid transparent', borderRight:`14px solid ${theme==='dark' ? '#222' : '#fff'}` }), zIndex:3 }} />
                           <div style={{ position:'relative', maxWidth:'240px', padding:'14px 18px 18px 18px', borderRadius: isOwn ? '50% 50% 20% 50% / 50% 50% 50% 20%' : '50% 50% 50% 20% / 50% 50% 20% 50%', background: theme==='dark' ? '#222' : '#fff', border:`3px solid ${theme==='dark' ? '#fff' : '#111'}`, boxShadow: isOwn ? (theme==='dark' ? '3px 3px 0 #fff' : '3px 3px 0 #111') : (theme==='dark' ? '-3px 3px 0 #fff' : '-3px 3px 0 #111'), color: theme==='dark' ? '#fff' : '#111', fontSize: isShout ? '17px' : '14px', fontWeight: isShout ? 900 : 'normal', fontFamily: isShout ? "'DeathRattle', sans-serif" : "'BlambotClassic', sans-serif", letterSpacing: isShout ? '2px' : 'normal', lineHeight:'1.5', wordBreak:'break-word', overflowWrap:'break-word', transition:'background 0.3s' }}>
-                            {msg.content}
+                            
+                            {/* ВОТ ТУТ МЫ ПРОВЕРЯЕМ, АУДИО ЭТО ИЛИ ТЕКСТ */}
+                            {msg.type === 'audio' && msg.audioData ? (
+                              <audio
+                                controls
+                                src={msg.audioData}
+                                style={{ width:'100%', maxWidth:'220px', filter: theme==='dark' ? 'invert(1)' : 'none', outline: 'none' }}
+                              />
+                            ) : (
+                              msg.content
+                            )}
+
                             <span style={{ display:'block', textAlign:'right', fontSize:'10px', marginTop:'6px', color: theme==='dark' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)', fontFamily:"'AnimeAce', sans-serif" }}>
-                              {msg.time} {isOwn && '✓✓'}
                             </span>
                           </div>
                         </div>
