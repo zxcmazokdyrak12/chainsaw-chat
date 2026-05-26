@@ -99,6 +99,10 @@ export default function App() {
               : AVATARS[0]
             )
             setPhase('chat')
+            
+            // ВАЖНО: Добавляем запрос списка комнат СРАЗУ при логине
+            socket.emit('get_rooms', { username: user.username })
+            
             setTimeout(() => {
               socket.emit('join_room', { roomId: 'general', username: user.username, avatar: user.avatar })
             }, 100)
