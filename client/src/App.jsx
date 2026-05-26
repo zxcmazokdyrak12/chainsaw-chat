@@ -471,7 +471,17 @@ const joinByCode = () => {
 
           {/* Messages */}
           <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
-            <div style={{ flex:1, overflowY:'auto', padding:'16px 24px', display:'flex', flexDirection:'column', gap:'10px' }}>
+            <div 
+            onScroll={() => setContextMenu(null)} 
+            style={{ 
+             flex: 1, 
+            overflowY: 'auto', 
+            padding: '16px 24px', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '10px' 
+             }}
+              >
               <AnimatePresence>
                 {messages.map((msg, index) => {
                   if (msg.system) return (
@@ -533,6 +543,59 @@ const joinByCode = () => {
                   )
                 })}
               </AnimatePresence>
+                
+                {/* ─── КОНТЕКСТНОЕ МЕНЮ ─── */}
+      <AnimatePresence>
+        {contextMenu && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            style={{
+              position: 'fixed',
+              top: contextMenu.y,
+              left: contextMenu.x,
+              background: theme === 'dark' ? '#222' : '#fff',
+              border: `3px solid ${theme === 'dark' ? '#fff' : '#111'}`,
+              padding: '4px',
+              zIndex: 9999,
+              borderRadius: '8px',
+              boxShadow: theme === 'dark' ? '4px 4px 0 #fff' : '4px 4px 0 #111',
+              fontFamily: "'AnimeAce', sans-serif",
+              fontSize: '12px',
+              width: '140px',
+              cursor: 'default'
+            }}
+            onClick={() => setContextMenu(null)}
+            onMouseLeave={() => setContextMenu(null)} // Закроет меню, если мышь ушла
+          >
+            {/* Удаление: только для своих сообщений */}
+            {contextMenu.msg.username === username && (
+              <div 
+                onClick={() => {
+                  socket.emit('delete_message', { messageId: contextMenu.msg.id, roomId: currentRoom });
+                  setContextMenu(null);
+                }}
+                style={{ padding: '8px 12px', cursor: 'pointer', color: '#ff4a4a', fontWeight: 900 }}
+              >
+                УДАЛИТЬ 🗑️
+              </div>
+            )}
+            
+            {/* Копирование */}
+            <div 
+              onClick={() => {
+                navigator.clipboard.writeText(contextMenu.msg.content);
+                setContextMenu(null);
+              }}
+              style={{ padding: '8px 12px', cursor: 'pointer', color: theme === 'dark' ? '#fff' : '#111' }}
+            >
+              КОПИРОВАТЬ 📋
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+  
 
               {/* Typing indicator */}
               <AnimatePresence>
@@ -591,6 +654,7 @@ const joinByCode = () => {
 
       {/* ─── TAB: ROOMS ─── */}
       {activeTab === 'rooms' && (
+        
   <div style={{ flex:1, padding:'20px', overflowY:'auto' }}>
 
     {/* show the code of the created room */}
