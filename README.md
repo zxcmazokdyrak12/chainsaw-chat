@@ -1,4 +1,5 @@
-<img width="808" height="495" alt="изображение" src="https://github.com/user-attachments/assets/6a0e5238-11fe-4a74-90fb-515d593e3fb9" /># 🪚 Chainsaw Chat (Fullstack Real-time Messenger)
+<img width="1868" height="990" alt="Снимок экрана 2026-06-21 145900" src="https://github.com/user-attachments/assets/e958e0cb-28a1-4303-b592-f2c4497de82e" /> Code Climate
+# 🪚 Chainsaw Chat (Fullstack Real-time Messenger)
 
 > A messenger set in the "Chainsaw Man" universe, created for those who appreciate the silence of the night city and Tatsuki Fujimoto's unique aesthetic. This project combines rigorous backend logic with vivid frontend animations.
 
