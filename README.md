@@ -162,5 +162,5 @@ chainsaw-chat/
 
 Created with love for Nayuta and clean code. 🩸
 
-<img width="1868" height="990" alt="Снимок экрана 2026-06-21 145900" src="https://github.com/user-attachments/assets/3037ff5e-18e2-40d8-b709-28842630659a" />
+
 
