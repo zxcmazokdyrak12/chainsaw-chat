@@ -11,6 +11,7 @@ import { Strategy as GoogleStrategy } from 'passport-google-oauth20'
 import session from 'express-session'
 import jwt from 'jsonwebtoken'
 import pg from 'pg'
+import bcrypt from 'bcryptjs'
 
 const { Pool } = pg
 const pool = new Pool({
@@ -19,6 +20,17 @@ const pool = new Pool({
 })
 
 async function initDB() {
+
+  await pool.query(`
+  CREATE TABLE IF NOT EXISTS local_users (
+    id SERIAL PRIMARY KEY,
+    username TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    avatar TEXT,
+    created_at TIMESTAMP DEFAULT NOW()
+  )
+`)
+
   // Инициализация таблицы пользователей
   await pool.query(`
     CREATE TABLE IF NOT EXISTS chat_users (
@@ -194,6 +206,56 @@ app.get('/auth/me', (req, res) => {
     res.json(user)
   } catch {
     res.status(401).json({ error: 'Invalid token' })
+  }
+})
+
+app.post('/auth/register', async (req, res) => {
+  const { username, password, avatar } = req.body
+  if (!username || !password)
+    return res.status(400).json({ error: 'Username and password required' })
+  if (password.length < 6)
+    return res.status(400).json({ error: 'Password min 6 characters' })
+  try {
+    const hash = await bcrypt.hash(password, 10)
+    const result = await pool.query(
+      'INSERT INTO local_users (username, password, avatar) VALUES ($1, $2, $3) RETURNING id, username, avatar',
+      [username.toUpperCase(), hash, avatar || null]
+    )
+    const user = result.rows[0]
+    const token = jwt.sign(
+      { id: user.id, username: user.username, avatar: user.avatar },
+      process.env.JWT_SECRET,
+      { expiresIn: '30d' }
+    )
+    res.json({ token, user })
+  } catch (err) {
+    if (err.code === '23505') return res.status(400).json({ error: 'Username already taken' })
+    res.status(500).json({ error: 'Server error' })
+  }
+})
+
+// Логин
+app.post('/auth/login', async (req, res) => {
+  const { username, password } = req.body
+  if (!username || !password)
+    return res.status(400).json({ error: 'Username and password required' })
+  try {
+    const result = await pool.query(
+      'SELECT * FROM local_users WHERE username = $1',
+      [username.toUpperCase()]
+    )
+    const user = result.rows[0]
+    if (!user) return res.status(400).json({ error: 'User not found' })
+    const valid = await bcrypt.compare(password, user.password)
+    if (!valid) return res.status(400).json({ error: 'Wrong password' })
+    const token = jwt.sign(
+      { id: user.id, username: user.username, avatar: user.avatar },
+      process.env.JWT_SECRET,
+      { expiresIn: '30d' }
+    )
+    res.json({ token, user: { id: user.id, username: user.username, avatar: user.avatar } })
+  } catch {
+    res.status(500).json({ error: 'Server error' })
   }
 })
 
