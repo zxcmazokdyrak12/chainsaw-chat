@@ -156,4 +156,8 @@ chainsaw-chat/
 
     [ ] Message reactions
 
+    [ ] Auth with login/password
+
+    [ ] Contect menu (Right button click)
+
 Created with love for Nayuta and clean code. 🩸
