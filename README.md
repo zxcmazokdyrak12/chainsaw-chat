@@ -1,6 +1,6 @@
 # 🪚 Chainsaw Chat (Fullstack Real-time Messenger)
 
-> A messenger set in the "Chainsaw Man" universe, created for those who appreciate the silence of the night city and Tatsuki Fujimoto's unique aesthetic. This project combines rigorous backend logic with vivid frontend animations.
+> A dark, fast, and noisy fullstack messenger set in the **Chainsaw Man** universe. Built for those who appreciate the silence of the night city, clean code, and Tatsuki Fujimoto's unique manga aesthetic.
 
 ---
 
@@ -14,11 +14,11 @@
 
 ## 🛠 Tech Stack
 
-- **Frontend:** React (Vite) + JavaScript
+- **Frontend:** React (Vite) + **TypeScript**
 - **Styling & Animation:** Framer Motion + custom inline styles
 - **Deployment:** Vercel (Frontend) + Render (Backend)
-- **Backend(Planning TS):** Node.js + Express + **TypeScript**
-- **Database & ORM(Planning Prisma):** **Neon (Serverless PostgreSQL)** + **Prisma ORM**
+- **Backend:** Node.js + Express + **TypeScript**
+- **Database & ORM:** **Neon (Serverless PostgreSQL)** + **Prisma ORM**
 - **Authentication:** **OAuth 2.0 (Google & GitHub)** via Passport.js + JWT Session Management
 - **Real-time:** Socket.io (WebSocket)
 - **Audio:** MediaRecorder API
@@ -28,30 +28,59 @@
 
 ## ✨ Key Features
 
-### 🔐 Secure OAuth 2.0 Authentication
-No more clunky registration forms. Users can instantly securely authenticate using their **Google** or **GitHub** accounts. The backend handles user creation, sessions via secure JWT tokens, and automatic profile integration.
+Here is a concise, punchy version in English for your README.md:
+Markdown
+
+### 📱 Mobile Adaptation & UI/UX Optimization
+
+Chainsaw Chat is fully optimized for mobile devices, adapting the aggressive manga-style layout for seamless one-handed use.
+
+- 🛠 What Was Done
+
+* **Dynamic Viewport (`100dvh`):** Replaced `100vh` with `100dvh` to prevent mobile browser navigation bars from cutting off the bottom of the interface.
+* **Streamlined Header:** Heavy character tabs are hidden on mobile, leaving a compact top bar with a theme toggle.
+* **Bottom Navigation (`BottomNav`):** Added a sticky bottom nav bar for easy thumb-reach switching between Chats, Rooms, Settings, and Profile.
+* **Isolated Scroll Containers:** Added independent vertical scrolling (`overflow-y: auto`) to each tab panel to prevent page-wide layout locks and scroll freezing.
+* **Smart Input Layout:** Added dynamic padding to the `InputBar` to keep it perfectly visible right above the mobile navigation bar without overlaps.
+* **Responsive Sidebar:** The room `Sidebar` is automatically hidden on mobile screens, giving 100% width to the active chat.
+
+### 🔐 Multi-Provider OAuth 2.0
+Instant, secure authentication using your **Google** or **GitHub** profiles. The backend automatically provisions users, signs secure JWT session tokens, and fetches raw profile assets (names, avatars) directly into the environment.
 
 ### 🚪 Dynamic Room System & Persistent Storage
 - Powered by **PostgreSQL** and **Prisma**, all users, rooms, and chat histories are safely stored in the cloud.
-- 4 default rooms: **General, Devils, Hunters, Pochita**
 - Create your own room with a custom name
 - Each room gets a unique **8-character invite code** (e.g. `KAIRYU42`)
 - Share the code — anyone can join instantly
 - Per-room message history is fully persistent
 
 ### 💬 Real-time Messaging
-Instant message exchange without page reloads via persistent WebSocket connection. Messages appear simultaneously for all users in the room.
+Zero-latency event synchronization powered by WebSockets. Chat state updates concurrently for all session members, handling text dispatch, message deletion, and pinning.
+
+### 🖱️ Tactical Context Menu
+Right-click on any message bubble to summon a custom inline action frame. Instantly delete messages from the database across all clients in real time or copy raw string content to the clipboard.
+
+### ⌨️ Alive Typing System
+Live typing status indicator that updates instantly. Uses a localized debounce throttle to register who is actively typing in the room, displaying animated bouncing manga dots.
+
+### 🎤 High-Fidelity Voice Notes
+Hold down the mic button to record, release to push. Encodes live microphone input into an optimized audio blob via the browser-native **MediaRecorder API** and streams it directly to the socket pipeline.
+
+### ⚙️ Granular Control & Settings Tab
+- Fully interactive settings panel keeping state variables in perfect synchronization.
+- Dynamic Font Scaling: Instantly switch layout bounds between Small, Medium, and Large typographic frames.
+- Keybind Pipelines: Toggle message submission behavior (Enter vs Ctrl+Enter).
+- Audio & Privacy Toggles: Hot-swap your chainsaw SFX triggers and typing state broadcasting natively.
+
+### 🪚 Public Safety Bureau License (Profile Tab)
+- Your presence inside the app is stylized as an official Devil Hunter Identification License.
+- Pulls live context like data of issue (28/06/2026) and unique barcode sequences.
+- Integrated Terminate Session sequence built with aggressive red manga tones for safe account de-authentication.
 
 ### 👤 User Identity & Profile Customization
 - Automatic avatar and name fetching from Google/GitHub profiles.
 - Integrated fully functional **Profile Tab** with an interactive **Log Out** mechanics for seamless account switching.
 - System notifications when users join.
-
-### ⌨️ Typing Indicators
-Live "is typing..." status with animated bouncing dots — visible to everyone in the room in real time.
-
-### 🎤 Voice Messages
-Hold the microphone button to record, release to send. Audio messages appear inline with a built-in player powered by the **MediaRecorder API**.
 
 ### 🎨 Manga-Style UI
 - Custom **Chainsaw Man favicon** guarding your browser tabs.
@@ -69,7 +98,7 @@ Denji, Aki, Makima, and Reze sit on top of the nav icons. Active tab — charact
 ### 🐾 Easter Eggs
 
 - **🪚 CAPS-LOCK chainsaw** — writing in ALL CAPS has a 10% chance of triggering a chainsaw revving sound effect.
-- **❤️ Pochita love trigger** — typing 'honey','baby','darling', 'cute', 'love', 'sweet', 'aww', '🥺', '💕', '😍', '🐾' or sending ❤️ has a 40% chance of making Pochita leap from the bottom of the screen with a fountain of hand-drawn hearts.
+- **❤️ Pochita love trigger** — typing 'honey', 'baby', 'darling', 'cute', 'love', 'sweet', 'aww', '🥺', '💕', '😍', '🐾' or sending ❤️ has a 40% chance of making Pochita leap from the bottom of the screen with a fountain of hand-drawn hearts.
 
 ---
 
@@ -119,45 +148,43 @@ npm run dev
 chainsaw-chat/
 ├── server/
 │   ├── prisma/
-│   │   └── schema.prisma  ← Database models (User, Room, Message)
+│   │   └── schema.prisma      ← Prisma relational models (User, Room, Message)
 │   ├── src/
-│   │   ├── index.ts       ← TypeScript server entryway
-│   │   └── passport.ts    ← Google & GitHub OAuth Strategy configuration
+│   │   ├── index.ts           ← Strictly typed Express server entrypoint
+│   │   └── passport.ts        ← OAuth 2.0 Security Strategies
 │   └── package.json
 └── client/
     ├── src/
-    │   ├── App.jsx        ← Main application hub
-    │   ├── fonts.css      ← Chainsaw Man font declarations
-    │   └── main.jsx
-    └── public/
-        ├── favicon.svg    ← Denji custom favicon
-        ├── denji.png / aki.png / makima.png / reze.png / pochita.png
-        ├── hand.png
-        ├── chainsaw.mp3
-        ├── bubble.png / bubble_me.png
-        ├── heart_0.png ... heart_8.png
-        └── icon_chat.png / icon_rooms.png / icon_settings.png / icon_profile.png
+    │   ├── components/        ← Modular UI Blocks (InputBar, ProfileTab, RoomsTab, etc.)
+    │   ├── hooks/             ← Customs React Hooks (useSettings tracking)
+    │   ├── utils/             ← Helper modules (date processing pipelines)
+    │   ├── App.tsx            ← Central reactive Hub (TypeScript-managed)
+    │   ├── fonts.css          ← @font-face declarations
+    │   └── main.tsx           ← Virtual DOM target mounting
+    └── public/                ← Binary audio clips, assets & manga frames
 
 🛤 Road Map
 
-    [x] Database integration (Neon Serverless PostgreSQL)
+    [x] Cloud Database Sync (Neon Serverless Cloud Architecture)
 
-    [ ] Prisma ORM configuration
+    [x] Prisma ORM configuration layer
 
-    [ ] TypeScript backend migration
+    [x] Full Backend Migration to Strict TypeScript
 
-    [x] Google & GitHub OAuth 2.0 Integration
+    [x] Frontend refactoring into full Type Safety (.tsx architecture alignment)
 
-    [x] User avatars, live dynamic profile extraction and logout support
+    [x] Google & GitHub Provider integration (OAuth 2.0)
 
-    [ ] Video messages via WebRTC
+    [x] Persistent session tracking via JSON Web Tokens
 
-    [ ] Mobile-responsive UI improvements
+    [x] Live interactive context action layouts
 
-    [ ] Message reactions
+    [ ] Async Video transmission framework via WebRTC
 
-    [ ] Auth with login/password
+    [x] Mobile-responsive UI improvements
 
-    [ ] Contect menu (Right button click)
+    [ ] Per-message emoticons and reactive status flags
 
-Created with love for Nayuta and clean code. 🩸
+    [ ] Independent login/pass legacy security framework
+
+Created with love for Nayuta and perfectly structured code. 🩸

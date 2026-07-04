@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model LocalUser {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  avatar    String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("local_users")
+}
+
+model ChatUser {
+  id         Int      @id @default(autoincrement())
+  provider   String
+  providerId String   @map("provider_id")
+  username   String
+  avatar     String?
+  email      String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@unique([provider, providerId])
+  @@map("chat_users")
+}
+
+model Room {
+  id        String   @id
+  name      String
+  code      String   @unique
+  createdBy String?  @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  members  RoomMember[]
+  messages Message[]
+
+  @@map("rooms")
+}
+
+model RoomMember {
+  roomId   String   @map("room_id")
+  username String
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@id([roomId, username])
+  @@map("room_members")
+}
+
+model Message {
+  id        BigInt   @id
+  roomId    String   @map("room_id")
+  username  String?
+  content   String?
+  type      String   @default("text")
+  audioData String?  @map("audio_data")
+  avatar    String?
+  time      String?
+  rotate    String?
+  system    Boolean  @default(false)
+  isEdited  Boolean  @default(false) @map("is_edited")
+  isPinned  Boolean  @default(false) @map("is_pinned")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
