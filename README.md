@@ -1,3 +1,4 @@
+<img width="1868" height="990" alt="Снимок экрана 2026-06-21 145900" src="https://github.com/user-attachments/assets/e958e0cb-28a1-4303-b592-f2c4497de82e" /> Code Climate
 # 🪚 Chainsaw Chat (Fullstack Real-time Messenger)
 
 > A dark, fast, and noisy fullstack messenger set in the **Chainsaw Man** universe. Built for those who appreciate the silence of the night city, clean code, and Tatsuki Fujimoto's unique manga aesthetic.
@@ -187,4 +188,4 @@ chainsaw-chat/
 
     [ ] Independent login/pass legacy security framework
 
-Created with love for Nayuta and perfectly structured code. 🩸
+Created with love for Nayuta and clean code. 🩸
