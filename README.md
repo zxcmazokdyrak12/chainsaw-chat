@@ -7,15 +7,47 @@
 
 ## 🖼️ Preview
 
-| Start Screen | Login Screen | Chat Interface (Manga-Style UI) | Settings Interface | Profile Screen |
-|---|---|---|---|---|
-| ![Start Screen](client/public/start_engine.png) | ![Login Screen](client/public/login_screen.png) | ![Chat Interface](client/public/chat_screen.png) | ! [Settings Interface](client/public/settings_screen.png) | ![Prfoile Screen](client/public/profile_screen.png) |
-| Mobile Chat Interface | Mobile Settings Interface | Mobile Profile Screen |
-|---|---|---|
-| ![Chat Interface](client/public/mobile_chat_screen.png) | ![Settings Interface](client/public/mobile_settings_screen.png) | ![Profile Screen](client/public/mobile_profile_screen.png) |
+### 🖥️ Desktop Version
+
+<table width="100%">
+  <tr>
+    <td width="33.3%" align="center"><b>Start Screen</b></td>
+    <td width="33.3%" align="center"><b>Login Screen</b></td>
+    <td width="33.3%" align="center"><b>Chat Interface (Manga-Style)</b></td>
+  </tr>
+  <tr>
+    <td><img src="client/public/start_engine.png" width="100%"></td>
+    <td><img src="client/public/login_screen.png" width="100%"></td>
+    <td><img src="client/public/chat_screen.png" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Settings Interface</b></td>
+    <td align="center"><b>Profile Screen</b></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td><img src="client/public/settings_screen.png" width="100%"></td>
+    <td><img src="client/public/profile_screen.png" width="100%"></td>
+    <td></td>
+  </tr>
+</table>
 
 ---
 
+### 📱 Mobile Version
+
+<table width="100%">
+  <tr>
+    <td width="33.3%" align="center"><b>Mobile Chat</b></td>
+    <td width="33.3%" align="center"><b>Mobile Settings</b></td>
+    <td width="33.3%" align="center"><b>Mobile Profile</b></td>
+  </tr>
+  <tr>
+    <td><img src="client/public/mobile_chat_screen.png" width="100%"></td>
+    <td><img src="client/public/mobile_settings_screen.png" width="100%"></td>
+    <td><img src="client/public/mobile_profile_screen.png" width="100%"></td>
+  </tr>
+</table>
 ## 🛠 Tech Stack
 
 - **Frontend:** React (Vite) + **TypeScript**
