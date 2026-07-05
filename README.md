@@ -65,8 +65,6 @@
 
 ## ✨ Key Features
 
-Here is a concise, punchy version in English for your README.md:
-Markdown
 
 ### 📱 Mobile Adaptation & UI/UX Optimization
 
