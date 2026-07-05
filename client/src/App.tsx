@@ -320,16 +320,18 @@ export default function App() {
         }
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       
-      // Выбираем максимально поддерживаемый и стабильный формат
+      // Настройка для Firefox с resistFingerprinting: 
+      // Не перебираем mimeType вручную, а даем браузеру использовать дефолтный системный контейнер
       let options = {};
-      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-        options = { mimeType: 'audio/webm;codecs=opus' };
-      } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+      
+      // Если это Firefox/Линукс/Мак с защитой, принудительный opus в webm может ломаться.
+      // Проверяем только самый базовый вариант, иначе оставляем пустой объект
+      if (MediaRecorder.isTypeSupported('audio/webm')) {
         options = { mimeType: 'audio/webm' };
-      } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
-        options = { mimeType: 'audio/mp4' };
+      } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
+        options = { mimeType: 'audio/ogg' };
       }
    
       mediaRecorder.current = new MediaRecorder(stream, options);
@@ -341,13 +343,12 @@ export default function App() {
         }
       };
    
-      mediaRecorder.current.onstop = () => {
+      mediaRecorder.current.onstop = async () => {
         if (audioChunks.current.length === 0) {
           console.error("Чанки аудио пусты!");
           return;
         }
    
-        // Принудительно задаем правильный mimeType, который использовал рекордер
         const finalType = mediaRecorder.current?.mimeType || 'audio/webm';
         const blob = new Blob(audioChunks.current, { type: finalType });
 
@@ -357,19 +358,28 @@ export default function App() {
           return;
         }
    
-        const reader = new FileReader();
-        
-        reader.onloadend = () => {
-          let base64Audio = reader.result as string;
-          
-          if (!base64Audio) {
-            console.error('Ошибка: FileReader вернул пустой результат');
-            return;
-          }
+        // Обернем FileReader в Promise, чтобы гарантировать отправку ТЕКСТА, а не битого объекта
+        const readBlobAsBase64 = (audioBlob: Blob): Promise<string> => {
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              let res = reader.result as string;
+              if (res && res.includes('data:application/octet-stream;base64,')) {
+                res = res.replace('data:application/octet-stream;base64,', `data:${finalType};base64,`);
+              }
+              resolve(res);
+            };
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(audioBlob);
+          });
+        };
 
-          // Фикс для Chrome/Safari: если тип сбросился до octet-stream, принудительно меняем его на аудио
-          if (base64Audio.includes('data:application/octet-stream;base64,')) {
-            base64Audio = base64Audio.replace('data:application/octet-stream;base64,', `data:${finalType};base64,`);
+        try {
+          const base64Audio = await readBlobAsBase64(blob);
+
+          if (!base64Audio || base64Audio.length < 100) {
+            console.error('Сгенерирована слишком короткая или пустая Base64 строка');
+            return;
           }
 
           socket.emit('send_message', {
@@ -380,17 +390,15 @@ export default function App() {
             type: 'audio',
             audioData: base64Audio,
           });
-        };
+        } catch (err) {
+          console.error('Ошибка при чтении Blob в Base64:', err);
+        }
 
-        // Сначала вешаем событие onloadend, а ТЕПЕРЬ запускаем чтение
-        reader.readAsDataURL(blob);
-
-        // Гасим микрофон
+        // Выключаем микрофон
         stream.getTracks().forEach(t => t.stop());
       };
    
-      // ВАЖНО: вызываем БЕЗ аргументов (не передаем миллисекунды). 
-      // Браузер запишет всё в один сплошной валидный трек.
+      // Запускаем без параметров времени
       mediaRecorder.current.start();
       setIsRecording(true);
     } catch (e) {
