@@ -81,7 +81,6 @@ export interface RoomItem {
   code: string
 }
 
-// FIX: Returned 'id' strictly to string to perfectly match UsernameScreen expectations
 export interface AvatarItem {
   id: string
   name: string
@@ -132,7 +131,6 @@ export default function App() {
   const [pinnedMsg, setPinnedMsg] = useState<MessageItem | null>(null)
 
   const { settings, update: updateSetting, resolveTheme } = useSettings()
-
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark' | 'system'>(() => resolveTheme() as 'light' | 'dark' | 'system')
 
   useEffect(() => {
@@ -314,13 +312,12 @@ export default function App() {
 
   const startRecording = async (): Promise<void> => {
     try {
-      // 🛠️ added check for Capacitor environment to request microphone permission on Android
-      if ((window as any).Capacitor) {
+      // NATIVE PLATFORM (Capacitor) requires explicit permission request for microphone access
+      if (window && (window as any).Capacitor && (window as any).Capacitor.isNativePlatform) {
         try {
-          // Запрашиваем микрофон напрямую у системы Android
           await (window as any).Capacitor.Plugins.Permissions.requestPermission({ name: 'microphone' });
-        } catch (permissionError) {
-          console.warn("Кастомный запрос прав не сработал, пробуем стандартный:", permissionError);
+        } catch (pe) {
+          console.warn(pe);
         }
       }
 
@@ -336,7 +333,7 @@ export default function App() {
       audioChunks.current = []
    
       mediaRecorder.current.ondataavailable = (e: BlobEvent) => {
-        if (e.data.size > 0) audioChunks.current.push(e.data)
+        if (e.data && e.data.size > 0) audioChunks.current.push(e.data)
       }
    
       mediaRecorder.current.onstop = () => {
@@ -363,7 +360,8 @@ export default function App() {
         stream.getTracks().forEach(t => t.stop())
       }
    
-      mediaRecorder.current.start(250)
+      // Убрали (250), пишем одним куском, чтобы веб на ПК не дохнул
+      mediaRecorder.current.start()
       setIsRecording(true)
     } catch (e) {
       console.error(e)
@@ -416,7 +414,7 @@ export default function App() {
       style={{
         display: 'flex', 
         flexDirection: 'column', 
-        height: '100dvh', // fix №1: dynamic height for mobile browsers (100vh is not enough on mobile, because of the address bar)
+        height: '100dvh', 
         background: T.appBg,
         fontFamily: 'BlambotClassic, "Arial Narrow", sans-serif',
         fontSize: 'var(--font-size-base, 14px)',
