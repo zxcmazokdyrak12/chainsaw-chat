@@ -21,11 +21,13 @@
     <td><img src="client/public/chat_screen.png" width="100%"></td>
   </tr>
   <tr>
+    <td align="center"><b>Rooms Screen</b></td>
     <td align="center"><b>Settings Interface</b></td>
     <td align="center"><b>Profile Screen</b></td>
     <td></td>
   </tr>
   <tr>
+    <td><img src="client/public/room_screen.png" width="100%"></td>
     <td><img src="client/public/settings_screen.png" width="100%"></td>
     <td><img src="client/public/profile_screen.png" width="100%"></td>
     <td></td>
@@ -39,11 +41,13 @@
 <table width="100%">
   <tr>
     <td width="33.3%" align="center"><b>Mobile Chat</b></td>
+    <td width="33.3%" align="center"><b>Mobile Rooms</b></td>
     <td width="33.3%" align="center"><b>Mobile Settings</b></td>
     <td width="33.3%" align="center"><b>Mobile Profile</b></td>
   </tr>
   <tr>
     <td><img src="client/public/mobile_chat_screen.png" width="100%"></td>
+    <td><img src="client/public/mobile_room_screen.png" width="100%"></td>
     <td><img src="client/public/mobile_settings_screen.png" width="100%"></td>
     <td><img src="client/public/mobile_profile_screen.png" width="100%"></td>
   </tr>
