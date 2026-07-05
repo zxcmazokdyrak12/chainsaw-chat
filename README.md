@@ -48,6 +48,7 @@
     <td><img src="client/public/mobile_profile_screen.png" width="100%"></td>
   </tr>
 </table>
+
 ## 🛠 Tech Stack
 
 - **Frontend:** React (Vite) + **TypeScript**
