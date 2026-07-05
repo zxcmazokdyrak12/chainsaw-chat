@@ -314,6 +314,17 @@ export default function App() {
 
   const startRecording = async (): Promise<void> => {
     try {
+      // 🛠️ added check for Capacitor environment to request microphone permission on Android
+      if ((window as any).Capacitor) {
+        try {
+          // Запрашиваем микрофон напрямую у системы Android
+          await (window as any).Capacitor.Plugins.Permissions.requestPermission({ name: 'microphone' });
+        } catch (permissionError) {
+          console.warn("Кастомный запрос прав не сработал, пробуем стандартный:", permissionError);
+        }
+      }
+
+      // default getUserMedia call
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
         ? 'audio/webm;codecs=opus'
