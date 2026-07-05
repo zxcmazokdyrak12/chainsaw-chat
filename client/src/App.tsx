@@ -312,7 +312,6 @@ export default function App() {
 
   const startRecording = async (): Promise<void> => {
     try {
-      // Поддержка Capacitor на мобилках
       if (window && (window as any).Capacitor && (window as any).Capacitor.isNativePlatform) {
         try {
           await (window as any).Capacitor.Plugins.Permissions.requestPermission({ name: 'microphone' });
@@ -323,14 +322,14 @@ export default function App() {
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       
-      // Явно проверяем кодеки, чтобы не словить тишину на Safari/iOS и Chrome на ПК
+      // Выбираем максимально поддерживаемый и стабильный формат
       let options = {};
       if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
         options = { mimeType: 'audio/webm;codecs=opus' };
       } else if (MediaRecorder.isTypeSupported('audio/webm')) {
         options = { mimeType: 'audio/webm' };
       } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
-        options = { mimeType: 'audio/mp4' }; // Спасение для Safari
+        options = { mimeType: 'audio/mp4' };
       }
    
       mediaRecorder.current = new MediaRecorder(stream, options);
@@ -348,23 +347,29 @@ export default function App() {
           return;
         }
    
-        const blob = new Blob(audioChunks.current, { type: mediaRecorder.current?.mimeType || 'audio/webm' });
+        // Принудительно задаем правильный mimeType, который использовал рекордер
+        const finalType = mediaRecorder.current?.mimeType || 'audio/webm';
+        const blob = new Blob(audioChunks.current, { type: finalType });
 
-        if (blob.size > 2 * 1024 * 1024) { // Увеличим лимит до 2МБ, 900КБ для base64 маловато
+        if (blob.size > 3 * 1024 * 1024) { 
           alert('Voice message too long!');
           stream.getTracks().forEach(t => t.stop());
           return;
         }
    
         const reader = new FileReader();
-        reader.readAsDataURL(blob); // Начинаем читать сразу
         
         reader.onloadend = () => {
-          const base64Audio = reader.result as string; // Явное приведение к строке
+          let base64Audio = reader.result as string;
           
-          if (!base64Audio || base64Audio.startsWith('data:;')) {
-            console.error('Ошибка кодирования Base64');
+          if (!base64Audio) {
+            console.error('Ошибка: FileReader вернул пустой результат');
             return;
+          }
+
+          // Фикс для Chrome/Safari: если тип сбросился до octet-stream, принудительно меняем его на аудио
+          if (base64Audio.includes('data:application/octet-stream;base64,')) {
+            base64Audio = base64Audio.replace('data:application/octet-stream;base64,', `data:${finalType};base64,`);
           }
 
           socket.emit('send_message', {
@@ -373,16 +378,20 @@ export default function App() {
             avatar: avatar.src,
             content: '🎤 voice message',
             type: 'audio',
-            audioData: base64Audio, // Теперь улетает чистая валидная Base64 Data URL строка!
+            audioData: base64Audio,
           });
         };
 
+        // Сначала вешаем событие onloadend, а ТЕПЕРЬ запускаем чтение
+        reader.readAsDataURL(blob);
+
+        // Гасим микрофон
         stream.getTracks().forEach(t => t.stop());
       };
    
-      // Запускаем нарезку данных небольшими порциями (каждые 250мс). 
-      // Это решает проблему пустых чанков на бэкенде при резком стопе
-      mediaRecorder.current.start(250);
+      // ВАЖНО: вызываем БЕЗ аргументов (не передаем миллисекунды). 
+      // Браузер запишет всё в один сплошной валидный трек.
+      mediaRecorder.current.start();
       setIsRecording(true);
     } catch (e) {
       console.error(e);
