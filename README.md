@@ -7,9 +7,12 @@
 
 ## 🖼️ Preview
 
-| Start Screen | Login Screen | Chat Interface (Manga-Style UI) |
+| Start Screen | Login Screen | Chat Interface (Manga-Style UI) | Settings Interface | Profile Screen |
+|---|---|---|---|---|
+| ![Start Screen](client/public/start_engine.png) | ![Login Screen](client/public/login_screen.png) | ![Chat Interface](client/public/chat_screen.png) | ! [Settings Interface](client/public/settings_screen.png) | ![Prfoile Screen](client/public/profile_screen.png) |
+| Mobile Chat Interface | Mobile Settings Interface | Mobile Profile Screen |
 |---|---|---|
-| ![Start Screen](client/public/start_engine.png) | ![Login Screen](client/public/login_screen.png) | ![Chat Interface](client/public/chat_screen.png) |
+| ![Chat Interface](client/public/mobile_chat_screen.png) | ![Settings Interface](client/public/mobile_settings_screen.png) | ![Profile Screen](client/public/mobile_profile_screen.png) |
 
 ---
 
