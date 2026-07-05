@@ -27,6 +27,9 @@ const prisma = new PrismaClient({
 
 const app = express()
 
+// ── FIX ДЛЯ RENDER (EXPRESS-RATE-LIMIT) ──────────────────────────
+app.set('trust proxy', 1) 
+
 // ── Types ────────────────────────────────────────────────────────
 
 interface AuthUser {
@@ -216,7 +219,6 @@ async function getRoomHistory(roomId: string) {
     take:    100,
   })
 
-  // collect unique usernames from messages to fetch avatars in one go
   const uniqueUsernames = Array.from(new Set(messages.map(m => m.username).filter(Boolean))) as string[]
   
   const [localUsers, oauthUsers] = await Promise.all([
@@ -228,12 +230,11 @@ async function getRoomHistory(roomId: string) {
   localUsers.forEach(u => avatarMap.set(u.username, u.avatar))
   oauthUsers.forEach(u => avatarMap.set(u.username, u.avatar))
 
-  // return messages with updated avatars, if user still exists
   return messages.map(m => {
     const freshAvatar = m.username ? avatarMap.get(m.username) : null
     return serializeMessage({
       ...m,
-      avatar: freshAvatar ?? m.avatar // if user was deleted, keep old avatar; otherwise, update to fresh avatar
+      avatar: freshAvatar ?? m.avatar 
     })
   })
 }
@@ -402,66 +403,41 @@ io.on('connection', (socket: Socket) => {
     socket.to(roomId).emit('user_joined', { username, roomId })
   })
 
+  // ── FIX CLEANED UP SEND_MESSAGE ────────────────────────────────
   socket.on('send_message', async (payload: SendMessagePayload) => {
-    const { roomId, username, content, type = 'text', audioData, avatar } = payload
+    try {
+      const { roomId, username, content, type = 'text', audioData, avatar } = payload
 
-    const now = Date.now()
-    if (!data.msgCount) data.msgCount = 0
-    if (!data.msgReset) data.msgReset = now
-    if (now - data.msgReset > 60_000) { data.msgCount = 0; data.msgReset = now }
-    data.msgCount++
-    if (data.msgCount > 30) { socket.emit('rate_limited', 'Too many messages'); return }
+      const now = Date.now()
+      if (!data.msgCount) data.msgCount = 0
+      if (!data.msgReset) data.msgReset = now
+      if (now - data.msgReset > 60_000) { data.msgCount = 0; data.msgReset = now }
+      data.msgCount++
+      if (data.msgCount > 30) { socket.emit('rate_limited', 'Too many messages'); return }
 
-    const message = {
-      id:        BigInt(Date.now()),
-      roomId,
-      username,
-      content:   content ?? '',
-      type,
-      audioData: audioData ?? null,
-      avatar:    avatar ?? null,
-      time:      new Date().toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' }),
-      rotate:    (Math.random() * 4 - 2).toFixed(2),
-      system:    false,
-      isEdited:  false,
-      isPinned:  false,
+      // Сохраняем в базу. Поле id опускаем, если в схеме Prisma стоит автогенерация/default,
+      // Либо используем BigInt(Date.now()), но ОДИН раз за вызов функции.
+      const savedMessage = await prisma.message.create({
+        data: {
+          id:        BigInt(Date.now()), // Оставляем BigInt, если в бд ручной id
+          roomId,
+          username,
+          content:   content ?? '',
+          type,
+          audioData: audioData ?? null,
+          avatar:    avatar ?? null,
+          time:      new Date().toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' }),
+          rotate:    (Math.random() * 4 - 2).toFixed(2),
+          system:    false,
+          isEdited:  false,
+          isPinned:  false,
+        }
+      })
+
+      io.to(roomId).emit('receive_message', serializeMessage(savedMessage))
+    } catch (err) {
+      console.error('[Send Message Error]:', err)
     }
-
-    socket.on('send_message', async (payload: SendMessagePayload) => {
-    const { roomId, username, content, type = 'text', audioData, avatar } = payload
-
-    const now = Date.now()
-    if (!data.msgCount) data.msgCount = 0
-    if (!data.msgReset) data.msgReset = now
-    if (now - data.msgReset > 60_000) { data.msgCount = 0; data.msgReset = now }
-    data.msgCount++
-    if (data.msgCount > 30) { socket.emit('rate_limited', 'Too many messages'); return }
-
-    const messageData = {
-      id:        BigInt(Date.now()),
-      roomId,
-      username,
-      content:   content ?? '',
-      type,
-      audioData: audioData ?? null,
-      avatar:    avatar ?? null,
-      time:      new Date().toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' }),
-      rotate:    (Math.random() * 4 - 2).toFixed(2),
-      system:    false,
-      isEdited:  false,
-      isPinned:  false,
-    }
-
-    // save the message to the database
-    const savedMessage = await prisma.message.create({ data: messageData })
-    
-    // send the message to all clients in the room
-    io.to(roomId).emit('receive_message', serializeMessage(savedMessage))
-  })
-    
-
-    await prisma.message.create({ data: message })
-    io.to(roomId).emit('receive_message', serializeMessage(message))
   })
 
   socket.on('delete_message', async ({ messageId, roomId }: { messageId: number; roomId: string }) => {
