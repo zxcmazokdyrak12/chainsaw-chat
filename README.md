@@ -40,10 +40,10 @@
 
 <table width="100%">
   <tr>
-    <td width="33.3%" align="center"><b>Mobile Chat</b></td>
-    <td width="33.3%" align="center"><b>Mobile Rooms</b></td>
-    <td width="33.3%" align="center"><b>Mobile Settings</b></td>
-    <td width="33.3%" align="center"><b>Mobile Profile</b></td>
+    <td width="25%" align="center"><b>Mobile Chat</b></td>
+    <td width="25%" align="center"><b>Mobile Rooms</b></td>
+    <td width="25%" align="center"><b>Mobile Settings</b></td>
+    <td width="25%" align="center"><b>Mobile Profile</b></td>
   </tr>
   <tr>
     <td><img src="client/public/mobile_chat_screen.png" width="100%"></td>
