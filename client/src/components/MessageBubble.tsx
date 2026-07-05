@@ -1,9 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
 
-// describe the structure of a message object
 export interface MessageData {
-  id: number
+  id: number | string
   username: string | null
   content: string | null
   time: string
@@ -11,19 +10,16 @@ export interface MessageData {
   avatar?: string
   isEdited?: boolean
   type?: string
-  audioData?: string
+  audioData?: any // Ослабим тип для гибкости приходящих данных от сокетов
   system?: boolean
 }
 
-// Пропсы для плеера
 interface AudioPlayerProps {
   src: string
   theme: string
 }
 
-// custom audio player component 
 export function AudioPlayer({ src, theme }: AudioPlayerProps) {
-  // showing typescript types for useRef and useState
   const audioRef = useRef<HTMLAudioElement>(null)
   const [playing, setPlaying] = useState<boolean>(false)
   const [progress, setProgress] = useState<number>(0)
@@ -31,22 +27,45 @@ export function AudioPlayer({ src, theme }: AudioPlayerProps) {
   const [currentTime, setCurrent] = useState<number>(0)
   const [error, setError] = useState<boolean>(false)
 
+  // Исправление: Инициализируем duration, если метаданные уже упали в кэш браузера
   useEffect(() => {
     const audio = audioRef.current
     if (!audio) return
 
-    const onLoaded = () => setDuration(audio.duration)
+    setError(false) // сбрасываем ошибку при смене источника
+
+    const onLoaded = () => {
+      if (audio.duration && !isNaN(audio.duration)) {
+        setDuration(audio.duration)
+      }
+    }
+
     const onTime = () => {
       setCurrent(audio.currentTime)
       setProgress(audio.duration ? (audio.currentTime / audio.duration) * 100 : 0)
     }
-    const onEnded = () => { setPlaying(false); setProgress(0); setCurrent(0) }
-    const onError = () => setError(true)
+
+    const onEnded = () => {
+      setPlaying(false)
+      setProgress(0)
+      setCurrent(0)
+    }
+
+    const onError = (e: any) => {
+      console.error("Audio element error details:", audio.error)
+      setError(true)
+    }
+
+    // Если аудио уже загрузилось (для быстрых Base64 строк)
+    if (audio.readyState >= 1 && audio.duration) {
+      setDuration(audio.duration)
+    }
 
     audio.addEventListener('loadedmetadata', onLoaded)
     audio.addEventListener('timeupdate', onTime)
     audio.addEventListener('ended', onEnded)
     audio.addEventListener('error', onError)
+
     return () => {
       audio.removeEventListener('loadedmetadata', onLoaded)
       audio.removeEventListener('timeupdate', onTime)
@@ -58,23 +77,35 @@ export function AudioPlayer({ src, theme }: AudioPlayerProps) {
   const togglePlay = () => {
     const audio = audioRef.current
     if (!audio) return
+    
     if (playing) {
       audio.pause()
       setPlaying(false)
     } else {
-      audio.play().catch(() => setError(true))
-      setPlaying(true)
+      // Перезапрашиваем duration на случай, если loadedmetadata проспал
+      if (!duration && audio.duration) {
+        setDuration(audio.duration)
+      }
+      
+      audio.play()
+        .then(() => setPlaying(true))
+        .catch((err) => {
+          console.error("Playback failed:", err)
+          setError(true)
+        })
     }
   }
 
-  // type guard for mouse event
   const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
     const audio = audioRef.current
-    if (!audio || !duration) return
+    // Если duration равен 0, но в самом аудио-элементе он есть — подставляем его
+    const actualDuration = duration || audio?.duration
+    if (!audio || !actualDuration || isNaN(actualDuration)) return
+
     const rect = e.currentTarget.getBoundingClientRect()
     const x = e.clientX - rect.left
     const ratio = Math.max(0, Math.min(1, x / rect.width))
-    audio.currentTime = ratio * duration
+    audio.currentTime = ratio * actualDuration
   }
 
   const fmt = (s: number) => {
@@ -93,20 +124,20 @@ export function AudioPlayer({ src, theme }: AudioPlayerProps) {
     return (
       <div style={{
         fontFamily: "'AnimeAce', sans-serif",
-        fontSize: '10px', color: '#cc2200', opacity: 0.7,
+        fontSize: '10px', color: '#cc2200', opacity: 0.9,
         padding: '4px 0',
+        display: 'flex', flexDirection: 'column', gap: '4px'
       }}>
-        🎤 voice message
+        <span>⚠️ Ошибка проигрывания ГС</span>
+        <span style={{ fontSize: '8px', opacity: 0.6 }}>Не поддерживаемый кодек или пустой файл</span>
       </div>
     )
   }
 
   return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', gap: '6px',
-      width: '180px',
-    }}>
-      <audio ref={audioRef} src={src} preload="metadata" />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '180px' }}>
+      {/* Добавили preload="auto" для Base64 */}
+      <audio ref={audioRef} src={src} preload="auto" crossOrigin="anonymous" />
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <motion.button
@@ -130,7 +161,7 @@ export function AudioPlayer({ src, theme }: AudioPlayerProps) {
           <div
             onClick={handleSeek}
             style={{
-              width: '100%', height: '4px',
+              width: '100%', height: '6px', // Чуть толще, чтобы кликать было удобнее
               background: track,
               cursor: 'pointer',
               position: 'relative',
@@ -151,7 +182,7 @@ export function AudioPlayer({ src, theme }: AudioPlayerProps) {
             fontSize: '9px', color: fg, opacity: 0.6,
           }}>
             <span>{fmt(currentTime)}</span>
-            <span>{fmt(duration)}</span>
+            <span>{fmt(duration || audioRef.current?.duration || 0)}</span>
           </div>
         </div>
       </div>
@@ -172,13 +203,12 @@ export function AudioPlayer({ src, theme }: AudioPlayerProps) {
 
 const SFX_WORDS = ['VROOM!', 'SLASH!', 'BANG!', 'GRAAA!', 'DOOOM!', 'GRIND!']
 
-// props for MessageBubble component
 interface MessageBubbleProps {
   msg: MessageData
   index: number
   isOwn: boolean
   theme: string
-  T: Record<string, string> // theme colors for the message bubble
+  T: Record<string, string>
   onContextMenu: (data: { x: number; y: number; msg: MessageData }) => void
 }
 
@@ -293,10 +323,12 @@ export default function MessageBubble({ msg, index, isOwn, theme, T, onContextMe
                 cursor: 'context-menu',
               }}
             >
-              {msg.type === 'audio' && msg.audioData
-                ? <AudioPlayer src={msg.audioData} theme={theme} />
-                : msg.content
-              }
+              {/* Исправление: проверяем строго тип аудио сообщения */}
+              {msg.type === 'audio' && msg.audioData ? (
+                <AudioPlayer src={msg.audioData} theme={theme} />
+              ) : (
+                msg.content
+              )}
             </div>
           </div>
         </div>

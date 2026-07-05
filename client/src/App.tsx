@@ -312,7 +312,7 @@ export default function App() {
 
   const startRecording = async (): Promise<void> => {
     try {
-      // NATIVE PLATFORM (Capacitor) requires explicit permission request for microphone access
+      // Поддержка Capacitor на мобилках
       if (window && (window as any).Capacitor && (window as any).Capacitor.isNativePlatform) {
         try {
           await (window as any).Capacitor.Plugins.Permissions.requestPermission({ name: 'microphone' });
@@ -321,59 +321,72 @@ export default function App() {
         }
       }
 
-      // default getUserMedia call
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : MediaRecorder.isTypeSupported('audio/webm')
-          ? 'audio/webm'
-          : 'audio/ogg;codecs=opus'
+      
+      // Явно проверяем кодеки, чтобы не словить тишину на Safari/iOS и Chrome на ПК
+      let options = {};
+      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+        options = { mimeType: 'audio/webm;codecs=opus' };
+      } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+        options = { mimeType: 'audio/webm' };
+      } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+        options = { mimeType: 'audio/mp4' }; // Спасение для Safari
+      }
    
-      mediaRecorder.current = new MediaRecorder(stream); // Пусть браузер сам выберет дефолтный лучший кодек
+      mediaRecorder.current = new MediaRecorder(stream, options);
       audioChunks.current = [];
    
       mediaRecorder.current.ondataavailable = (e: BlobEvent) => {
         if (e.data && e.data.size > 0) {
-        audioChunks.current.push(e.data);
+          audioChunks.current.push(e.data);
         }
       };
    
       mediaRecorder.current.onstop = () => {
-     // Дополнительная проверка: если чанки пусты, значит данные не успели дойти
-       if (audioChunks.current.length === 0) {
-       console.error("Чанки аудио пусты!");
-       return;
-     }
+        if (audioChunks.current.length === 0) {
+          console.error("Чанки аудио пусты!");
+          return;
+        }
    
         const blob = new Blob(audioChunks.current, { type: mediaRecorder.current?.mimeType || 'audio/webm' });
 
-         if (blob.size > 900_000) {
-        alert('Voice message too long!');
+        if (blob.size > 2 * 1024 * 1024) { // Увеличим лимит до 2МБ, 900КБ для base64 маловато
+          alert('Voice message too long!');
           stream.getTracks().forEach(t => t.stop());
-       return;
-      }
+          return;
+        }
    
         const reader = new FileReader();
+        reader.readAsDataURL(blob); // Начинаем читать сразу
+        
         reader.onloadend = () => {
-        socket.emit('send_message', {
-       roomId: currentRoom,
-        username,
-       avatar: avatar.src,
-        content: '🎤 voice message',
-        type: 'audio',
-       audioData: reader.result,
-          })
-        }
-        reader.readAsDataURL(blob)
-        stream.getTracks().forEach(t => t.stop())
-      }
+          const base64Audio = reader.result as string; // Явное приведение к строке
+          
+          if (!base64Audio || base64Audio.startsWith('data:;')) {
+            console.error('Ошибка кодирования Base64');
+            return;
+          }
+
+          socket.emit('send_message', {
+            roomId: currentRoom,
+            username,
+            avatar: avatar.src,
+            content: '🎤 voice message',
+            type: 'audio',
+            audioData: base64Audio, // Теперь улетает чистая валидная Base64 Data URL строка!
+          });
+        };
+
+        stream.getTracks().forEach(t => t.stop());
+      };
    
-      // Убрали (250), пишем одним куском, чтобы веб на ПК не дохнул
-      mediaRecorder.current.start(500)
-      setIsRecording(true)
+      // Запускаем нарезку данных небольшими порциями (каждые 250мс). 
+      // Это решает проблему пустых чанков на бэкенде при резком стопе
+      mediaRecorder.current.start(250);
+      setIsRecording(true);
     } catch (e) {
-      console.error(e)
-      alert('Microphone access denied')
+      console.error(e);
+      alert('Microphone access denied');
     }
   }
 
