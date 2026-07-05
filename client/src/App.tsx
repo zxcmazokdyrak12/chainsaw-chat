@@ -329,31 +329,39 @@ export default function App() {
           ? 'audio/webm'
           : 'audio/ogg;codecs=opus'
    
-      mediaRecorder.current = new MediaRecorder(stream, { mimeType })
-      audioChunks.current = []
+      mediaRecorder.current = new MediaRecorder(stream); // Пусть браузер сам выберет дефолтный лучший кодек
+      audioChunks.current = [];
    
       mediaRecorder.current.ondataavailable = (e: BlobEvent) => {
-        if (e.data && e.data.size > 0) audioChunks.current.push(e.data)
-      }
+        if (e.data && e.data.size > 0) {
+        audioChunks.current.push(e.data);
+        }
+      };
    
       mediaRecorder.current.onstop = () => {
-        const blob = new Blob(audioChunks.current, { type: mimeType })
+     // Дополнительная проверка: если чанки пусты, значит данные не успели дойти
+       if (audioChunks.current.length === 0) {
+       console.error("Чанки аудио пусты!");
+       return;
+     }
    
-        if (blob.size > 900_000) {
-          alert('Voice message too long! Keep it under ~30 seconds.')
-          stream.getTracks().forEach(t => t.stop())
-          return
-        }
+        const blob = new Blob(audioChunks.current, { type: mediaRecorder.current?.mimeType || 'audio/webm' });
+
+         if (blob.size > 900_000) {
+        alert('Voice message too long!');
+          stream.getTracks().forEach(t => t.stop());
+       return;
+      }
    
-        const reader = new FileReader()
+        const reader = new FileReader();
         reader.onloadend = () => {
-          socket.emit('send_message', {
-            roomId: currentRoom,
-            username,
-            avatar: avatar.src,
-            content: '🎤 voice message',
-            type: 'audio',
-            audioData: reader.result,
+        socket.emit('send_message', {
+       roomId: currentRoom,
+        username,
+       avatar: avatar.src,
+        content: '🎤 voice message',
+        type: 'audio',
+       audioData: reader.result,
           })
         }
         reader.readAsDataURL(blob)
@@ -361,7 +369,7 @@ export default function App() {
       }
    
       // Убрали (250), пишем одним куском, чтобы веб на ПК не дохнул
-      mediaRecorder.current.start()
+      mediaRecorder.current.start(500)
       setIsRecording(true)
     } catch (e) {
       console.error(e)
