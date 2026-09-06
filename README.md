@@ -64,7 +64,7 @@
 ![Socket.io](https://img.shields.io/badge/Socket.io-black?style=for-the-badge&logo=socketdotio&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
 ![Prisma](https://img.shields.io/badge/Prisma-3982CE?style=for-the-badge&logo=Prisma&logoColor=white)
-![Neon](https://img.shields.io/badge/Neon-00E599?style=for-the-badge&logo=neon&
+![Neon](https://img.shields.io/badge/Neon-00E599?style=for-the-badge&logo=neon&)
 
 ---
 
@@ -145,7 +145,9 @@ Denji, Aki, Makima, and Reze sit on top of the nav icons. Active tab — charact
 ## 🚀 Installation & Environment
 
 ### 1. Clone the repository
-%%MAGIT_PARSER_PROTECT%%```bash
+```
+%%MAGIT_PARSER_PROTECT%%
+bash
 git clone https://github.com/zxcmazokdyrak12/chainsaw-chat.git
 cd chainsaw-chat
 %%MAGIT_PARSER_PROTECT%%```
