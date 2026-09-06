@@ -1,8 +1,6 @@
-markdown
-
 # 🪚 Chainsaw Chat (Fullstack Real-time Messenger)
 
-> A dark, fast, and noisy fullstack messenger set in the **Chainsaw Man** universe [0.1.2]. Built for those who appreciate the silence of the night city, clean code, and Tatsuki Fujimoto's unique manga aesthetic.
+> A dark, fast, and noisy fullstack messenger set in the **Chainsaw Man** universe. Built for those who appreciate the silence of the night city, clean code, and Tatsuki Fujimoto's unique manga aesthetic.
 
 ---
 
@@ -54,10 +52,6 @@ markdown
   </tr>
 </table>
 
----
-
-## 🛠 Tech Stack
-
 ### Frontend
 ![TypeScript](https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)
 ![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)
@@ -70,41 +64,81 @@ markdown
 ![Socket.io](https://img.shields.io/badge/Socket.io-black?style=for-the-badge&logo=socketdotio&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
 ![Prisma](https://img.shields.io/badge/Prisma-3982CE?style=for-the-badge&logo=Prisma&logoColor=white)
-![Neon](https://img.shields.io/badge/Neon-00E599?style=for-the-badge&logo=neon&logoColor=black)
+![Neon](https://img.shields.io/badge/Neon-00E599?style=for-the-badge&logo=neon&
 
 ---
 
 ## ✨ Key Features
 
+
 ### 📱 Mobile Adaptation & UI/UX Optimization
+
 Chainsaw Chat is fully optimized for mobile devices, adapting the aggressive manga-style layout for seamless one-handed use.
-* **Dynamic Viewport (`100dvh`):** Replaced standard `100vh` to prevent mobile browser navigation bars from cutting off the UI layout [0.1.2].
-* **Streamlined Header:** Heavy character tabs are safely hidden on mobile viewports for a cleaner interface.
-* **Bottom Navigation (`BottomNav`):** Sticky thumb-reach panel for easy switching between core app tabs [0.1.2].
-* **Isolated Scroll Containers:** Added independent vertical scrolling (`overflow-y: auto`) to eliminate full-page layout freeze [0.1.2].
 
-### 🔐 Multi-Provider OAuth 2.0 & Session Safety
-* Instant, secure authentication via **Google** and **GitHub** social profiles [0.1.2].
-* Seamless Passport.js strategy management on the backend layer [0.1.2].
-* Automatic user provisioning and secure JWT session tokens issuance [0.1.2].
+- 🛠 What Was Done
 
-### 🚪 Dynamic Room System & Persistent Cloud Storage
-* Powered by **PostgreSQL** and **Prisma ORM** for solid relational data flows [0.1.2].
-* Generate instant custom channels with unique **8-character invite codes** (e.g., `KAIRYU42`).
-* Fully persistent message logs and synchronized room membership states.
+* **Dynamic Viewport (`100dvh`):** Replaced `100vh` with `100dvh` to prevent mobile browser navigation bars from cutting off the bottom of the interface.
+* **Streamlined Header:** Heavy character tabs are hidden on mobile, leaving a compact top bar with a theme toggle.
+* **Bottom Navigation (`BottomNav`):** Added a sticky bottom nav bar for easy thumb-reach switching between Chats, Rooms, Settings, and Profile.
+* **Isolated Scroll Containers:** Added independent vertical scrolling (`overflow-y: auto`) to each tab panel to prevent page-wide layout locks and scroll freezing.
+* **Smart Input Layout:** Added dynamic padding to the `InputBar` to keep it perfectly visible right above the mobile navigation bar without overlaps.
+* **Responsive Sidebar:** The room `Sidebar` is automatically hidden on mobile screens, giving 100% width to the active chat.
 
-### 💬 Real-time Synchronization & Voice Engine
-* **Zero-Latency Dispatch:** Real-time event propagation via persistent WebSockets (Socket.io) [0.1.2].
-* **Tactical Context Menu:** Interactive bubble frames to delete backend records instantly across clients.
-* **Alive Typing UI:** Throttled typing indicator broadcast with custom animated bouncing manga dots [0.1.2].
-* **Voice Notes Engine:** Captures and encodes mic input into compressed audio blobs via the **MediaRecorder API** [0.1.2].
+### 🔐 Multi-Provider OAuth 2.0
+Instant, secure authentication using your **Google** or **GitHub** profiles. The backend automatically provisions users, signs secure JWT session tokens, and fetches raw profile assets (names, avatars) directly into the environment.
 
-### 🎨 Manga-Style UI/UX & Easter Eggs
-* **Grim Aesthetic:** Authentic printed manga layout featuring halftone backgrounds, side tails, and random speech bubble tilts [0.1.2].
-* **Death Rattle Fonts:** Aggressive typographic treatments for uppercase messages with action words (**VROOM!, SLASH!, BANG!**) [0.1.2].
-* **Chibi Navigation:** Animated jumps for Denji, Aki, Makima, and Reze active profile state indicators.
-* **🪚 Chainsaw Rev:** ALL CAPS text submissions trigger an interactive chainsaw audio sound effect (10% chance) [0.1.2].
-* **🐾 Pochita Love:** Keywords like 'love', 'cute', 'aww', or sending ❤️ triggers a Pochita screen leap with hand-drawn hearts (40% chance) [0.1.2].
+### 🚪 Dynamic Room System & Persistent Storage
+- Powered by **PostgreSQL** and **Prisma**, all users, rooms, and chat histories are safely stored in the cloud.
+- Create your own room with a custom name
+- Each room gets a unique **8-character invite code** (e.g. `KAIRYU42`)
+- Share the code — anyone can join instantly
+- Per-room message history is fully persistent
+
+### 💬 Real-time Messaging
+Zero-latency event synchronization powered by WebSockets. Chat state updates concurrently for all session members, handling text dispatch, message deletion, and pinning.
+
+### 🖱️ Tactical Context Menu
+Right-click on any message bubble to summon a custom inline action frame. Instantly delete messages from the database across all clients in real time or copy raw string content to the clipboard.
+
+### ⌨️ Alive Typing System
+Live typing status indicator that updates instantly. Uses a localized debounce throttle to register who is actively typing in the room, displaying animated bouncing manga dots.
+
+### 🎤 High-Fidelity Voice Notes
+Hold down the mic button to record, release to push. Encodes live microphone input into an optimized audio blob via the browser-native **MediaRecorder API** and streams it directly to the socket pipeline.
+
+### ⚙️ Granular Control & Settings Tab
+- Fully interactive settings panel keeping state variables in perfect synchronization.
+- Dynamic Font Scaling: Instantly switch layout bounds between Small, Medium, and Large typographic frames.
+- Keybind Pipelines: Toggle message submission behavior (Enter vs Ctrl+Enter).
+- Audio & Privacy Toggles: Hot-swap your chainsaw SFX triggers and typing state broadcasting natively.
+
+### 🪚 Public Safety Bureau License (Profile Tab)
+- Your presence inside the app is stylized as an official Devil Hunter Identification License.
+- Pulls live context like data of issue (28/06/2026) and unique barcode sequences.
+- Integrated Terminate Session sequence built with aggressive red manga tones for safe account de-authentication.
+
+### 👤 User Identity & Profile Customization
+- Automatic avatar and name fetching from Google/GitHub profiles.
+- Integrated fully functional **Profile Tab** with an interactive **Log Out** mechanics for seamless account switching.
+- System notifications when users join.
+
+### 🎨 Manga-Style UI
+- Custom **Chainsaw Man favicon** guarding your browser tabs.
+- Two themes: **light** (classic manga paper) and **dark** (grim noir).
+- Halftone dot background — like a printed manga page.
+- Angular speech bubbles with side tails.
+- Random tilt on each message bubble.
+- SFX words above every bubble: **VROOM!, SLASH!, BANG!, GRAAA!**
+- CAPS messages render in a special "shout" style with Death Rattle font.
+- Custom **Chainsaw Man fonts**: BlambotClassic, CCDoohickey, DeathRattle, AnimeAce, Broadband.
+
+### 🧭 Chibi Navigation
+Denji, Aki, Makima, and Reze sit on top of the nav icons. Active tab — character is full color. Inactive — greyed out and shrunk. Click — they jump.
+
+### 🐾 Easter Eggs
+
+- **🪚 CAPS-LOCK chainsaw** — writing in ALL CAPS has a 10% chance of triggering a chainsaw revving sound effect.
+- **❤️ Pochita love trigger** — typing 'honey', 'baby', 'darling', 'cute', 'love', 'sweet', 'aww', '🥺', '💕', '😍', '🐾' or sending ❤️ has a 40% chance of making Pochita leap from the bottom of the screen with a fountain of hand-drawn hearts.
 
 ---
 
@@ -127,7 +161,7 @@ GITHUB_CLIENT_ID="your_github_id"
 GITHUB_CLIENT_SECRET="your_github_secret"
 CLIENT_URL="http://localhost:5173"
 %%MAGIT_PARSER_PROTECT%%```
-Install backend packages and apply database schema:
+Install dependencies and run migrations:
 %%MAGIT_PARSER_PROTECT%%```bash
 cd server
 npm install
@@ -140,7 +174,7 @@ Create a `.env` file in the `client/` directory:
 %%MAGIT_PARSER_PROTECT%%```env
 VITE_API_URL="http://localhost:5000"
 %%MAGIT_PARSER_PROTECT%%```
-Install frontend dependencies and start the Vite dev server:
+Install and run:
 %%MAGIT_PARSER_PROTECT%%```bash
 cd ../client
 npm install
@@ -153,15 +187,46 @@ npm run dev
 
 %%MAGIT_PARSER_PROTECT%%```text
 chainsaw-chat/
-├── client/                  # Frontend single page application (React + Vite)
-│   ├── public/              # Binary graphic assets & custom manga fonts [0.1.2]
-│   └── src/                 # Reactive UI components & Framer Motion workflows
-├── server/                  # Backend REST API & WebSocket pipeline (Node.js)
+├── server/
 │   ├── prisma/
-│   │   └── schema.prisma    # Prisma schemas for User, Room, and Message models [0.1.2]
-│   └── src/
-│       ├── index.ts         # Strictly typed Express server & socket lifecycle [0.1.2]
-│       └── passport.ts      # Multi-provider OAuth 2.0 authentication strategies [0.1.2]
+│   │   └── schema.prisma      ← Prisma relational models (User, Room, Message)
+│   ├── src/
+│   │   ├── index.ts           ← Strictly typed Express server entrypoint
+│   │   └── passport.ts        ← OAuth 2.0 Security Strategies
+│   └── package.json
+└── client/
+    ├── src/
+    │   ├── components/        ← Modular UI Blocks (InputBar, ProfileTab, RoomsTab, etc.)
+    │   ├── hooks/             ← Custom React Hooks (useSettings tracking)
+    │   ├── utils/             ← Helper modules (date processing pipelines)
+    │   ├── App.tsx            ← Central reactive Hub (TypeScript-managed)
+    │   ├── fonts.css          ← @font-face declarations
+    │   └── main.tsx           ← Virtual DOM target mounting
+    └── public/                ← Binary audio clips, assets & manga frames
 %%MAGIT_PARSER_PROTECT%%```
 
-Use code with caution.
+🛤 Road Map
+
+    [x] Cloud Database Sync (Neon Serverless Cloud Architecture)
+
+    [x] Prisma ORM configuration layer
+
+    [x] Full Backend Migration to Strict TypeScript
+
+    [x] Frontend refactoring into full Type Safety (.tsx architecture alignment)
+
+    [x] Google & GitHub Provider integration (OAuth 2.0)
+
+    [x] Persistent session tracking via JSON Web Tokens
+
+    [x] Live interactive context action layouts
+
+    [ ] Async Video transmission framework via WebRTC
+
+    [x] Mobile-responsive UI improvements
+
+    [ ] Per-message emoticons and reactive status flags
+
+    [ ] Independent login/pass legacy security framework
+
+Created with love for Nayuta and clean code. 🩸
