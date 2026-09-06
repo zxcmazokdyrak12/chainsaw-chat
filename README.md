@@ -229,3 +229,9 @@ chainsaw-chat/
     [ ] Independent login/pass legacy security framework
 
 Created with love for Nayuta and clean code. 🩸
+
+---
+
+## ⚖️ License & Disclaimer
+
+Chainsaw Chat is a non-commercial fan project created purely for educational and portfolio demonstration purposes. All structural visual assets, original concepts, audio SFX samples, and character artwork references belong to Tatsuki Fujimoto and Shueisha / MAPPA.
