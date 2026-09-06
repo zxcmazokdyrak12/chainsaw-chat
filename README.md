@@ -145,16 +145,14 @@ Denji, Aki, Makima, and Reze sit on top of the nav icons. Active tab — charact
 ## 🚀 Installation & Environment
 
 ### 1. Clone the repository
-```
-%%MAGIT_PARSER_PROTECT%%
-bash
+```bash
 git clone https://github.com/zxcmazokdyrak12/chainsaw-chat.git
 cd chainsaw-chat
-%%MAGIT_PARSER_PROTECT%%```
+```
 
 ### 2. Backend Setup (`/server`)
 Create a `.env` file in the `server/` directory:
-%%MAGIT_PARSER_PROTECT%%```env
+```env
 DATABASE_URL="postgresql://user:password@neon-host/dbname?sslmode=require"
 JWT_SECRET="your_jwt_secret"
 GOOGLE_CLIENT_ID="your_google_id"
@@ -162,32 +160,31 @@ GOOGLE_CLIENT_SECRET="your_google_secret"
 GITHUB_CLIENT_ID="your_github_id"
 GITHUB_CLIENT_SECRET="your_github_secret"
 CLIENT_URL="http://localhost:5173"
-%%MAGIT_PARSER_PROTECT%%```
+```
 Install dependencies and run migrations:
-%%MAGIT_PARSER_PROTECT%%```bash
+```bash
 cd server
 npm install
 npx prisma db push
 npm run dev
-%%MAGIT_PARSER_PROTECT%%```
+```
 
 ### 3. Frontend Setup (`/client`)
 Create a `.env` file in the `client/` directory:
-%%MAGIT_PARSER_PROTECT%%```env
+```env
 VITE_API_URL="http://localhost:5000"
-%%MAGIT_PARSER_PROTECT%%```
+```
 Install and run:
-%%MAGIT_PARSER_PROTECT%%```bash
+```bash
 cd ../client
 npm install
 npm run dev
-%%MAGIT_PARSER_PROTECT%%```
+```
 
 ---
 
 ## 📁 Project Structure
-
-%%MAGIT_PARSER_PROTECT%%```text
+```text
 chainsaw-chat/
 ├── server/
 │   ├── prisma/
@@ -205,7 +202,7 @@ chainsaw-chat/
     │   ├── fonts.css          ← @font-face declarations
     │   └── main.tsx           ← Virtual DOM target mounting
     └── public/                ← Binary audio clips, assets & manga frames
-%%MAGIT_PARSER_PROTECT%%```
+```
 
 🛤 Road Map
 
