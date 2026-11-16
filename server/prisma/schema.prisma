@@ -37,8 +37,9 @@ model Room {
   createdBy String?  @map("created_by")
   createdAt DateTime @default(now()) @map("created_at")
 
-  members  RoomMember[]
-  messages Message[]
+  members   RoomMember[]
+  messages  Message[]
+  readMarks ReadMark[]
 
   @@map("rooms")
 }
@@ -67,9 +68,24 @@ model Message {
   system    Boolean  @default(false)
   isEdited  Boolean  @default(false) @map("is_edited")
   isPinned  Boolean  @default(false) @map("is_pinned")
+  // { "🔥": ["DENJI", "POWER"], ... }
+  reactions Json     @default("{}")
   createdAt DateTime @default(now()) @map("created_at")
 
   room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
 
   @@map("messages")
+}
+
+// last message each user has seen in a room → powers SENT / SEEN flags
+model ReadMark {
+  roomId     String   @map("room_id")
+  username   String
+  lastReadId BigInt   @map("last_read_id")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@id([roomId, username])
+  @@map("read_marks")
 }

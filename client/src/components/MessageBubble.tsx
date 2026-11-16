@@ -12,6 +12,7 @@ export interface MessageData {
   type?: string
   audioData?: any // Ослабим тип для гибкости приходящих данных от сокетов
   system?: boolean
+  reactions?: Record<string, string[]>
 }
 
 interface AudioPlayerProps {
@@ -209,10 +210,15 @@ interface MessageBubbleProps {
   isOwn: boolean
   theme: string
   T: Record<string, string>
+  username?: string
+  seen?: boolean
+  onReact?: (emoji: string) => void
   onContextMenu: (data: { x: number; y: number; msg: MessageData }) => void
 }
 
-export default function MessageBubble({ msg, index, isOwn, theme, T, onContextMenu }: MessageBubbleProps) {
+export default function MessageBubble({ msg, index, isOwn, theme, T, username, seen, onReact, onContextMenu }: MessageBubbleProps) {
+  const reactions = Object.entries(msg.reactions ?? {}).filter(([, users]) => users.length > 0)
+  const ink = theme === 'dark' ? '#fff' : '#111'
   const contentStr = msg.content || ''
   const isShout = contentStr === contentStr.toUpperCase()
     && contentStr.replace(/[^a-zA-Zа-яА-Я]/g, '').length > 2
@@ -274,6 +280,14 @@ export default function MessageBubble({ msg, index, isOwn, theme, T, onContextMe
           }}>
             {msg.username} · {msg.time}
             {msg.isEdited && <span style={{ opacity: 0.5, fontSize: '9px' }}>✏️</span>}
+            {isOwn && (
+              <span
+                title={seen ? 'Seen' : 'Sent'}
+                style={{ fontSize: '9px', letterSpacing: '1px', color: seen ? '#cc2200' : 'inherit', fontWeight: seen ? 900 : 'normal' }}
+              >
+                {seen ? '✓✓ SEEN' : '✓ SENT'}
+              </span>
+            )}
           </span>
 
           <div style={{ position: 'relative' }}>
@@ -295,6 +309,7 @@ export default function MessageBubble({ msg, index, isOwn, theme, T, onContextMe
             }} />
 
             <div
+              onDoubleClick={() => onReact?.('🔥')}
               onContextMenu={(e: React.MouseEvent<HTMLDivElement>) => {
                 e.preventDefault()
                 onContextMenu({ x: e.clientX, y: e.clientY, msg })
@@ -331,6 +346,43 @@ export default function MessageBubble({ msg, index, isOwn, theme, T, onContextMe
               )}
             </div>
           </div>
+
+          {reactions.length > 0 && (
+            <div style={{
+              display: 'flex', flexWrap: 'wrap', gap: '4px',
+              justifyContent: isOwn ? 'flex-end' : 'flex-start',
+              maxWidth: '280px', marginTop: '4px',
+              paddingLeft: isOwn ? 0 : '8px', paddingRight: isOwn ? '8px' : 0,
+            }}>
+              {reactions.map(([emoji, users], i) => {
+                const mine = !!username && users.includes(username)
+                return (
+                  <motion.button
+                    key={emoji}
+                    initial={{ scale: 0, rotate: -20 }}
+                    animate={{ scale: 1, rotate: i % 2 ? 3 : -3 }}
+                    whileHover={{ scale: 1.12, rotate: 0 }}
+                    whileTap={{ scale: 0.85 }}
+                    onClick={() => onReact?.(emoji)}
+                    title={users.join(', ')}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '3px',
+                      padding: '1px 7px',
+                      background: mine ? '#cc2200' : (theme === 'dark' ? '#222' : '#fff'),
+                      color: mine ? '#fff' : ink,
+                      border: `2px solid ${ink}`,
+                      boxShadow: `2px 2px 0 ${ink}`,
+                      fontFamily: "'AnimeAce', sans-serif", fontSize: '10px',
+                      cursor: 'pointer', lineHeight: 1.6,
+                    }}
+                  >
+                    <span style={{ fontSize: '13px' }}>{emoji}</span>
+                    {users.length}
+                  </motion.button>
+                )
+              })}
+            </div>
+          )}
         </div>
       </div>
     </motion.div>

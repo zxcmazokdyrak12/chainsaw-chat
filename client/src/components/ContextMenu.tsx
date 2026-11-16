@@ -1,5 +1,5 @@
-import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { REACTIONS } from '../config'
 
 // Define the shape of the message object expected by the context menu
 interface MessageData {
@@ -23,6 +23,7 @@ interface ContextMenuProps {
   username: string | null
   onDelete: (id: number) => void
   onCopy: (content: string) => void
+  onReact: (id: number, emoji: string) => void
   onClose: () => void
 }
 
@@ -32,6 +33,7 @@ export default function ContextMenu({
   username, 
   onDelete, 
   onCopy, 
+  onReact,
   onClose 
 }: ContextMenuProps) {
   return (
@@ -53,12 +55,32 @@ export default function ContextMenu({
             boxShadow: theme === 'dark' ? '4px 4px 0 #fff' : '4px 4px 0 #111',
             fontFamily: "'AnimeAce', sans-serif",
             fontSize: '12px',
-            width: '140px',
+            width: '176px',
             cursor: 'default'
           }}
           onClick={onClose}
           onMouseLeave={onClose}
         >
+          {/* quick reactions */}
+          <div style={{
+            display: 'flex', justifyContent: 'space-between',
+            padding: '4px 4px 6px',
+            borderBottom: `2px solid ${theme === 'dark' ? '#fff' : '#111'}`,
+            marginBottom: '2px',
+          }}>
+            {REACTIONS.map(emoji => (
+              <motion.span
+                key={emoji}
+                whileHover={{ scale: 1.35, rotate: -8 }}
+                whileTap={{ scale: 0.8 }}
+                onClick={(e) => { e.stopPropagation(); onReact(contextMenu.msg.id, emoji) }}
+                style={{ cursor: 'pointer', fontSize: '17px', lineHeight: 1 }}
+              >
+                {emoji}
+              </motion.span>
+            ))}
+          </div>
+
           {/* Only show DELETE if the message owner matches the current logged-in user */}
           {contextMenu.msg.username === username && (
             <div

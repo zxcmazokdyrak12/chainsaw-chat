@@ -24,6 +24,9 @@ interface HeaderProps {
   activeTab: string
   onTabChange: (tabId: string) => void
   onThemeToggle: () => void
+  callCount?: number
+  inCall?: boolean
+  onCall?: () => void
 }
 
 interface TabItem {
@@ -35,7 +38,8 @@ interface TabItem {
 
 export default function Header({
   T, theme, username, rooms, currentRoom,
-  activeTab, onTabChange, onThemeToggle
+  activeTab, onTabChange, onThemeToggle,
+  callCount = 0, inCall = false, onCall,
 }: HeaderProps) {
   const { isMobile } = useWindowSize()
 
@@ -89,6 +93,28 @@ export default function Header({
             }}>
               {username}
             </span>
+          )}
+          {onCall && !inCall && (
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              whileHover={{ skewX: -5 }}
+              onClick={onCall}
+              title={callCount ? 'Join the video call' : 'Start a video call in this room'}
+              animate={callCount ? { scale: [1, 1.08, 1] } : { scale: 1 }}
+              transition={callCount ? { repeat: Infinity, duration: 1.2 } : {}}
+              style={{
+                background: '#cc2200', color: '#fff',
+                border: `2px solid ${T.headerBorder}`,
+                padding: isMobile ? '3px 7px' : '4px 10px',
+                fontSize: isMobile ? '10px' : '12px',
+                fontFamily: 'BlambotClassic, sans-serif',
+                letterSpacing: '1px', cursor: 'pointer',
+                clipPath: 'polygon(6px 0,100% 0,calc(100% - 6px) 100%,0 100%)',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {callCount ? `📹 JOIN (${callCount})` : '📹 CALL'}
+            </motion.button>
           )}
           <motion.button
             whileTap={{ scale: 0.9 }}
