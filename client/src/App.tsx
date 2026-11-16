@@ -18,8 +18,11 @@ import { groupMessagesByDate } from './utils/dateGroups'
 import { useSettings } from './hooks/useSettings'
 import BottomNav from './components/BottomNav'
 import { useWindowSize } from './hooks/useWindowSize'
+import { useVideoCall } from './hooks/useVideoCall'
+import VideoCall from './components/VideoCall'
+import { API_URL } from './config'
 
-const socket: Socket = io('https://chainsaw-chat.onrender.com', {
+const socket: Socket = io(API_URL, {
   transports: ['websocket', 'polling']
 })
 
@@ -72,6 +75,7 @@ export interface MessageItem {
   time?: string
   type?: 'text' | 'audio' | string
   audioData?: string | ArrayBuffer | null
+  reactions?: Record<string, string[]>
 }
 
 export interface RoomItem {
@@ -130,6 +134,14 @@ export default function App() {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const [pinnedMsg, setPinnedMsg] = useState<MessageItem | null>(null)
 
+  const [authError, setAuthError]     = useState<string>('')
+  const [authLoading, setAuthLoading] = useState<boolean>(false)
+  // username → id of the last message they've seen in the current room
+  const [seenMarks, setSeenMarks] = useState<Record<string, number>>({})
+  const lastMarked = useRef<number>(0)
+
+  const call = useVideoCall(socket, currentRoom)
+
   const { settings, update: updateSetting, resolveTheme } = useSettings()
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark' | 'system'>(() => resolveTheme() as 'light' | 'dark' | 'system')
 
@@ -164,27 +176,72 @@ export default function App() {
     }
     const saved = localStorage.getItem('token')
     if (saved) {
-      fetch('https://chainsaw-chat.onrender.com/auth/me', {
+      fetch(`${API_URL}/auth/me`, {
         headers: { Authorization: `Bearer ${saved}` }
       })
         .then(r => r.json())
         .then(user => {
-          if (user.username) {
-            setUsername(user.username)
-            setAvatar(user.avatar
-              ? { id: 'oauth', name: user.username, src: user.avatar }
-              : (AVATARS[0] as AvatarItem)
-            )
-            setPhase('chat')
-            socket.emit('get_rooms', { username: user.username })
-            setTimeout(() => {
-              socket.emit('join_room', { roomId: 'general', username: user.username, avatar: user.avatar })
-            }, 100)
-          }
+          if (user.username) enterChat(user)
+          else localStorage.removeItem('token')
         })
         .catch(() => localStorage.removeItem('token'))
     }
   }, [])
+
+  // shared entry point for OAuth tokens and login/password accounts
+  const enterChat = (user: { username: string; avatar?: string | null }, fallback: AvatarItem = AVATARS[0] as AvatarItem): void => {
+    const chosen: AvatarItem = user.avatar
+      ? { id: 'account', name: user.username, src: user.avatar }
+      : fallback
+    setUsername(user.username)
+    setAvatar(chosen)
+    setPhase('chat')
+    socket.emit('get_rooms', { username: user.username })
+    setTimeout(() => {
+      socket.emit('join_room', { roomId: 'general', username: user.username, avatar: chosen.src })
+    }, 100)
+  }
+
+  const handleAccountAuth = async (mode: 'login' | 'register', password: string): Promise<void> => {
+    const name = usernameInput.trim().toUpperCase()
+    if (name.length < 2 || password.length < 6 || authLoading) return
+    setAuthLoading(true)
+    setAuthError('')
+    try {
+      const res = await fetch(`${API_URL}/auth/${mode}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: name, password, avatar: avatar.src }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.token) {
+        setAuthError(data.error || (res.status === 429 ? 'Too many tries, wait a bit' : 'Server error'))
+        return
+      }
+      localStorage.setItem('token', data.token)
+      playSound(CHAINSAW_SFX, 0.4)
+      enterChat(data.user, avatar)
+    } catch {
+      setAuthError('Server is sleeping, try again')
+    } finally {
+      setAuthLoading(false)
+    }
+  }
+
+  // persist character choice for login/password accounts (OAuth accounts just ignore it)
+  const handleAvatarChange = (newAv: { id: string | number; name: string; src: string }): void => {
+    setAvatar({ id: String(newAv.id), name: newAv.name, src: newAv.src })
+    const token = localStorage.getItem('token')
+    if (!token) return
+    fetch(`${API_URL}/auth/avatar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ avatar: newAv.src }),
+    })
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => { if (data?.token) localStorage.setItem('token', data.token) })
+      .catch(() => {})
+  }
 
   const triggerPochita = (text: string): void => {
     if (!settings.pochitaEnabled) return
@@ -249,6 +306,15 @@ export default function App() {
     socket.on('message_deleted', ({ messageId }: { messageId: string | number }) => {
       setMessages(p => p.filter(m => m.id !== messageId))
     })
+    socket.on('message_reacted', ({ messageId, reactions }: { messageId: string | number, reactions: Record<string, string[]> }) => {
+      setMessages(p => p.map(m => (m.id === messageId ? { ...m, reactions } : m)))
+    })
+    socket.on('seen_state', ({ marks }: { roomId: string, marks: Record<string, number> }) => {
+      setSeenMarks(marks)
+    })
+    socket.on('seen_update', ({ username: who, lastReadId }: { roomId: string, username: string, lastReadId: number }) => {
+      setSeenMarks(p => ({ ...p, [who]: Math.max(p[who] ?? 0, lastReadId) }))
+    })
 
     return () => {
       socket.off('rooms_list')
@@ -257,6 +323,9 @@ export default function App() {
       socket.off('typing_update')
       socket.off('user_joined')
       socket.off('message_deleted')
+      socket.off('message_reacted')
+      socket.off('seen_state')
+      socket.off('seen_update')
     }
   }, [username, avatar])
 
@@ -264,10 +333,26 @@ export default function App() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, typingUsers])
 
+  // tell the room which message we've seen last (only when the chat is actually on screen)
+  useEffect(() => {
+    const markSeen = () => {
+      if (phase !== 'chat' || activeTab !== 'chat' || document.visibilityState !== 'visible') return
+      const last = [...messages].reverse().find(m => !m.system && typeof m.id === 'number')
+      if (!last || (last.id as number) <= lastMarked.current) return
+      lastMarked.current = last.id as number
+      socket.emit('mark_seen', { roomId: currentRoom, messageId: last.id })
+    }
+    markSeen()
+    document.addEventListener('visibilitychange', markSeen)
+    return () => document.removeEventListener('visibilitychange', markSeen)
+  }, [messages, activeTab, currentRoom, phase])
+
   const joinRoom = (roomId: string): void => {
     setCurrentRoom(roomId)
     setMessages([])
     setTypingUsers([])
+    setSeenMarks({})
+    lastMarked.current = 0
     socket.emit('join_room', { roomId, username, avatar: avatar.src })
   }
 
@@ -422,6 +507,7 @@ export default function App() {
   }
 
   const handleLogout = (): void => {
+    call.leave()
     localStorage.removeItem('token')
     document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"
     window.location.href = '/'
@@ -439,11 +525,24 @@ export default function App() {
         usernameInput={usernameInput}
         onUsernameInputChange={(v) => setUsernameInput(v.toUpperCase())}
         onSubmit={handleSetUsername}
+        onAccountSubmit={handleAccountAuth}
+        authError={authError}
+        authLoading={authLoading}
+        onClearError={() => setAuthError('')}
       />
     )
   }
 
   const groupedItems: GroupedItem[] = groupMessagesByDate(messages)
+
+  // furthest message any *other* member has seen → everything of ours up to it is SEEN
+  const seenByOthers = Object.entries(seenMarks)
+    .filter(([who]) => who !== username)
+    .reduce<number>((max, [, id]) => Math.max(max, Number(id)), 0)
+
+  const reactTo = (messageId: string | number, emoji: string): void => {
+    socket.emit('react_message', { messageId, roomId: currentRoom, emoji })
+  }
 
   return (
     <motion.div
@@ -469,6 +568,9 @@ export default function App() {
         rooms={rooms} currentRoom={currentRoom}
         activeTab={activeTab} onTabChange={setActiveTab}
         onThemeToggle={() => updateSetting('theme', theme === 'light' ? 'dark' : 'light')}
+        callCount={call.participants.length}
+        inCall={call.inCall}
+        onCall={() => { setActiveTab('chat'); call.join() }}
       />
 
       {/* main content */}
@@ -504,6 +606,38 @@ export default function App() {
                   gap: '10px' 
                 }}
               >
+                {call.participants.length > 0 && !call.inCall && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+                    style={{
+                      padding: '8px 14px',
+                      background: '#cc2200', color: '#fff',
+                      border: `3px solid ${theme === 'dark' ? '#fff' : '#111'}`,
+                      boxShadow: theme === 'dark' ? '4px 4px 0 #fff' : '4px 4px 0 #111',
+                      fontFamily: "'AnimeAce', sans-serif", fontSize: '11px',
+                      display: 'flex', gap: '10px', alignItems: 'center',
+                      transform: 'rotate(-0.5deg)',
+                    }}
+                  >
+                    <span style={{ fontFamily: "'CCDoohickey', BlambotClassic, sans-serif", fontStyle: 'italic', fontWeight: 900, fontSize: '14px' }}>BZZZT!</span>
+                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      📹 CALL: {call.participants.join(', ')}
+                    </span>
+                    <motion.button
+                      whileTap={{ scale: 0.92 }} whileHover={{ skewX: -5 }}
+                      onClick={call.join}
+                      style={{
+                        background: '#fff', color: '#111', border: '2px solid #111',
+                        padding: '4px 12px', cursor: 'pointer',
+                        fontFamily: 'BlambotClassic, sans-serif', fontSize: '12px', letterSpacing: '2px',
+                        clipPath: 'polygon(6px 0,100% 0,calc(100% - 6px) 100%,0 100%)',
+                      }}
+                    >
+                      JOIN ⛓
+                    </motion.button>
+                  </motion.div>
+                )}
+
                 {pinnedMsg && (
                   <div style={{
                     padding: '8px 14px',
@@ -539,6 +673,9 @@ export default function App() {
                       msg={msg} index={index}
                       isOwn={msg.username === username}
                       theme={theme} T={T}
+                      username={username}
+                      seen={typeof msg.id === 'number' && msg.id <= seenByOthers}
+                      onReact={(emoji) => reactTo(msg.id, emoji)}
                       onContextMenu={(data) => setContextMenu({ x: data.x, y: data.y, msg: data.msg })}
                     />
                   )
@@ -552,6 +689,7 @@ export default function App() {
                     setContextMenu(null)
                   }}
                   onCopy={(content) => { navigator.clipboard.writeText(content); setContextMenu(null) }}
+                  onReact={(msgId, emoji) => { reactTo(msgId, emoji); setContextMenu(null) }}
                   onClose={() => setContextMenu(null)}
                 />
 
@@ -614,7 +752,7 @@ export default function App() {
               rooms={rooms} currentRoom={currentRoom}
               T={T} theme={theme}
               onLogout={handleLogout}
-              onAvatarChange={(newAv: any) => setAvatar({ id: String(newAv.id), name: newAv.name, src: newAv.src })}
+              onAvatarChange={handleAvatarChange}
             />
           </div>
         )}
@@ -631,6 +769,8 @@ export default function App() {
           />
         </div>
       )}
+
+      <VideoCall call={call} theme={theme} username={username} avatar={avatar.src} isMobile={isMobile} />
 
       <PochitaEgg visible={pochitaVisible} hearts={hearts} />
     </motion.div>

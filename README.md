@@ -87,6 +87,22 @@ Chainsaw Chat is fully optimized for mobile devices, adapting the aggressive man
 ### 🔐 Multi-Provider OAuth 2.0
 Instant, secure authentication using your **Google** or **GitHub** profiles. The backend automatically provisions users, signs secure JWT session tokens, and fetches raw profile assets (names, avatars) directly into the environment.
 
+### 🔑 Login & Password Accounts
+- Sign up with just a nickname + password — no Google/GitHub needed.
+- Passwords are hashed with **bcrypt**, sessions live in a **JWT** (30 days).
+- Your chosen character and rooms are kept between visits (guests are still wiped on disconnect).
+- Brute-force protection: separate rate limit on `/auth/login` and `/auth/register`.
+
+### 📹 Video Calls (WebRTC)
+- Hit **📹 CALL** in the header to start a call in the current room, others see a **BZZZT! JOIN** banner.
+- Peer-to-peer **mesh** for up to 4 hunters — video and audio go directly between browsers, Socket.io only relays signaling (offer / answer / ICE).
+- Every participant is a manga panel with halftone overlay and SFX; mic / camera toggles; falls back to voice-only without a camera.
+
+### 🔥 Reactions & Seen Flags
+- React to any message with 🔥 🩸 😂 ❤️ 😱 🪚 from the context menu, or **double-click** a bubble for an instant 🔥.
+- Reactions are stored in PostgreSQL and synced live for everyone in the room.
+- Your own messages show **✓ SENT** → **✓✓ SEEN** once someone else in the room has read them.
+
 ### 🚪 Dynamic Room System & Persistent Storage
 - Powered by **PostgreSQL** and **Prisma**, all users, rooms, and chat histories are safely stored in the cloud.
 - Create your own room with a custom name
@@ -220,13 +236,13 @@ chainsaw-chat/
 
     [x] Live interactive context action layouts
 
-    [ ] Async Video transmission framework via WebRTC
+    [x] Async Video transmission framework via WebRTC
 
     [x] Mobile-responsive UI improvements
 
-    [ ] Per-message emoticons and reactive status flags
+    [x] Per-message emoticons and reactive status flags
 
-    [ ] Independent login/pass legacy security framework
+    [x] Independent login/pass legacy security framework
 
 Created with love for Nayuta and clean code. 🩸
 

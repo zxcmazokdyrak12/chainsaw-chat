@@ -1,4 +1,5 @@
-import { motion } from 'framer-motion'
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 // describe the structure of an avatar object
 export interface AvatarItem {
@@ -40,15 +41,34 @@ interface UsernameScreenProps {
   usernameInput: string
   onUsernameInputChange: (value: string) => void
   onSubmit: () => void
+  onAccountSubmit: (mode: 'login' | 'register', password: string) => void
+  authError: string
+  authLoading: boolean
+  onClearError: () => void
 }
+
+const SLANT = 'polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)'
 
 export default function UsernameScreen({ 
   avatar, 
   onAvatarChange, 
   usernameInput, 
   onUsernameInputChange, 
-  onSubmit 
+  onSubmit,
+  onAccountSubmit,
+  authError,
+  authLoading,
+  onClearError,
 }: UsernameScreenProps) {
+  const [mode, setMode] = useState<'guest' | 'account'>('guest')
+  const [password, setPassword] = useState<string>('')
+
+  const nameOk = usernameInput.trim().length >= 2
+  const passOk = password.length >= 6
+  const canSubmitAccount = nameOk && passOk && !authLoading
+
+  const switchMode = (m: 'guest' | 'account') => { setMode(m); onClearError() }
+
   return (
     <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} style={{ height:'100vh', background:'#0d0d0d', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:'24px', fontFamily:'BlambotClassic, sans-serif', overflowY:'auto', padding:'20px' }}>
 
@@ -137,25 +157,111 @@ export default function UsernameScreen({
         ))}
       </div>
 
-      <p style={{ color:'#555', fontSize:'11px', letterSpacing:'3px', margin:0 }}>WHAT'S YOUR NICKNAME?</p>
+      {/* GUEST / ACCOUNT switch */}
+      <div style={{ display:'flex', gap:'6px', width:'280px' }}>
+        {(['guest', 'account'] as const).map(m => (
+          <motion.button
+            key={m}
+            whileTap={{ scale:0.95 }} whileHover={{ skewX:-5 }}
+            onClick={() => switchMode(m)}
+            style={{
+              flex:1, padding:'8px', cursor:'pointer',
+              background: mode === m ? '#fff' : 'transparent',
+              color: mode === m ? '#111' : '#555',
+              border: `2px solid ${mode === m ? '#fff' : '#333'}`,
+              fontFamily:"'AnimeAce', sans-serif", fontSize:'10px', letterSpacing:'2px',
+              clipPath: SLANT, transition:'all 0.2s',
+            }}
+          >
+            {m === 'guest' ? 'GUEST' : 'ACCOUNT'}
+          </motion.button>
+        ))}
+      </div>
+
+      <p style={{ color:'#555', fontSize:'11px', letterSpacing:'3px', margin:0 }}>
+        {mode === 'guest' ? "WHAT'S YOUR NICKNAME?" : 'NICKNAME + PASSWORD'}
+      </p>
 
       <div style={{ display:'flex', flexDirection:'column', gap:'10px', width:'280px' }}>
         <input
-          style={{ padding:'12px 20px', background:'#1a1a1a', border:'3px solid #fff', color:'#fff', fontSize:'16px', outline:'none', fontFamily:'BlambotClassic, sans-serif', letterSpacing:'2px', textTransform:'uppercase', clipPath:'polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)', textAlign:'center' }}
+          style={{ padding:'12px 20px', background:'#1a1a1a', border:'3px solid #fff', color:'#fff', fontSize:'16px', outline:'none', fontFamily:'BlambotClassic, sans-serif', letterSpacing:'2px', textTransform:'uppercase', clipPath:SLANT, textAlign:'center' }}
           placeholder="NICKNAME..."
           maxLength={14}
           value={usernameInput}
-          onChange={e => onUsernameInputChange(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && onSubmit()}
+          onChange={e => { onUsernameInputChange(e.target.value); onClearError() }}
+          onKeyDown={e => e.key === 'Enter' && mode === 'guest' && onSubmit()}
+          autoComplete="username"
           autoFocus
         />
-        <motion.button
-          whileTap={{ scale:0.95 }} whileHover={{ skewX:-5 }}
-          onClick={onSubmit}
-          style={{ padding:'12px', background: usernameInput.trim().length >= 2 ? '#cc2200' : '#333', color:'#fff', border:'none', fontFamily:'BlambotClassic, sans-serif', fontSize:'16px', letterSpacing:'3px', cursor: usernameInput.trim().length >= 2 ? 'pointer' : 'default', clipPath:'polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)', transition:'background 0.2s' }}
-        >
-          ENTER ⛓
-        </motion.button>
+
+        <AnimatePresence mode="wait">
+          {mode === 'guest' ? (
+            <motion.button
+              key="guest"
+              initial={{ opacity:0, x:-20 }} animate={{ opacity:1, x:0 }} exit={{ opacity:0, x:20 }}
+              whileTap={{ scale:0.95 }} whileHover={{ skewX:-5 }}
+              onClick={onSubmit}
+              style={{ padding:'12px', background: nameOk ? '#cc2200' : '#333', color:'#fff', border:'none', fontFamily:'BlambotClassic, sans-serif', fontSize:'16px', letterSpacing:'3px', cursor: nameOk ? 'pointer' : 'default', clipPath:SLANT, transition:'background 0.2s' }}
+            >
+              ENTER ⛓
+            </motion.button>
+          ) : (
+            <motion.div
+              key="account"
+              initial={{ opacity:0, x:-20 }} animate={{ opacity:1, x:0 }} exit={{ opacity:0, x:20 }}
+              style={{ display:'flex', flexDirection:'column', gap:'10px' }}
+            >
+              <input
+                type="password"
+                style={{ padding:'12px 20px', background:'#1a1a1a', border:'3px solid #fff', color:'#fff', fontSize:'16px', outline:'none', fontFamily:'BlambotClassic, sans-serif', letterSpacing:'4px', clipPath:SLANT, textAlign:'center' }}
+                placeholder="PASSWORD..."
+                maxLength={72}
+                value={password}
+                onChange={e => { setPassword(e.target.value); onClearError() }}
+                onKeyDown={e => e.key === 'Enter' && canSubmitAccount && onAccountSubmit('login', password)}
+                autoComplete="current-password"
+              />
+              <div style={{ display:'flex', gap:'8px' }}>
+                {(['login', 'register'] as const).map(m => (
+                  <motion.button
+                    key={m}
+                    whileTap={{ scale:0.95 }} whileHover={canSubmitAccount ? { skewX:-5 } : {}}
+                    disabled={!canSubmitAccount}
+                    onClick={() => onAccountSubmit(m, password)}
+                    style={{
+                      flex:1, padding:'12px 6px',
+                      background: !canSubmitAccount ? '#333' : m === 'login' ? '#cc2200' : '#fff',
+                      color: !canSubmitAccount ? '#777' : m === 'login' ? '#fff' : '#111',
+                      border:'none', fontFamily:'BlambotClassic, sans-serif', fontSize:'14px', letterSpacing:'2px',
+                      cursor: canSubmitAccount ? 'pointer' : 'default', clipPath:SLANT, transition:'background 0.2s',
+                    }}
+                  >
+                    {authLoading ? '...' : m === 'login' ? 'LOG IN ⛓' : 'SIGN UP ✚'}
+                  </motion.button>
+                ))}
+              </div>
+              <span style={{ fontFamily:"'AnimeAce', sans-serif", fontSize:'9px', color:'#444', letterSpacing:'1px', textAlign:'center' }}>
+                SIGN UP SAVES YOUR CHARACTER &amp; ROOMS · PASSWORD 6+ CHARS
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {authError && (
+            <motion.div
+              initial={{ opacity:0, scale:0.8, rotate:-3 }} animate={{ opacity:1, scale:1, rotate:-1 }} exit={{ opacity:0 }}
+              style={{
+                padding:'8px 12px', background:'#cc2200', color:'#fff',
+                border:'3px solid #fff', boxShadow:'4px 4px 0 #fff',
+                fontFamily:"'AnimeAce', sans-serif", fontSize:'10px', letterSpacing:'1px', textAlign:'center',
+              }}
+            >
+              <span style={{ fontFamily:"'CCDoohickey', BlambotClassic, sans-serif", fontStyle:'italic', fontWeight:900, marginRight:'6px' }}>GRAAA!</span>
+              {authError.toUpperCase()}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </motion.div>
   )

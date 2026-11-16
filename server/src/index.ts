@@ -51,7 +51,13 @@ interface SocketData {
   username?: string
   msgCount?: number
   msgReset?: number
+  callRoom?: string
 }
+
+type Reactions = Record<string, string[]>
+
+// allowed reaction set — keeps the payload small and on-theme
+const REACTIONS = ['🔥', '🩸', '😂', '❤️', '😱', '🪚'] as const
 
 interface SendMessagePayload {
   roomId: string
@@ -181,6 +187,7 @@ const serializeMessage = (r: {
   system: boolean
   isEdited: boolean
   isPinned: boolean
+  reactions?: unknown
 }) => ({
   id:        Number(r.id),
   username:  r.username,
@@ -193,6 +200,7 @@ const serializeMessage = (r: {
   system:    r.system,
   isEdited:  r.isEdited,
   isPinned:  r.isPinned,
+  reactions: (r.reactions && typeof r.reactions === 'object' ? r.reactions : {}) as Reactions,
 })
 
 async function getUserRooms(username: string) {
@@ -285,6 +293,10 @@ app.get('/auth/me', (req: Request, res: Response) => {
   }
 })
 
+const authLimiter = rateLimit({ windowMs: 15 * 60_000, max: 20 })
+app.use('/auth/login', authLimiter)
+app.use('/auth/register', authLimiter)
+
 app.post('/auth/register', async (req: Request, res: Response) => {
   const { username, password, avatar } = req.body as {
     username?: string
@@ -292,12 +304,17 @@ app.post('/auth/register', async (req: Request, res: Response) => {
     avatar?: string
   }
   if (!username || !password) { res.status(400).json({ error: 'Username and password required' }); return }
+  const name = username.trim().toUpperCase()
+  if (!/^[A-ZА-ЯЁ0-9_-]{2,14}$/.test(name)) {
+    res.status(400).json({ error: 'Nickname: 2-14 letters, digits, _ or -' }); return
+  }
   if (password.length < 6)    { res.status(400).json({ error: 'Password min 6 characters' }); return }
+  if (password.length > 72)   { res.status(400).json({ error: 'Password max 72 characters' }); return }
 
   try {
     const hash = await bcrypt.hash(password, 10)
     const user = await prisma.localUser.create({
-      data:   { username: username.toUpperCase(), password: hash, avatar: avatar ?? null },
+      data:   { username: name, password: hash, avatar: avatar ?? null },
       select: { id: true, username: true, avatar: true },
     })
     const token = jwt.sign(
@@ -312,16 +329,32 @@ app.post('/auth/register', async (req: Request, res: Response) => {
   }
 })
 
+// аватар для аккаунта по логину/паролю — чтобы выбранный персонаж сохранялся между входами
+app.post('/auth/avatar', async (req: Request, res: Response) => {
+  const token = req.headers.authorization?.split(' ')[1]
+  const { avatar } = req.body as { avatar?: string }
+  if (!token || !avatar || avatar.length > 300) { res.status(400).json({ error: 'Bad request' }); return }
+  try {
+    const payload = jwt.verify(token, JWT_SECRET) as JwtPayload
+    const local = await prisma.localUser.findUnique({ where: { username: payload.username } })
+    if (!local || local.id !== payload.id) { res.status(404).json({ error: 'Not a local account' }); return }
+    await prisma.localUser.update({ where: { id: local.id }, data: { avatar } })
+    const fresh = jwt.sign({ id: local.id, username: local.username, avatar }, JWT_SECRET, { expiresIn: '30d' })
+    res.json({ token: fresh })
+  } catch {
+    res.status(401).json({ error: 'Invalid token' })
+  }
+})
+
 app.post('/auth/login', async (req: Request, res: Response) => {
   const { username, password } = req.body as { username?: string; password?: string }
   if (!username || !password) { res.status(400).json({ error: 'Username and password required' }); return }
 
   try {
-    const user = await prisma.localUser.findUnique({ where: { username: username.toUpperCase() } })
-    if (!user) { res.status(400).json({ error: 'User not found' }); return }
-
-    const valid = await bcrypt.compare(password, user.password)
-    if (!valid) { res.status(400).json({ error: 'Wrong password' }); return }
+    const user = await prisma.localUser.findUnique({ where: { username: username.trim().toUpperCase() } })
+    // одна и та же ошибка для "нет юзера" и "не тот пароль" — не подсказываем, какие ники заняты
+    const valid = user ? await bcrypt.compare(password, user.password) : false
+    if (!user || !valid) { res.status(400).json({ error: 'Wrong nickname or password' }); return }
 
     const token = jwt.sign(
       { id: user.id, username: user.username, avatar: user.avatar },
@@ -343,6 +376,25 @@ const io = new Server(httpServer, {
 })
 
 const typingUsers: Record<string, Record<string, string>> = {}
+
+// roomId → { socketId → username } — who is in the video call right now
+const calls: Record<string, Record<string, string>> = {}
+const MAX_CALL_PEERS = 4 // mesh P2P: every peer streams to every other one
+
+const callParticipants = (roomId: string): string[] => Object.values(calls[roomId] ?? {})
+
+function leaveCall(socket: Socket) {
+  const data = socket.data as SocketData
+  const roomId = data.callRoom
+  if (!roomId) return
+  delete data.callRoom
+  const call = calls[roomId]
+  if (!call?.[socket.id]) return
+  delete call[socket.id]
+  if (!Object.keys(call).length) delete calls[roomId]
+  io.to(roomId).emit('call_peer_left', { socketId: socket.id })
+  io.to(roomId).emit('call_state', { roomId, participants: callParticipants(roomId) })
+}
 
 io.on('connection', (socket: Socket) => {
   const data = socket.data as SocketData
@@ -393,6 +445,7 @@ io.on('connection', (socket: Socket) => {
   })
 
   socket.on('join_room', async ({ roomId, username }: { roomId: string; username: string }) => {
+    if (data.callRoom && data.callRoom !== roomId) leaveCall(socket)
     socket.rooms.forEach(room => { if (room !== socket.id) socket.leave(room) })
     socket.join(roomId)
     data.currentRoom = roomId
@@ -401,6 +454,16 @@ io.on('connection', (socket: Socket) => {
     const history = await getRoomHistory(roomId)
     socket.emit('room_history', history)
     socket.to(roomId).emit('user_joined', { username, roomId })
+
+    try {
+      const marks = await prisma.readMark.findMany({ where: { roomId } })
+      socket.emit('seen_state', {
+        roomId,
+        marks: Object.fromEntries(marks.map((m: { username: string; lastReadId: bigint }) => [m.username, Number(m.lastReadId)])),
+      })
+    } catch (err) { console.error('[Seen State Error]:', err) }
+
+    socket.emit('call_state', { roomId, participants: callParticipants(roomId) })
   })
 
   // ── FIX CLEANED UP SEND_MESSAGE ────────────────────────────────
@@ -467,6 +530,69 @@ io.on('connection', (socket: Socket) => {
     } catch (err) { console.error(err) }
   })
 
+  // ── Reactions ──────────────────────────────────────────────────
+  socket.on('react_message', async ({ messageId, roomId, emoji }: { messageId: number; roomId: string; emoji: string }) => {
+    const who = data.username
+    if (!who || !(REACTIONS as readonly string[]).includes(emoji)) return
+    try {
+      const msg = await prisma.message.findUnique({ where: { id: BigInt(messageId) }, select: { reactions: true, roomId: true } })
+      if (!msg || msg.roomId !== roomId) return
+
+      const reactions: Reactions = { ...((msg.reactions ?? {}) as Reactions) }
+      const list = reactions[emoji] ?? []
+      const next = list.includes(who) ? list.filter(u => u !== who) : [...list, who]
+      if (next.length) reactions[emoji] = next
+      else delete reactions[emoji]
+
+      await prisma.message.update({ where: { id: BigInt(messageId) }, data: { reactions } })
+      io.to(roomId).emit('message_reacted', { messageId, reactions })
+    } catch (err) { console.error('[React Error]:', err) }
+  })
+
+  // ── Seen flags ─────────────────────────────────────────────────
+  socket.on('mark_seen', async ({ roomId, messageId }: { roomId: string; messageId: number }) => {
+    const who = data.username
+    if (!who || !roomId || !messageId) return
+    try {
+      const id = BigInt(messageId)
+      const prev = await prisma.readMark.findUnique({ where: { roomId_username: { roomId, username: who } } })
+      if (prev && prev.lastReadId >= id) return
+      await prisma.readMark.upsert({
+        where:  { roomId_username: { roomId, username: who } },
+        update: { lastReadId: id },
+        create: { roomId, username: who, lastReadId: id },
+      })
+      socket.to(roomId).emit('seen_update', { roomId, username: who, lastReadId: messageId })
+    } catch (err) { console.error('[Seen Error]:', err) }
+  })
+
+  // ── Video calls (WebRTC signaling) ─────────────────────────────
+  socket.on('call_join', ({ roomId }: { roomId: string }) => {
+    const who = data.username
+    if (!who || !roomId) return
+    const call = calls[roomId] ?? (calls[roomId] = {})
+    if (Object.keys(call).length >= MAX_CALL_PEERS && !call[socket.id]) {
+      socket.emit('call_error', 'Call is full')
+      return
+    }
+    const peers = Object.entries(call).map(([socketId, username]) => ({ socketId, username }))
+    call[socket.id] = who
+    data.callRoom = roomId
+    socket.emit('call_peers', { roomId, peers })
+    io.to(roomId).emit('call_state', { roomId, participants: callParticipants(roomId) })
+  })
+
+  socket.on('call_leave', () => leaveCall(socket))
+
+  // relay SDP offers/answers and ICE candidates between two peers of the same call
+  for (const evt of ['webrtc_offer', 'webrtc_answer', 'webrtc_ice'] as const) {
+    socket.on(evt, ({ to, payload }: { to: string; payload: unknown }) => {
+      const roomId = data.callRoom
+      if (!roomId || !calls[roomId]?.[to]) return
+      io.to(to).emit(evt, { from: socket.id, username: data.username, payload })
+    })
+  }
+
   socket.on('typing_start', ({ roomId, username }: { roomId: string; username: string }) => {
     if (!typingUsers[roomId]) typingUsers[roomId] = {}
     typingUsers[roomId][socket.id] = username
@@ -483,6 +609,7 @@ io.on('connection', (socket: Socket) => {
   socket.on('disconnect', async () => {
     const roomId   = data.currentRoom
     const username = data.username
+    leaveCall(socket)
 
     if (roomId && typingUsers[roomId]) {
       delete typingUsers[roomId][socket.id]
@@ -491,12 +618,15 @@ io.on('connection', (socket: Socket) => {
 
     if (username) {
       try {
-        const oauthUser = await prisma.chatUser.findFirst({ where: { username } })
-        if (!oauthUser) {
+        const [oauthUser, localUser] = await Promise.all([
+          prisma.chatUser.findFirst({ where: { username } }),
+          prisma.localUser.findUnique({ where: { username } }),
+        ])
+        if (!oauthUser && !localUser) {
           await prisma.roomMember.deleteMany({ where: { username } })
           console.log(`[🧹 PURGE] Guest ${username} removed`)
         } else {
-          console.log(`[💾 KEEP] OAuth user ${username} disconnected`)
+          console.log(`[💾 KEEP] Registered user ${username} disconnected`)
         }
       } catch (err) { console.error('[Disconnect Error]:', err) }
     }
