@@ -214,9 +214,10 @@ interface MessageBubbleProps {
   seen?: boolean
   onReact?: (emoji: string) => void
   onContextMenu: (data: { x: number; y: number; msg: MessageData }) => void
+  onAvatarClick?: (username: string, avatar?: string) => void
 }
 
-export default function MessageBubble({ msg, index, isOwn, theme, T, username, seen, onReact, onContextMenu }: MessageBubbleProps) {
+export default function MessageBubble({ msg, index, isOwn, theme, T, username, seen, onReact, onContextMenu, onAvatarClick }: MessageBubbleProps) {
   const reactions = Object.entries(msg.reactions ?? {}).filter(([, users]) => users.length > 0)
 
   // long-press → context menu on touch screens
@@ -252,8 +253,11 @@ export default function MessageBubble({ msg, index, isOwn, theme, T, username, s
         {msg.avatar && (
           <img
             src={msg.avatar}
-            alt="avatar"
+            alt={msg.username ? `${msg.username} — open character page` : 'avatar'}
+            title={msg.username ? `${msg.username}'s character page` : undefined}
+            onClick={() => msg.username && onAvatarClick?.(msg.username, msg.avatar)}
             style={{
+              cursor: onAvatarClick ? 'pointer' : 'default',
               width: '30px', height: '30px',
               borderRadius: '50%', objectFit: 'cover',
               border: '2px solid var(--ink)',

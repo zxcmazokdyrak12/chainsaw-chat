@@ -23,6 +23,7 @@ import VideoCall from './components/VideoCall'
 import StickerBomb from './components/StickerBomb'
 import Tutorial from './components/Tutorial'
 import SfxLayer, { makeBurst, type SfxBurst } from './components/SfxLayer'
+import CharacterModal from './components/CharacterModal'
 import { API_URL } from './config'
 
 const socket: Socket = io(API_URL, {
@@ -167,6 +168,8 @@ export default function App() {
     return !o
   })
   const [drawerOpen, setDrawerOpen] = useState<boolean>(false)
+  // whose character page is open (tap on an avatar in the chat)
+  const [viewUser, setViewUser] = useState<{ name: string; avatar?: string } | null>(null)
 
   const startTour = (): void => { setActiveTab('chat'); setTimeout(() => setTourOpen(true), 350) }
   const closeTour = (): void => {
@@ -798,6 +801,7 @@ export default function App() {
                       seen={typeof msg.id === 'number' && msg.id <= seenByOthers}
                       onReact={(emoji) => reactTo(msg.id, emoji)}
                       onContextMenu={(data) => setContextMenu({ x: data.x, y: data.y, msg: data.msg })}
+                      onAvatarClick={(name, av) => setViewUser({ name, avatar: av })}
                     />
                   )
                 })}
@@ -895,6 +899,7 @@ export default function App() {
       )}
 
       <Tutorial open={tourOpen} onClose={closeTour} />
+      <CharacterModal username={viewUser?.name ?? null} fallbackAvatar={viewUser?.avatar ?? null} onClose={() => setViewUser(null)} />
       <VideoCall call={call} theme={theme} username={username} avatar={avatar.src} isMobile={isMobile} />
 
       <PochitaEgg visible={pochitaVisible} hearts={hearts} />
