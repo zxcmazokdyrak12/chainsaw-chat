@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import CsmIcon from './CsmIcon'
 import { useWindowSize } from '../hooks/useWindowSize'
 
 export interface HeaderThemeTokens {
@@ -65,10 +66,11 @@ export default function Header({
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         borderBottom: isMobile ? 'none' : `2px solid ${T.headerBorder}`, // На мобилке убираем нижнюю рамку топбара, так как табов под ним не будет
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
           <h1 style={{
             margin: 0,
-            fontSize: isMobile ? '16px' : '22px',
+            fontSize: isMobile ? '15px' : '22px',
+            minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis',
             letterSpacing: isMobile ? '1px' : '3px',
             color: T.titleColor,
             textShadow: 'none',
@@ -124,7 +126,7 @@ export default function Header({
               {callCount > 0 && (
                 <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--blood)', marginRight: '6px', verticalAlign: '1px' }} />
               )}
-              {callCount ? `JOIN CALL (${callCount})` : 'CALL'}
+              {callCount ? (isMobile ? `JOIN (${callCount})` : `JOIN CALL (${callCount})`) : 'CALL'}
             </motion.button>
           )}
           <motion.button
@@ -143,7 +145,10 @@ export default function Header({
               whiteSpace: 'nowrap',
             }}
           >
-            {theme === 'light' ? '◑ DARK' : '◐ LIGHT'}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+              <CsmIcon name={theme === 'light' ? 'moon' : 'sun'} size={isMobile ? 15 : 14} strokeWidth={2.4} />
+              {!isMobile && (theme === 'light' ? 'NEGATIVE' : 'PAPER')}
+            </span>
           </motion.button>
         </div>
       </div>

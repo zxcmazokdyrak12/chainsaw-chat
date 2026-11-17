@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import IntroScreen from './components/IntroScreen'
 import UsernameScreen, { AVATARS } from './components/UsernameScreen'
 import Header from './components/Header'
-import Sidebar from './components/Sidebar'
+import { ChapterRail, ChapterDrawer } from './components/ChapterDrawer'
 import MessageBubble from './components/MessageBubble'
 import ContextMenu from './components/ContextMenu'
 import TypingIndicator from './components/TypingIndicator'
@@ -158,6 +158,16 @@ export default function App() {
     setToneCut(true)
     cutTimer.current = setTimeout(() => { setActiveTab(tab); setToneCut(false) }, 90)
   }
+  // chapters panel: rail on desktop (remembers open/closed), drawer on mobile
+  const [railOpen, setRailOpen] = useState<boolean>(() => {
+    try { return localStorage.getItem('chainsaw_rail') !== 'closed' } catch { return true }
+  })
+  const toggleRail = (): void => setRailOpen(o => {
+    try { localStorage.setItem('chainsaw_rail', o ? 'closed' : 'open') } catch { /* ignore */ }
+    return !o
+  })
+  const [drawerOpen, setDrawerOpen] = useState<boolean>(false)
+
   const startTour = (): void => { setActiveTab('chat'); setTimeout(() => setTourOpen(true), 350) }
   const closeTour = (): void => {
     setTourOpen(false)
@@ -668,20 +678,25 @@ export default function App() {
         {/* ВКЛАДКА ЧАТА */}
         {activeTab === 'chat' && (
           <div style={{ display: 'flex', flex: 1, overflow: 'hidden', gap: isMobile ? '6px' : '10px' }}>
-            {/* fix #2: Hide Sidebar on mobile to prevent layout issues */}
+            {/* chapters rail (desktop); on mobile it's a drawer inside the feed panel */}
             {!isMobile && (
-              <div style={{ display: 'flex', border: `4px solid ${T.headerBorder}`, borderRadius: '4px', overflow: 'hidden', background: T.appBg }}>
-                <Sidebar
-                  rooms={rooms} currentRoom={currentRoom}
-                  theme={theme} T={T} onJoinRoom={joinRoom}
-                />
-              </div>
+              <ChapterRail
+                rooms={rooms} currentRoom={currentRoom} onPick={joinRoom}
+                open={railOpen} onToggle={toggleRail}
+                panelStyle={{ border: `4px solid ${T.headerBorder}`, borderRadius: '4px', overflow: 'hidden', background: T.appBg }}
+              />
             )}
             
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', gap: isMobile ? '6px' : '10px' }}>
             {/* feed panel */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', border: `4px solid ${T.headerBorder}`, borderRadius: '4px', overflow: 'hidden', background: T.appBg }}>
               <SfxLayer bursts={sfx} />
+              {isMobile && (
+                <ChapterDrawer
+                  rooms={rooms} currentRoom={currentRoom} onPick={joinRoom}
+                  open={drawerOpen} setOpen={setDrawerOpen}
+                />
+              )}
               {/* stickerbomb layer — behind messages, one layout per room */}
               <StickerBomb
                 density={settings.stickerBomb ?? 'light'}
@@ -697,7 +712,7 @@ export default function App() {
                   position: 'relative', zIndex: 1,
                   flex: 1, 
                   overflowY: 'auto', 
-                  padding: isMobile ? '12px 16px' : '16px 24px', 
+                  padding: isMobile ? '54px 16px 12px' : '16px 24px', 
                   display: 'flex', 
                   flexDirection: 'column', 
                   gap: '10px' 

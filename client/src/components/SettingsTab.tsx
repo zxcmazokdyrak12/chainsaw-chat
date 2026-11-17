@@ -1,5 +1,6 @@
 import React from 'react'
 import { motion } from 'framer-motion'
+import CsmIcon, { type CsmIconName } from './CsmIcon'
 
 // Reusing the same strict interface for settings structure
 export interface Settings {
@@ -13,129 +14,6 @@ export interface Settings {
   sfxEnabled: boolean
 }
 
-interface FontLabelDetail {
-  label: string
-  desc: string
-  px: string
-}
-
-// Strictly type the static font scaling labels configuration map
-const FONT_LABELS: Record<Settings['fontSize'], FontLabelDetail> = {
-  small: { label: 'А', desc: 'Small', px: '12px' },
-  medium: { label: 'А', desc: 'Medium', px: '14px' },
-  large: { label: 'А', desc: 'Large', px: '17px' },
-}
-
-interface ThemeOption {
-  value: Settings['theme']
-  label: string
-}
-
-// Strictly type the theme selector choices array
-const THEME_OPTIONS: ThemeOption[] = [
-  { value: 'system', label: '💻 System' },
-  { value: 'light',  label: '☀️ Light'  },
-  { value: 'dark',   label: '🌙 Dark'   },
-]
-
-// ─────────────────────────────────────────────────────────────────
-// SUB-COMPONENTS PROPS INTERFACES
-
-interface ToggleProps {
-  checked: boolean
-  onChange: (checked: boolean) => void
-  T: Record<string, string>
-}
-
-function Toggle({ checked, onChange, T }: ToggleProps) {
-  return (
-    <div
-      onClick={() => onChange(!checked)}
-      style={{
-        width: '48px', height: '26px', borderRadius: '13px',
-        background: checked ? 'var(--accent)' : T.inputBg,
-        border: `2px solid ${T.inputBorder}`,
-        position: 'relative', cursor: 'pointer', transition: 'background 0.2s',
-        flexShrink: 0,
-      }}
-    >
-      <motion.div
-        animate={{ x: checked ? 22 : 2 }}
-        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-        style={{
-          position: 'absolute', top: '2px',
-          width: '18px', height: '18px', borderRadius: '50%',
-          background: checked ? 'var(--on-accent)' : T.inputBorder,
-        }}
-      />
-    </div>
-  )
-}
-
-interface SectionProps {
-  title: string
-  T: Record<string, string>
-  children: React.ReactNode
-}
-
-function Section({ title, T, children }: SectionProps) {
-  return (
-    <div style={{ width: '100%', maxWidth: '480px' }}>
-      <div style={{
-        fontFamily: 'BlambotClassic, sans-serif',
-        fontSize: '11px', letterSpacing: '3px',
-        color: 'var(--accent)', marginBottom: '10px',
-        borderBottom: `2px solid var(--accent)`,
-        paddingBottom: '4px',
-        textTransform: 'uppercase',
-      }}>
-        {title}
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        {children}
-      </div>
-    </div>
-  )
-}
-
-interface RowProps {
-  label: string
-  desc?: string
-  T: Record<string, string>
-  children: React.ReactNode
-}
-
-function Row({ label, desc, T, children }: RowProps) {
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '12px 16px',
-      background: T.inputBg,
-      border: `2px solid ${T.inputBorder}`,
-      gap: '16px',
-    }}>
-      <div>
-        <div style={{
-          fontFamily: 'BlambotClassic, sans-serif',
-          fontSize: 'var(--font-size-base, 14px)',
-          color: T.titleColor, letterSpacing: '1px',
-        }}>{label}</div>
-        {desc && (
-          <div style={{
-            fontFamily: "'AnimeAce', sans-serif",
-            fontSize: '11px', color: T.titleColor, opacity: 0.5,
-            marginTop: '2px',
-          }}>{desc}</div>
-        )}
-      </div>
-      {children}
-    </div>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────────
-// MAIN COMPONENT EXPORT
-
 interface SettingsTabProps {
   T: Record<string, string>
   settings: Settings
@@ -143,200 +21,260 @@ interface SettingsTabProps {
   onReplayTutorial?: () => void
 }
 
-export default function SettingsTab({ T, settings, onUpdate, onReplayTutorial }: SettingsTabProps) {
+const ink = 'var(--ink)'
+const paper = 'var(--paper)'
+
+// ── building blocks ──────────────────────────────────────────────
+
+// a panel with a narration caption stuck over its top-left border
+function Panel({ title, icon, children, wide }: { title: string; icon: CsmIconName; children: React.ReactNode; wide?: boolean }) {
+  return (
+    <section style={{
+      position: 'relative', gridColumn: wide ? '1 / -1' : undefined,
+      border: `3px solid ${ink}`, borderRadius: '12px',
+      padding: '26px 16px 16px', marginTop: '14px',
+      backgroundColor: paper,
+    }}>
+      <div style={{
+        position: 'absolute', top: '-15px', left: '14px',
+        display: 'flex', alignItems: 'center', gap: '7px',
+        border: `3px solid ${ink}`, backgroundColor: paper, color: ink,
+        padding: '3px 12px 3px 9px', transform: 'rotate(-1.5deg)',
+        boxShadow: `3px 3px 0 ${ink}`,
+        fontFamily: 'BlambotClassic, sans-serif', fontSize: '15px', letterSpacing: '2px',
+      }}>
+        <CsmIcon name={icon} size={17} strokeWidth={2.4} />
+        {title}
+      </div>
+      {children}
+    </section>
+  )
+}
+
+// on/off switch that reads like an ink stamp
+function Stamp({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <button
+      role="switch" aria-checked={checked} aria-label={label}
+      onClick={() => onChange(!checked)}
+      style={{
+        position: 'relative', flexShrink: 0,
+        width: '70px', height: '32px', padding: 0,
+        border: `3px solid ${ink}`, borderRadius: '999px',
+        backgroundColor: checked ? ink : paper,
+        cursor: 'pointer',
+      }}
+    >
+      <span style={{
+        position: 'absolute', top: '50%', transform: 'translateY(-50%)',
+        [checked ? 'left' : 'right']: '9px',
+        fontFamily: 'BlambotClassic, sans-serif', fontSize: '12px', letterSpacing: '1px',
+        color: checked ? paper : ink, opacity: 0.85,
+      } as React.CSSProperties}>
+        {checked ? 'ON' : 'OFF'}
+      </span>
+      <motion.span
+        animate={{ x: checked ? 38 : 0 }}
+        transition={{ type: 'spring', stiffness: 500, damping: 32 }}
+        style={{
+          position: 'absolute', top: '2px', left: '2px',
+          width: '22px', height: '22px', borderRadius: '50%',
+          backgroundColor: checked ? paper : ink,
+        }}
+      />
+    </button>
+  )
+}
+
+function Row({ icon, label, desc, children }: { icon: CsmIconName; label: string; desc: string; children: React.ReactNode }) {
   return (
     <div style={{
-      flex: 1, overflowY: 'auto', padding: '24px 16px',
-      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '28px',
+      display: 'flex', alignItems: 'center', gap: '12px',
+      padding: '10px 2px', borderBottom: `2px dotted ${ink}`,
     }}>
-
-      <div style={{
-        fontFamily: 'BlambotClassic, sans-serif',
-        fontSize: '22px', letterSpacing: '4px',
-        color: T.titleColor,
-        textShadow: '3px 3px 0 var(--accent)',
-      }}>
-        ⚙️ SETTINGS
+      <CsmIcon name={icon} size={24} strokeWidth={2.2} style={{ color: ink }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontFamily: 'BlambotClassic, sans-serif', fontSize: '16px', letterSpacing: '1.5px', color: ink }}>{label}</div>
+        <div style={{ fontFamily: "'AnimeAce', sans-serif", fontSize: '10px', color: ink, opacity: 0.6, marginTop: '2px' }}>{desc}</div>
       </div>
+      {children}
+    </div>
+  )
+}
 
-      {/* THEME CONFIGURATION SECTION */}
-      <Section title="interface theme" T={T}>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {THEME_OPTIONS.map(opt => (
-            <motion.button
-              key={opt.value}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => onUpdate('theme', opt.value)}
-              style={{
-                flex: 1, padding: '10px 8px',
-                background: settings.theme === opt.value ? 'var(--accent)' : T.inputBg,
-                color: settings.theme === opt.value ? 'var(--on-accent)' : T.titleColor,
-                border: `2px solid ${settings.theme === opt.value ? 'var(--accent)' : T.inputBorder}`,
-                fontFamily: "'AnimeAce', sans-serif",
-                fontSize: '11px', cursor: 'pointer',
-                letterSpacing: '0.5px',
-                transition: 'all 0.15s',
-              }}
-            >
-              {opt.label}
-            </motion.button>
-          ))}
-        </div>
-      </Section>
-
-      {/* FONT SIZE SELECTION SECTION */}
-      <Section title="FONT SIZE" T={T}>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {(Object.keys(FONT_LABELS) as Array<keyof typeof FONT_LABELS>).map((key) => {
-            const val = FONT_LABELS[key];
-            return (
-              <motion.button
-                key={key}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => onUpdate('fontSize', key)}
-                style={{
-                  flex: 1, padding: '12px 8px',
-                  background: settings.fontSize === key ? 'var(--accent)' : T.inputBg,
-                  color: settings.fontSize === key ? 'var(--on-accent)' : T.titleColor,
-                  border: `2px solid ${settings.fontSize === key ? 'var(--accent)' : T.inputBorder}`,
-                  fontFamily: 'BlambotClassic, sans-serif',
-                  fontSize: val.px,
-                  cursor: 'pointer', transition: 'all 0.15s',
-                  display: 'flex', flexDirection: 'column',
-                  alignItems: 'center', gap: '4px',
-                }}
-              >
-                <span>{val.label}</span>
-                <span style={{ fontSize: '9px', fontFamily: "'AnimeAce', sans-serif", opacity: 0.8 }}>
-                  {val.desc}
-                </span>
-              </motion.button>
-            )
-          })}
-        </div>
-      </Section>
-
-      {/* STICKERBOMB BACKGROUND */}
-      <Section title="STICKERBOMB" T={T}>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {([
-            { value: 'off',   label: '🚫 Off' },
-            { value: 'light', label: '🩹 Light' },
-            { value: 'full',  label: '💣 Full' },
-          ] as const).map(opt => (
-            <motion.button
-              key={opt.value}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => onUpdate('stickerBomb', opt.value)}
-              style={{
-                flex: 1, padding: '10px 8px',
-                background: (settings.stickerBomb ?? 'light') === opt.value ? 'var(--accent)' : T.inputBg,
-                color: (settings.stickerBomb ?? 'light') === opt.value ? 'var(--on-accent)' : T.titleColor,
-                border: `2px solid ${(settings.stickerBomb ?? 'light') === opt.value ? 'var(--accent)' : T.inputBorder}`,
-                fontFamily: "'AnimeAce', sans-serif",
-                fontSize: '11px', cursor: 'pointer',
-                letterSpacing: '0.5px',
-                transition: 'all 0.15s',
-              }}
-            >
-              {opt.label}
-            </motion.button>
-          ))}
-        </div>
-      </Section>
-
-      {/* CHAT INPUT SUBMISSION CONFIGURATION */}
-      <Section title="SEND MESSAGES" T={T}>
-        <Row
-          label="Enter → send"
-          desc={settings.sendOnEnter
-            ? 'Ctrl+Enter — new line'
-            : 'Ctrl+Enter — send, Enter — new line'}
-          T={T}
-        >
-          <Toggle
-            checked={settings.sendOnEnter}
-            onChange={(v) => onUpdate('sendOnEnter', v)}
-            T={T}
-          />
-        </Row>
-      </Section>
-
-      {/* MOTIONS & SOUND EFFECTS TOGGLES */}
-      <Section title="SOUND" T={T}>
-        <Row
-          label="🪚 Chainsaw sounds"
-          desc="Roar when CAPS LOCK is on and at startup"
-          T={T}
-        >
-          <Toggle
-            checked={settings.soundEnabled}
-            onChange={(v) => onUpdate('soundEnabled', v)}
-            T={T}
-          />
-        </Row>
-      </Section>
-
-      {/* POCHITA HEARTS EASTER EGG TOGGLE */}
-      <Section title="EASTER EGGS" T={T}>
-        <Row
-          label="🐶 Pochita Hearts"
-          desc="appears on cute words"
-          T={T}
-        >
-          <Toggle
-            checked={settings.pochitaEnabled ?? true}
-            onChange={(v) => onUpdate('pochitaEnabled', v)}
-            T={T}
-          />
-        </Row>
-        <Row
-          label="💥 Manga SFX"
-          desc="DOOOM on caps, DON when you send, ZAP! when someone joins"
-          T={T}
-        >
-          <Toggle
-            checked={settings.sfxEnabled ?? true}
-            onChange={(v) => onUpdate('sfxEnabled', v)}
-            T={T}
-          />
-        </Row>
-      </Section>
-
-      {/* TUTORIAL */}
-      {onReplayTutorial && (
-        <Section title="TUTORIAL" T={T}>
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={onReplayTutorial}
-            style={{
-              width: '100%', padding: '12px 8px',
-              background: 'var(--accent)', color: 'var(--on-accent)',
-              border: `2px solid ${T.inputBorder}`,
-              fontFamily: 'BlambotClassic, sans-serif',
-              fontSize: '15px', letterSpacing: '2px', cursor: 'pointer',
-            }}
-          >
-            📖 REPLAY THE TOUR
-          </motion.button>
-        </Section>
+// a choice tile: a mini preview + caption, selected = thick frame and a check stamp
+function Tile({ selected, onClick, caption, children }: { selected: boolean; onClick: () => void; caption: string; children: React.ReactNode }) {
+  return (
+    <motion.button
+      whileTap={{ scale: 0.96 }}
+      onClick={onClick}
+      aria-pressed={selected}
+      style={{
+        position: 'relative', flex: 1, minWidth: 0,
+        padding: '8px 8px 6px',
+        backgroundColor: paper, color: ink,
+        border: `${selected ? 4 : 2}px solid ${ink}`, borderRadius: '12px',
+        boxShadow: selected ? `4px 4px 0 ${ink}` : 'none',
+        cursor: 'pointer',
+        display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: '6px',
+      }}
+    >
+      {children}
+      <span style={{ fontFamily: 'BlambotClassic, sans-serif', fontSize: '13px', letterSpacing: '1.5px', textAlign: 'center' }}>{caption}</span>
+      {selected && (
+        <span style={{
+          position: 'absolute', top: '-10px', right: '-8px',
+          width: '24px', height: '24px', borderRadius: '50%',
+          backgroundColor: ink, color: paper,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '13px', transform: 'rotate(-10deg)',
+        }}>✓</span>
       )}
+    </motion.button>
+  )
+}
 
-      {/* PRIVACY & BROADCAST CONFIGURATIONS */}
-      <Section title="PRIVACY" T={T}>
-        <Row
-          label="⌨️ Show when I'm typing"
-          desc={settings.showTyping ? 'Others can see your typing status' : 'Your typing status is hidden from others'}
-          T={T}
-        >
-          <Toggle
-            checked={settings.showTyping}
-            onChange={(v) => onUpdate('showTyping', v)}
-            T={T}
-          />
-        </Row>
-      </Section>
+// tiny page previews for the theme picker
+function PagePreview({ mode }: { mode: 'light' | 'dark' | 'system' }) {
+  const half = (bg: string, fg: string) => (
+    <div style={{ flex: 1, background: bg, padding: '6px 5px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      <div style={{ height: '9px', width: '70%', border: `2px solid ${fg}`, borderRadius: '6px' }} />
+      <div style={{ height: '9px', width: '55%', border: `2px solid ${fg}`, borderRadius: '6px', alignSelf: 'flex-end', backgroundImage: `radial-gradient(${fg} .6px, transparent 1px)`, backgroundSize: '4px 4px' }} />
+      <div style={{ height: '3px', width: '80%', background: fg }} />
+    </div>
+  )
+  return (
+    <div style={{ display: 'flex', height: '54px', border: `2px solid ${ink}`, borderRadius: '6px', overflow: 'hidden' }}>
+      {mode !== 'dark' && half('#f5f2ea', '#111')}
+      {mode !== 'light' && half('#0e0e0e', '#f2efe6')}
+    </div>
+  )
+}
 
+// sticker density preview: little rotated squares
+function BombPreview({ level }: { level: 'off' | 'light' | 'full' }) {
+  const spots = level === 'off' ? [] : level === 'light'
+    ? [[6, 8, -12], [70, 30, 14], [14, 62, 8]]
+    : [[4, 6, -12], [38, 14, 10], [72, 4, -6], [10, 46, 16], [52, 40, -14], [80, 52, 9], [28, 70, -4], [64, 72, 12]]
+  return (
+    <div className={level === 'off' ? undefined : 'tone-light'} style={{ position: 'relative', height: '54px', border: `2px solid ${ink}`, borderRadius: '6px', overflow: 'hidden', backgroundColor: paper }}>
+      {spots.map(([x, y, r], i) => (
+        <span key={i} style={{
+          position: 'absolute', left: `${x}%`, top: `${y}%`, width: '15px', height: '15px',
+          background: paper, border: `2px solid ${ink}`, borderRadius: '3px',
+          transform: `rotate(${r}deg)`, boxShadow: `1px 1px 0 ${ink}`,
+        }} />
+      ))}
+      {level === 'off' && (
+        <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'AnimeAce', sans-serif", fontSize: '10px', opacity: 0.5 }}>clean page</span>
+      )}
+    </div>
+  )
+}
+
+const FONT_PX: Record<Settings['fontSize'], string> = { small: '12px', medium: '14px', large: '17px' }
+
+// ── the tab ──────────────────────────────────────────────────────
+
+export default function SettingsTab({ settings, onUpdate, onReplayTutorial }: SettingsTabProps) {
+  const bomb = settings.stickerBomb ?? 'light'
+
+  return (
+    <div style={{ flex: 1, overflowY: 'auto', padding: '22px 20px 34px', color: ink }}>
+      <div style={{ maxWidth: '820px', margin: '0 auto' }}>
+
+        {/* title */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '14px', marginBottom: '6px' }}>
+          <div style={{ fontFamily: 'BlambotClassic, sans-serif', fontSize: '40px', letterSpacing: '6px', lineHeight: 1 }}>SETTINGS</div>
+          <div style={{ fontFamily: 'serif', fontSize: '18px', opacity: 0.55, paddingBottom: '4px' }}>設定</div>
+        </div>
+        <div style={{ height: '4px', background: ink, marginBottom: '3px' }} />
+        <div style={{ height: '1.5px', background: ink, marginBottom: '14px' }} />
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', columnGap: '18px', rowGap: '14px' }}>
+
+          <Panel title="PAGE" icon={settings.theme === 'dark' ? 'moon' : 'sun'} wide>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              {(['system', 'light', 'dark'] as const).map(m => (
+                <Tile key={m} selected={settings.theme === m} onClick={() => onUpdate('theme', m)}
+                  caption={m === 'system' ? 'SYSTEM' : m === 'light' ? 'PAPER' : 'NEGATIVE'}>
+                  <PagePreview mode={m} />
+                </Tile>
+              ))}
+            </div>
+          </Panel>
+
+          <Panel title="LETTERING" icon="chat">
+            <div style={{ display: 'flex', gap: '10px' }}>
+              {(['small', 'medium', 'large'] as const).map(sz => (
+                <Tile key={sz} selected={settings.fontSize === sz} onClick={() => onUpdate('fontSize', sz)} caption={sz.toUpperCase()}>
+                  <div style={{ height: '54px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{
+                      border: `2px solid ${ink}`, borderRadius: '50% / 50%', padding: '6px 10px',
+                      fontFamily: "'AnimeAce', sans-serif", fontSize: FONT_PX[sz],
+                    }}>Aa</span>
+                  </div>
+                </Tile>
+              ))}
+            </div>
+          </Panel>
+
+          <Panel title="STICKERBOMB" icon="sfx">
+            <div style={{ display: 'flex', gap: '10px' }}>
+              {(['off', 'light', 'full'] as const).map(lv => (
+                <Tile key={lv} selected={bomb === lv} onClick={() => onUpdate('stickerBomb', lv)} caption={lv.toUpperCase()}>
+                  <BombPreview level={lv} />
+                </Tile>
+              ))}
+            </div>
+          </Panel>
+
+          <Panel title="SOUND & FX" icon="chainsaw">
+            <Row icon="chainsaw" label="CHAINSAW SOUNDS" desc="roar at startup and on CAPS LOCK">
+              <Stamp label="Chainsaw sounds" checked={settings.soundEnabled} onChange={v => onUpdate('soundEnabled', v)} />
+            </Row>
+            <Row icon="sfx" label="MANGA SFX" desc="DOOOM on caps, DON on send, ZAP! on join">
+              <Stamp label="Manga SFX" checked={settings.sfxEnabled ?? true} onChange={v => onUpdate('sfxEnabled', v)} />
+            </Row>
+            <Row icon="heart" label="POCHITA HEARTS" desc="hearts rain on cute words">
+              <Stamp label="Pochita hearts" checked={settings.pochitaEnabled ?? true} onChange={v => onUpdate('pochitaEnabled', v)} />
+            </Row>
+          </Panel>
+
+          <Panel title="CONTROLS & PRIVACY" icon="keyboard">
+            <Row icon="send" label="ENTER SENDS"
+              desc={settings.sendOnEnter ? 'Shift+Enter — new line' : 'Ctrl+Enter sends, Enter — new line'}>
+              <Stamp label="Enter sends" checked={settings.sendOnEnter} onChange={v => onUpdate('sendOnEnter', v)} />
+            </Row>
+            <Row icon="keyboard" label="SHOW I'M TYPING"
+              desc={settings.showTyping ? 'others see your thought balloon' : 'you type in secret'}>
+              <Stamp label="Show typing" checked={settings.showTyping} onChange={v => onUpdate('showTyping', v)} />
+            </Row>
+          </Panel>
+
+          {onReplayTutorial && (
+            <Panel title="TOUR" icon="book" wide>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: '200px', fontFamily: "'AnimeAce', sans-serif", fontSize: '11px', lineHeight: 1.6 }}>
+                  Forgot where things are? The crew will walk you through the chat again.
+                </div>
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={onReplayTutorial}
+                  style={{
+                    padding: '12px 22px', display: 'flex', alignItems: 'center', gap: '10px',
+                    background: 'var(--accent)', color: 'var(--on-accent)',
+                    border: `3px solid ${ink}`, borderRadius: '12px', boxShadow: `4px 4px 0 ${ink}`,
+                    fontFamily: 'BlambotClassic, sans-serif', fontSize: '16px', letterSpacing: '2px', cursor: 'pointer',
+                  }}
+                >
+                  <CsmIcon name="book" size={20} /> REPLAY THE TOUR
+                </motion.button>
+              </div>
+            </Panel>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
