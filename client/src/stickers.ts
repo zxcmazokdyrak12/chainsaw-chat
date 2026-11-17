@@ -46,6 +46,7 @@ export const STICKERS: Sticker[] = [
   { kind: 'card', src: '/stickers/panel_asa_selfie.jpg',     name: 'Asa & Denji',    ratio: 'auto' },
   { kind: 'card', src: '/stickers/panel_sleepover.jpg',      name: 'Sleepover',      ratio: 'auto' },
   { kind: 'card', src: '/stickers/panel_denji_kobeni.jpg',   name: 'Denji & Kobeni', ratio: 'auto' },
+  { kind: 'card', src: '/stickers/panel_himeno_window.jpg',  name: 'Himeno',         ratio: 'auto' },
 
   // close-ups cut from the same panels
   { kind: 'card', src: '/stickers/crop_makima_eyes.jpg',      name: 'Makima',      ratio: 'auto' },
