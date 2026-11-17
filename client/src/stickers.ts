@@ -60,8 +60,8 @@ export const STICKERS: Sticker[] = [
   { kind: 'card', src: '/stickers/crop_kishibe_face.jpg',     name: 'Kishibe',     ratio: 'auto' },
 
   // lettering
-  { kind: 'sfx', text: 'BRRRRM!',      color: '#cc2200' },
+  { kind: 'sfx', text: 'BRRRRM!',      color: '#111' },
   { kind: 'sfx', text: 'DEVIL HUNTER', color: '#111' },
-  { kind: 'sfx', text: 'ZUDOM',        color: '#cc2200' },
-  { kind: 'sfx', text: '♥',            color: '#ff4f8b' },
+  { kind: 'sfx', text: 'ZUDOM',        color: '#111' },
+  { kind: 'sfx', text: '♥',            color: '#111' },
 ]

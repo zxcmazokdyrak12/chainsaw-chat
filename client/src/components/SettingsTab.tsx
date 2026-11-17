@@ -52,7 +52,7 @@ function Toggle({ checked, onChange, T }: ToggleProps) {
       onClick={() => onChange(!checked)}
       style={{
         width: '48px', height: '26px', borderRadius: '13px',
-        background: checked ? '#cc2200' : T.inputBg,
+        background: checked ? 'var(--accent)' : T.inputBg,
         border: `2px solid ${T.inputBorder}`,
         position: 'relative', cursor: 'pointer', transition: 'background 0.2s',
         flexShrink: 0,
@@ -83,8 +83,8 @@ function Section({ title, T, children }: SectionProps) {
       <div style={{
         fontFamily: 'BlambotClassic, sans-serif',
         fontSize: '11px', letterSpacing: '3px',
-        color: '#cc2200', marginBottom: '10px',
-        borderBottom: `2px solid #cc2200`,
+        color: 'var(--accent)', marginBottom: '10px',
+        borderBottom: `2px solid var(--accent)`,
         paddingBottom: '4px',
         textTransform: 'uppercase',
       }}>
@@ -153,7 +153,7 @@ export default function SettingsTab({ T, settings, onUpdate, onReplayTutorial }:
         fontFamily: 'BlambotClassic, sans-serif',
         fontSize: '22px', letterSpacing: '4px',
         color: T.titleColor,
-        textShadow: '3px 3px 0 #cc2200',
+        textShadow: '3px 3px 0 var(--accent)',
       }}>
         ⚙️ SETTINGS
       </div>
@@ -168,9 +168,9 @@ export default function SettingsTab({ T, settings, onUpdate, onReplayTutorial }:
               onClick={() => onUpdate('theme', opt.value)}
               style={{
                 flex: 1, padding: '10px 8px',
-                background: settings.theme === opt.value ? '#cc2200' : T.inputBg,
-                color: settings.theme === opt.value ? '#fff' : T.titleColor,
-                border: `2px solid ${settings.theme === opt.value ? '#cc2200' : T.inputBorder}`,
+                background: settings.theme === opt.value ? 'var(--accent)' : T.inputBg,
+                color: settings.theme === opt.value ? 'var(--on-accent)' : T.titleColor,
+                border: `2px solid ${settings.theme === opt.value ? 'var(--accent)' : T.inputBorder}`,
                 fontFamily: "'AnimeAce', sans-serif",
                 fontSize: '11px', cursor: 'pointer',
                 letterSpacing: '0.5px',
@@ -195,9 +195,9 @@ export default function SettingsTab({ T, settings, onUpdate, onReplayTutorial }:
                 onClick={() => onUpdate('fontSize', key)}
                 style={{
                   flex: 1, padding: '12px 8px',
-                  background: settings.fontSize === key ? '#cc2200' : T.inputBg,
-                  color: settings.fontSize === key ? '#fff' : T.titleColor,
-                  border: `2px solid ${settings.fontSize === key ? '#cc2200' : T.inputBorder}`,
+                  background: settings.fontSize === key ? 'var(--accent)' : T.inputBg,
+                  color: settings.fontSize === key ? 'var(--on-accent)' : T.titleColor,
+                  border: `2px solid ${settings.fontSize === key ? 'var(--accent)' : T.inputBorder}`,
                   fontFamily: 'BlambotClassic, sans-serif',
                   fontSize: val.px,
                   cursor: 'pointer', transition: 'all 0.15s',
@@ -229,9 +229,9 @@ export default function SettingsTab({ T, settings, onUpdate, onReplayTutorial }:
               onClick={() => onUpdate('stickerBomb', opt.value)}
               style={{
                 flex: 1, padding: '10px 8px',
-                background: (settings.stickerBomb ?? 'light') === opt.value ? '#cc2200' : T.inputBg,
-                color: (settings.stickerBomb ?? 'light') === opt.value ? '#fff' : T.titleColor,
-                border: `2px solid ${(settings.stickerBomb ?? 'light') === opt.value ? '#cc2200' : T.inputBorder}`,
+                background: (settings.stickerBomb ?? 'light') === opt.value ? 'var(--accent)' : T.inputBg,
+                color: (settings.stickerBomb ?? 'light') === opt.value ? 'var(--on-accent)' : T.titleColor,
+                border: `2px solid ${(settings.stickerBomb ?? 'light') === opt.value ? 'var(--accent)' : T.inputBorder}`,
                 fontFamily: "'AnimeAce', sans-serif",
                 fontSize: '11px', cursor: 'pointer',
                 letterSpacing: '0.5px',
@@ -299,7 +299,7 @@ export default function SettingsTab({ T, settings, onUpdate, onReplayTutorial }:
             onClick={onReplayTutorial}
             style={{
               width: '100%', padding: '12px 8px',
-              background: '#cc2200', color: '#fff',
+              background: 'var(--accent)', color: 'var(--on-accent)',
               border: `2px solid ${T.inputBorder}`,
               fontFamily: 'BlambotClassic, sans-serif',
               fontSize: '15px', letterSpacing: '2px', cursor: 'pointer',

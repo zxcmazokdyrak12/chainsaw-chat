@@ -119,13 +119,13 @@ export function AudioPlayer({ src, theme }: AudioPlayerProps) {
   const dark = theme === 'dark'
   const fg = dark ? '#fff' : '#111'
   const track = dark ? '#555' : '#ccc'
-  const fill = '#cc2200'
+  const fill = 'var(--accent)'
 
   if (error) {
     return (
       <div style={{
         fontFamily: "'AnimeAce', sans-serif",
-        fontSize: '10px', color: '#cc2200', opacity: 0.9,
+        fontSize: '10px', color: 'var(--accent)', opacity: 0.9,
         padding: '4px 0',
         display: 'flex', flexDirection: 'column', gap: '4px'
       }}>
@@ -226,16 +226,16 @@ export default function MessageBubble({ msg, index, isOwn, theme, T, username, s
     if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null }
   }
   useEffect(() => cancelPress, [])
-  const ink = theme === 'dark' ? '#fff' : '#111'
+  const ink = 'var(--ink)'
   const contentStr = msg.content || ''
   const isShout = contentStr === contentStr.toUpperCase()
     && contentStr.replace(/[^a-zA-Zа-яА-Я]/g, '').length > 2
+  const isShort = msg.type !== 'audio' && contentStr.length <= 34 && !contentStr.includes('\n')
 
   return (
     <motion.div
       initial={{ x: isOwn ? 50 : -50, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
-      whileHover={{ scale: 1.02 }}
       transition={{ type: 'spring', stiffness: 320, damping: 28 }}
       style={{
         display: 'flex',
@@ -256,9 +256,10 @@ export default function MessageBubble({ msg, index, isOwn, theme, T, username, s
             style={{
               width: '30px', height: '30px',
               borderRadius: '50%', objectFit: 'cover',
-              border: `2px solid ${theme === 'light' ? '#111' : '#fff'}`,
+              border: '2px solid var(--ink)',
               flexShrink: 0,
-              marginBottom: '4px',
+              marginBottom: '18px',
+              filter: 'grayscale(1) contrast(1.15)',
             }}
           />
         )}
@@ -291,33 +292,44 @@ export default function MessageBubble({ msg, index, isOwn, theme, T, username, s
             {isOwn && (
               <span
                 title={seen ? 'Seen' : 'Sent'}
-                style={{ fontSize: '9px', letterSpacing: '1px', color: seen ? '#cc2200' : 'inherit', fontWeight: seen ? 900 : 'normal' }}
+                style={{ fontSize: '9px', letterSpacing: '1px', color: seen ? 'var(--accent)' : 'inherit', fontWeight: seen ? 900 : 'normal' }}
               >
                 {seen ? '✓✓ SEEN' : '✓ SENT'}
               </span>
             )}
           </span>
 
-          <div style={{ position: 'relative' }}>
-            <div style={{
-              position: 'absolute', bottom: '20px',
-              ...(isOwn
-                ? { right: '-18px', borderTop: '10px solid transparent', borderBottom: '10px solid transparent', borderLeft: `18px solid ${theme === 'dark' ? '#fff' : '#111'}` }
-                : { left: '-18px', borderTop: '10px solid transparent', borderBottom: '10px solid transparent', borderRight: `18px solid ${theme === 'dark' ? '#fff' : '#111'}` }
-              ),
-              zIndex: 2,
-            }} />
-            <div style={{
-              position: 'absolute', bottom: '22px',
-              ...(isOwn
-                ? { right: '-13px', borderTop: '8px solid transparent', borderBottom: '8px solid transparent', borderLeft: `14px solid ${theme === 'dark' ? '#222' : '#fff'}` }
-                : { left: '-13px', borderTop: '8px solid transparent', borderBottom: '8px solid transparent', borderRight: `14px solid ${theme === 'dark' ? '#222' : '#fff'}` }
-              ),
-              zIndex: 3,
-            }} />
+          <div style={{ position: 'relative', marginBottom: isShout ? 0 : '14px' }}>
+            {/* speech-bubble tail, glued under the bubble on the speaker's side */}
+            {!isShout && (
+              <svg
+                viewBox="0 0 34 30" aria-hidden
+                style={{
+                  position: 'absolute', bottom: '-19px', width: '34px', height: '30px',
+                  overflow: 'visible', zIndex: 2, pointerEvents: 'none',
+                  ...(isOwn ? { right: '18%', transform: 'scaleX(-1)' } : { left: '18%' }),
+                }}
+              >
+                <path d="M3 0 L31 0 L5 28 Z" fill="var(--paper)" />
+                <path d="M28 7 L5 28 L10 8" fill="none" stroke="var(--ink)" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
+              </svg>
+            )}
+
+            {/* CAPS = a jagged shout balloon stretched behind the text */}
+            {isShout && (
+              <svg viewBox="0 0 380 150" preserveAspectRatio="none" aria-hidden
+                style={{ position: 'absolute', inset: '-10px -16px', width: 'calc(100% + 32px)', height: 'calc(100% + 20px)', overflow: 'visible', pointerEvents: 'none' }}>
+                <polygon
+                  fill="var(--paper)" stroke="var(--ink)" strokeWidth="3.5" strokeLinejoin="round"
+                  vectorEffect="non-scaling-stroke"
+                  points="20,40 60,48 70,8 110,36 150,4 175,34 215,6 235,36 285,12 290,44 345,30 330,62 372,76 332,90 352,124 300,108 288,144 245,114 215,146 185,112 140,140 120,108 70,132 72,100 18,110 46,78 4,62 44,56"
+                />
+              </svg>
+            )}
 
             <div
               data-tour="bubble"
+              className={isOwn && !isShout ? 'tone-light' : undefined}
               onDoubleClick={() => onReact?.('🔥')}
               onContextMenu={(e: React.MouseEvent<HTMLDivElement>) => {
                 e.preventDefault()
@@ -341,31 +353,34 @@ export default function MessageBubble({ msg, index, isOwn, theme, T, username, s
               onTouchCancel={cancelPress}
               style={{
                 position: 'relative',
-                maxWidth: '280px',
-                padding: '12px 16px 14px 16px',
-                borderRadius: isOwn
-                  ? '50% 50% 20% 50% / 50% 50% 50% 20%'
-                  : '50% 50% 50% 20% / 50% 50% 20% 50%',
-                background: theme === 'dark' ? '#222' : '#fff',
-                border: `3px solid ${theme === 'dark' ? '#fff' : '#111'}`,
-                boxShadow: isOwn
-                  ? (theme === 'dark' ? '3px 3px 0 #fff' : '3px 3px 0 #111')
-                  : (theme === 'dark' ? '-3px 3px 0 #fff' : '-3px 3px 0 #111'),
-                color: theme === 'dark' ? '#fff' : '#111',
-                fontSize: isShout ? '17px' : 'var(--font-size-base, 14px)',
-                fontWeight: isShout ? 900 : 'normal',
-                fontFamily: isShout ? "'DeathRattle', sans-serif" : "'BlambotClassic', sans-serif",
-                letterSpacing: isShout ? '2px' : 'normal',
+                maxWidth: isShout ? '320px' : '300px',
+                minWidth: isShout ? '150px' : undefined,
+                padding: isShout ? '26px 34px' : isShort ? '14px 26px' : '13px 20px',
+                textAlign: isShort || isShout ? 'center' : 'left',
+                // manga balloons: ovals for short lines, rounded boxes for long ones
+                borderRadius: isShout ? 0 : isShort ? '50% / 50%' : '26px',
+                backgroundColor: isShout ? 'transparent' : 'var(--paper)',
+                border: isShout ? 'none' : '3px solid var(--ink)',
+                color: 'var(--ink)',
+                fontSize: isShout ? '18px' : 'var(--font-size-base, 14px)',
+                fontFamily: isShout ? "'DeathRattle', 'AnimeAce', sans-serif" : "'AnimeAce', sans-serif",
+                letterSpacing: isShout ? '2px' : '0.3px',
                 lineHeight: '1.5',
                 wordBreak: 'break-word',
                 overflowWrap: 'break-word',
-                transition: 'background 0.3s',
                 cursor: 'context-menu',
               }}
             >
-              {/* Исправление: проверяем строго тип аудио сообщения */}
               {msg.type === 'audio' && msg.audioData ? (
                 <AudioPlayer src={msg.audioData} theme={theme} />
+              ) : isOwn && !isShout ? (
+                // own lines sit on a paper strip so the screentone never eats the letters
+                <span style={{
+                  backgroundColor: 'var(--paper)', padding: '1px 6px', borderRadius: '6px',
+                  boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone',
+                }}>
+                  {msg.content}
+                </span>
               ) : (
                 msg.content
               )}
@@ -393,15 +408,14 @@ export default function MessageBubble({ msg, index, isOwn, theme, T, username, s
                     style={{
                       display: 'flex', alignItems: 'center', gap: '3px',
                       padding: '1px 7px',
-                      background: mine ? '#cc2200' : (theme === 'dark' ? '#222' : '#fff'),
-                      color: mine ? '#fff' : ink,
+                      background: mine ? 'var(--accent)' : 'var(--paper)',
+                      color: mine ? 'var(--on-accent)' : ink,
                       border: `2px solid ${ink}`,
-                      boxShadow: `2px 2px 0 ${ink}`,
                       fontFamily: "'AnimeAce', sans-serif", fontSize: '10px',
                       cursor: 'pointer', lineHeight: 1.6,
                     }}
                   >
-                    <span style={{ fontSize: '13px' }}>{emoji}</span>
+                    <span style={{ fontSize: '13px', filter: 'grayscale(1) contrast(1.3)' }}>{emoji}</span>
                     {users.length}
                   </motion.button>
                 )

@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion'
 
 interface Tab {
   id: string
@@ -31,59 +30,56 @@ export default function BottomNav({ activeTab, theme, T, onTabChange }: BottomNa
       borderTop: `3px solid ${border}`,
       display: 'flex', justifyContent: 'space-around',
       alignItems: 'center',
-      padding: '6px 0 max(6px, env(safe-area-inset-bottom))',
+      padding: '0 0 env(safe-area-inset-bottom)',
+      minHeight: '58px',
       zIndex: 100,
     }}>
-      {TABS.map(tab => {
+      {TABS.map((tab, i) => {
         const isActive = activeTab === tab.id
+        const ink = border
         return (
-          <motion.button
+          <button
             key={tab.id}
-            whileTap={{ scale: 0.85 }}
             onClick={() => onTabChange(tab.id)}
             data-tour={`tab-${tab.id}`}
+            className={isActive ? 'tone manga-tab' : 'manga-tab'}
             style={{
-              flex: 1,
-              background: 'transparent', border: 'none',
+              flex: 1, alignSelf: 'stretch',
+              backgroundColor: bg,
+              border: 'none',
+              borderRight: i < TABS.length - 1 ? `3px solid ${ink}` : 'none',
+              borderRadius: 0,
               cursor: 'pointer',
               display: 'flex', flexDirection: 'column',
-              alignItems: 'center', gap: '3px',
-              padding: '4px 0',
-              borderTop: isActive
-                ? `3px solid #cc2200`
-                : '3px solid transparent',
+              alignItems: 'center', justifyContent: 'center', gap: '3px',
+              padding: '6px 0',
             }}
           >
-            <div style={{
-              width: '36px', height: '36px', borderRadius: '50%',
-              background: isActive
-                ? (theme === 'light' ? '#111' : '#fff')
-                : 'transparent',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'background 0.2s',
+            <span style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
+              background: isActive ? bg : 'transparent',
+              border: isActive ? `2px solid ${ink}` : '2px solid transparent',
+              borderRadius: '12px',
+              padding: '3px 8px',
             }}>
               <img
-                src={tab.icon}
+                src={tab.icon} alt=""
                 style={{
                   width: '20px', height: '20px', objectFit: 'contain',
-                  filter: isActive
-                    ? (theme === 'light' ? 'invert(1)' : 'invert(0)')
-                    : (theme === 'light' ? 'invert(0) opacity(0.4)' : 'invert(1) opacity(0.4)'),
-                  transition: 'filter 0.2s',
+                  filter: theme === 'light' ? 'none' : 'invert(1)',
+                  opacity: isActive ? 1 : 0.55,
                 }}
               />
-            </div>
-            <span style={{
-              fontFamily: 'BlambotClassic, sans-serif',
-              fontSize: '8px', letterSpacing: '0.5px',
-              color: isActive
-                ? '#cc2200'
-                : (theme === 'light' ? 'rgba(0,0,0,0.35)' : 'rgba(255,255,255,0.35)'),
-              transition: 'color 0.2s',
-            }}>
-              {tab.label}
+              <span style={{
+                fontFamily: 'BlambotClassic, sans-serif',
+                fontSize: '9px', letterSpacing: '1px',
+                color: T.titleColor,
+                opacity: isActive ? 1 : 0.55,
+              }}>
+                {tab.label}
+              </span>
             </span>
-          </motion.button>
+          </button>
         )
       })}
     </div>

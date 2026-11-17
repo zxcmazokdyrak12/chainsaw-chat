@@ -142,7 +142,7 @@ export default function InputBar({
           style={{
             width: '36px', height: '36px',
             flexShrink: 0,
-            background: isRecording ? '#cc2200' : T.inputBg,
+            background: isRecording ? 'var(--blood)' : T.inputBg,
             border: `2px solid ${T.inputBorder}`,
             cursor: 'pointer', fontSize: '16px',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -163,7 +163,7 @@ export default function InputBar({
               style={{
                 flex: 1,
                 background: T.inputBg,
-                border: `2px solid #cc2200`,
+                border: `2px solid var(--blood)`,
                 display: 'flex', alignItems: 'center',
                 padding: '0 8px', minHeight: '36px',
                 overflow: 'hidden',
@@ -171,7 +171,7 @@ export default function InputBar({
             >
               <span style={{
                 fontFamily: "'AnimeAce', sans-serif",
-                fontSize: '10px', color: '#cc2200',
+                fontSize: '10px', color: 'var(--blood)',
                 marginRight: '8px', whiteSpace: 'nowrap', flexShrink: 0,
               }}>
                 REC ●

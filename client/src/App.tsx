@@ -52,20 +52,22 @@ export interface ThemeTokens {
   sidebarBorder: string
 }
 
+// manga page: black ink on newsprint. Greys come from screentone (see index.css), not from flat fills.
 const LIGHT: ThemeTokens = {
-  appBg: '#f0ebe0', headerBg: '#e8e3d8', headerBorder: '#111',
-  inputZoneBg: '#e8e3d8', inputBorder: '#111', inputBg: '#fff', inputColor: '#111',
-  nameColor: '#cc2200', sfxColor: '#cc2200', titleColor: '#111', titleAccent: '#cc2200',
-  btnBg: '#111', btnColor: '#fff', shadow: '5px 5px 0 rgba(0,0,0,0.85)',
-  halftone: 'rgba(0,0,0,0.07)', sidebarBg: '#e0dbd0', sidebarBorder: '#111',
+  appBg: '#f5f2ea', headerBg: '#f5f2ea', headerBorder: '#111',
+  inputZoneBg: '#f5f2ea', inputBorder: '#111', inputBg: '#fbf9f4', inputColor: '#111',
+  nameColor: '#111', sfxColor: '#111', titleColor: '#111', titleAccent: '#111',
+  btnBg: '#111', btnColor: '#f5f2ea', shadow: '4px 4px 0 #111',
+  halftone: 'rgba(0,0,0,0.07)', sidebarBg: '#f5f2ea', sidebarBorder: '#111',
 }
 
+// "negative" page: white ink on black, like Fujimoto's inverted spreads
 const DARK: ThemeTokens = {
-  appBg: '#111', headerBg: '#0a0a0a', headerBorder: '#fff',
-  inputZoneBg: '#0a0a0a', inputBorder: '#fff', inputBg: '#1a1a1a', inputColor: '#fff',
-  nameColor: '#fff', sfxColor: '#fff', titleColor: '#fff', titleAccent: '#fff',
-  btnBg: '#fff', btnColor: '#111', shadow: '5px 5px 0 rgba(255,255,255,0.15)',
-  halftone: 'rgba(255,255,255,0.03)', sidebarBg: '#0a0a0a', sidebarBorder: '#fff',
+  appBg: '#0e0e0e', headerBg: '#0e0e0e', headerBorder: '#f2efe6',
+  inputZoneBg: '#0e0e0e', inputBorder: '#f2efe6', inputBg: '#161616', inputColor: '#f2efe6',
+  nameColor: '#f2efe6', sfxColor: '#f2efe6', titleColor: '#f2efe6', titleAccent: '#f2efe6',
+  btnBg: '#f2efe6', btnColor: '#111', shadow: '4px 4px 0 #f2efe6',
+  halftone: 'rgba(255,255,255,0.04)', sidebarBg: '#0e0e0e', sidebarBorder: '#f2efe6',
 }
 
 export interface MessageItem {
@@ -146,6 +148,15 @@ export default function App() {
 
   // onboarding tour — shown once after the first time you get into the chat
   const [tourOpen, setTourOpen] = useState<boolean>(false)
+  // tab switch = quick screentone cut: tone covers the page (90ms), page swaps, tone dissolves (120ms)
+  const [toneCut, setToneCut] = useState<boolean>(false)
+  const cutTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const switchTab = (tab: string): void => {
+    if (tab === activeTab) return
+    if (cutTimer.current) clearTimeout(cutTimer.current)
+    setToneCut(true)
+    cutTimer.current = setTimeout(() => { setActiveTab(tab); setToneCut(false) }, 90)
+  }
   const startTour = (): void => { setActiveTab('chat'); setTimeout(() => setTourOpen(true), 350) }
   const closeTour = (): void => {
     setTourOpen(false)
@@ -176,6 +187,8 @@ export default function App() {
   }, [settings.theme])
 
   const theme = resolvedTheme
+  // css variables (--ink, --paper, --accent…) follow the theme
+  useEffect(() => { document.documentElement.dataset.theme = theme === 'dark' ? 'dark' : 'light' }, [theme])
   const T: ThemeTokens = theme === 'light' ? LIGHT : DARK
 
   const playSound = (src: string, volume: number = 0.4): void => {
@@ -604,7 +617,7 @@ export default function App() {
       <Header
         T={T} theme={theme} username={username}
         rooms={rooms} currentRoom={currentRoom}
-        activeTab={activeTab} onTabChange={setActiveTab}
+        activeTab={activeTab} onTabChange={switchTab}
         onThemeToggle={() => updateSetting('theme', theme === 'light' ? 'dark' : 'light')}
         callCount={call.participants.length}
         inCall={call.inCall}
@@ -619,6 +632,17 @@ export default function App() {
         flexDirection: 'column',
         position: 'relative'
       }}>
+        {/* quick cut between tabs */}
+        <motion.div
+          className="tone"
+          initial={false}
+          animate={{ opacity: toneCut ? 1 : 0 }}
+          transition={{ duration: toneCut ? 0.09 : 0.12, ease: 'linear' }}
+          style={{
+            position: 'absolute', inset: 0, zIndex: 60, pointerEvents: 'none',
+            backgroundColor: T.appBg,
+          }}
+        />
         
         {/* ВКЛАДКА ЧАТА */}
         {activeTab === 'chat' && (
@@ -658,7 +682,7 @@ export default function App() {
                     initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
                     style={{
                       padding: '8px 14px',
-                      background: '#cc2200', color: '#fff',
+                      background: 'var(--accent)', color: 'var(--on-accent)',
                       border: `3px solid ${theme === 'dark' ? '#fff' : '#111'}`,
                       boxShadow: theme === 'dark' ? '4px 4px 0 #fff' : '4px 4px 0 #111',
                       fontFamily: "'AnimeAce', sans-serif", fontSize: '11px',
@@ -689,13 +713,13 @@ export default function App() {
                   <div style={{
                     padding: '8px 14px',
                     background: theme === 'dark' ? '#1a1a1a' : '#f0ebe0',
-                    border: `2px solid #cc2200`,
-                    borderLeft: '4px solid #cc2200',
+                    border: `2px solid var(--accent)`,
+                    borderLeft: '4px solid var(--accent)',
                     fontFamily: "'AnimeAce', sans-serif",
                     fontSize: '11px', color: T.titleColor,
                     display: 'flex', gap: '8px', alignItems: 'center',
                   }}>
-                    <span style={{ color: '#cc2200' }}>📌</span>
+                    <span style={{ color: 'var(--accent)' }}>📌</span>
                     <span style={{ opacity: 0.6 }}>PINNED:</span>
                     <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {pinnedMsg.content}
@@ -710,8 +734,17 @@ export default function App() {
 
                   const msg = item.data
                   if (msg.system) return (
-                    <motion.div key={msg.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ textAlign: 'center', fontSize: '11px', color: theme === 'light' ? '#999' : '#555', fontFamily: "'AnimeAce', sans-serif", letterSpacing: '1px', padding: '4px 0' }}>
-                      {msg.content}
+                    // narration caption — the rectangular box in a panel corner
+                    <motion.div key={msg.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} style={{ display: 'flex', justifyContent: 'center', padding: '4px 0' }}>
+                      <span style={{
+                        display: 'inline-block', transform: 'rotate(-1deg)',
+                        border: '3px solid var(--ink)', backgroundColor: 'var(--paper)',
+                        boxShadow: '3px 3px 0 var(--ink)', color: 'var(--ink)',
+                        padding: '4px 12px', fontSize: '11px',
+                        fontFamily: "'AnimeAce', sans-serif", letterSpacing: '1px',
+                      }}>
+                        ▶ {msg.content}
+                      </span>
                     </motion.div>
                   )
                   return (
@@ -768,7 +801,7 @@ export default function App() {
             <RoomsTab
               rooms={rooms} currentRoom={currentRoom}
               theme={theme} T={T}
-              onJoinRoom={joinRoom} onSwitchToChat={() => setActiveTab('chat')}
+              onJoinRoom={joinRoom} onSwitchToChat={() => switchTab('chat')}
               showCreateRoom={showCreateRoom} setShowCreateRoom={setShowCreateRoom}
               showJoinByCode={showJoinByCode} setShowJoinByCode={setShowJoinByCode}
               newRoomName={newRoomName} setNewRoomName={setNewRoomName}
@@ -813,7 +846,7 @@ export default function App() {
             activeTab={activeTab}
             theme={theme}
             T={T}
-            onTabChange={setActiveTab}
+            onTabChange={switchTab}
           />
         </div>
       )}

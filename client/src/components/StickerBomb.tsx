@@ -79,9 +79,11 @@ function layout(density: StickerDensity, mode: 'edges' | 'everywhere', seed: str
 }
 
 // white die-cut edge that hugs the alpha channel of the PNG, plus a soft drop shadow
+// everything is printed in ink: colour art is pushed to b/w so it sits on the page
+const BW = 'grayscale(1) contrast(1.12)'
 const DIE_CUT =
-  'drop-shadow(2.5px 0 0 #fff) drop-shadow(-2.5px 0 0 #fff) drop-shadow(0 2.5px 0 #fff) ' +
-  'drop-shadow(0 -2.5px 0 #fff) drop-shadow(3px 5px 4px rgba(0,0,0,0.35))'
+  `${BW} drop-shadow(2.5px 0 0 #f5f2ea) drop-shadow(-2.5px 0 0 #f5f2ea) drop-shadow(0 2.5px 0 #f5f2ea) ` +
+  'drop-shadow(0 -2.5px 0 #f5f2ea) drop-shadow(0 0 1.5px #111) drop-shadow(3px 5px 4px rgba(0,0,0,0.3))'
 
 function StickerBody({ sticker, size }: { sticker: Sticker; size: number }) {
   if (sticker.kind === 'cut') {
@@ -95,19 +97,19 @@ function StickerBody({ sticker, size }: { sticker: Sticker; size: number }) {
   if (sticker.kind === 'card') {
     return (
       <div style={{
-        position: 'relative', width: size, padding: 5, background: '#fff', borderRadius: 12,
+        position: 'relative', width: size, padding: 5, background: '#f5f2ea', borderRadius: 12, border: '2px solid #111',
         boxShadow: '3px 5px 8px rgba(0,0,0,0.35)',
       }}>
         {/* tape strip */}
         <div style={{
           position: 'absolute', top: -9, left: '50%', width: size * 0.45, height: 16,
           transform: 'translateX(-50%) rotate(-4deg)',
-          background: 'rgba(255, 236, 190, 0.75)', borderRadius: 2,
+          background: 'rgba(225, 222, 212, 0.8)', borderRadius: 2,
           boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
         }} />
         <img
           src={sticker.src} alt="" draggable={false}
-          style={{ width: '100%', aspectRatio: sticker.ratio ?? '4 / 5', objectFit: 'cover', borderRadius: 8, display: 'block' }}
+          style={{ width: '100%', aspectRatio: sticker.ratio ?? '4 / 5', objectFit: 'cover', borderRadius: 8, display: 'block', filter: BW }}
         />
       </div>
     )
@@ -117,8 +119,8 @@ function StickerBody({ sticker, size }: { sticker: Sticker; size: number }) {
       fontFamily: 'BlambotClassic, sans-serif',
       fontSize: size * 0.32, lineHeight: 1, whiteSpace: 'nowrap',
       color: sticker.color, letterSpacing: '1px',
-      padding: '8px 12px', background: '#fff', borderRadius: 999,
-      WebkitTextStroke: sticker.color === '#111' ? '0' : '1px #111',
+      padding: '8px 12px', background: '#f5f2ea', borderRadius: 999, border: '2px solid #111',
+      WebkitTextStroke: '0',
       boxShadow: '3px 5px 8px rgba(0,0,0,0.3)',
     }}>
       {sticker.text}

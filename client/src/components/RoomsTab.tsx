@@ -71,7 +71,7 @@ export default function RoomsTab({
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          style={{ background: theme === 'light' ? '#111' : '#fff', color: theme === 'light' ? '#fff' : '#111', padding: '16px 20px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', border: `3px solid #cc2200` }}
+          style={{ background: theme === 'light' ? '#111' : '#fff', color: theme === 'light' ? '#fff' : '#111', padding: '16px 20px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', border: `3px solid var(--accent)` }}
         >
           <div>
             <div style={{ fontSize: '11px', opacity: 0.6, fontFamily: "'AnimeAce', sans-serif", marginBottom: '4px' }}>YOUR ROOM CODE - SHARE!</div>
@@ -79,7 +79,7 @@ export default function RoomsTab({
           </div>
           <button
             onClick={() => { navigator.clipboard.writeText(createdCode); }}
-            style={{ background: '#cc2200', color: '#fff', border: 'none', padding: '8px 16px', fontFamily: 'Impact, sans-serif', fontSize: '13px', cursor: 'pointer', letterSpacing: '1px' }}
+            style={{ background: 'var(--accent)', color: 'var(--on-accent)', border: 'none', padding: '8px 16px', fontFamily: 'Impact, sans-serif', fontSize: '13px', cursor: 'pointer', letterSpacing: '1px' }}
           >
             COPY
           </button>
@@ -116,7 +116,7 @@ export default function RoomsTab({
                 onChange={e => setNewRoomName(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && onCreateRoom()}
               />
-              <motion.button whileTap={{ scale: 0.95 }} onClick={onCreateRoom} style={{ padding: '10px 20px', background: '#cc2200', color: '#fff', border: 'none', fontFamily: 'Impact, sans-serif', fontSize: '14px', letterSpacing: '2px', cursor: 'pointer' }}>
+              <motion.button whileTap={{ scale: 0.95 }} onClick={onCreateRoom} style={{ padding: '10px 20px', background: 'var(--accent)', color: 'var(--on-accent)', border: 'none', fontFamily: 'Impact, sans-serif', fontSize: '14px', letterSpacing: '2px', cursor: 'pointer' }}>
                 CREATE ⛓
               </motion.button>
             </div>
@@ -130,7 +130,7 @@ export default function RoomsTab({
             <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <input
-                  style={{ flex: 1, padding: '10px 14px', background: T.inputBg, border: `3px solid ${joinError ? '#cc2200' : T.inputBorder}`, color: T.inputColor, fontSize: '16px', outline: 'none', fontFamily: 'Impact, sans-serif', letterSpacing: '4px', textTransform: 'uppercase', textAlign: 'center' }}
+                  style={{ flex: 1, padding: '10px 14px', background: T.inputBg, border: `3px solid ${joinError ? 'var(--accent)' : T.inputBorder}`, color: T.inputColor, fontSize: '16px', outline: 'none', fontFamily: 'Impact, sans-serif', letterSpacing: '4px', textTransform: 'uppercase', textAlign: 'center' }}
                   placeholder="KAIRYU42"
                   maxLength={8}
                   value={joinCode}
@@ -142,7 +142,7 @@ export default function RoomsTab({
                 </motion.button>
               </div>
               {joinError && (
-                <span style={{ color: '#cc2200', fontSize: '12px', fontFamily: "'AnimeAce', sans-serif", letterSpacing: '1px' }}>
+                <span style={{ color: 'var(--accent)', fontSize: '12px', fontFamily: "'AnimeAce', sans-serif", letterSpacing: '1px' }}>
                   ✕ {joinError}
                 </span>
               )}
@@ -157,7 +157,7 @@ export default function RoomsTab({
             <div>{room.name}</div>
             <div style={{ fontSize: '11px', letterSpacing: '3px', opacity: 0.5, marginTop: '4px', fontFamily: 'Impact, sans-serif' }}>{room.code}</div>
             <div style={{ fontSize: '9px', opacity: 0.4, fontFamily: "'AnimeAce', sans-serif", marginTop: '2px' }}>{room.count} сообщ.</div>
-            {currentRoom === room.id && <div style={{ fontSize: '10px', color: '#cc2200', marginTop: '4px' }}>● YOU ARE HERE</div>}
+            {currentRoom === room.id && <div style={{ fontSize: '10px', color: 'var(--accent)', marginTop: '4px' }}>● YOU ARE HERE</div>}
           </motion.button>
         ))}
       </div>

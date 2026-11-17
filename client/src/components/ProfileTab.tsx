@@ -111,7 +111,7 @@ function AvatarPicker({
         style={{
           background: dark ? '#111' : '#f0ebe0',
           border: `3px solid ${cardBorder}`,
-          boxShadow: '6px 6px 0 #cc2200',
+          boxShadow: '6px 6px 0 var(--accent)',
           padding: '16px', maxWidth: '480px', width: '92%', // adaptive width for mobile
           maxHeight: '75vh', display: 'flex', flexDirection: 'column',
           boxSizing: 'border-box'
@@ -121,7 +121,7 @@ function AvatarPicker({
           fontFamily: 'BlambotClassic, sans-serif', fontSize: '13px',
           letterSpacing: '3px', color: textMain,
           marginBottom: '14px', textAlign: 'center',
-          borderBottom: '2px solid #cc2200', paddingBottom: '8px',
+          borderBottom: '2px solid var(--accent)', paddingBottom: '8px',
           flexShrink: 0
         }}>
           SELECT AGENT
@@ -143,8 +143,8 @@ function AvatarPicker({
               style={{
                 cursor: 'pointer', display: 'flex', flexDirection: 'column',
                 alignItems: 'center', gap: '6px', padding: '6px',
-                border: `2px solid ${avatar.id === av.id ? '#cc2200' : (dark ? '#333' : '#ccc')}`,
-                background: avatar.id === av.id ? 'rgba(204,34,0,0.1)' : 'transparent',
+                border: `2px solid ${avatar.id === av.id ? 'var(--accent)' : (dark ? '#333' : '#ccc')}`,
+                background: avatar.id === av.id ? 'rgba(17,17,17,0.1)' : 'transparent',
                 boxSizing: 'border-box',
                 minWidth: 0 // important for text ellipsis in flexbox
               }}
@@ -158,7 +158,7 @@ function AvatarPicker({
                   aspectRatio: '1/1',
                   objectFit: 'cover', 
                   display: 'block',
-                  border: `2px solid ${avatar.id === av.id ? '#cc2200' : 'transparent'}` 
+                  border: `2px solid ${avatar.id === av.id ? 'var(--accent)' : 'transparent'}` 
                 }} 
               />
               <span style={{ 
@@ -183,7 +183,7 @@ function AvatarPicker({
             background: dark ? '#fff' : '#111', color: dark ? '#111' : '#fff',
             border: `2px solid ${cardBorder}`, fontFamily: 'BlambotClassic, sans-serif',
             fontSize: '14px', letterSpacing: '3px', cursor: 'pointer',
-            boxShadow: '3px 3px 0 #cc2200',
+            boxShadow: '3px 3px 0 var(--accent)',
             flexShrink: 0
           }}
         >
@@ -238,8 +238,8 @@ export default function ProfileTab({
           }}
         >
           {/* red stripes */}
-          <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '6px', background: 'repeating-linear-gradient(180deg, #cc2200 0px, #cc2200 18px, transparent 18px, transparent 25px)', zIndex: 1 }} />
-          <div style={{ position: 'absolute', left: '9px', top: 0, bottom: 0, width: '2px', background: 'repeating-linear-gradient(180deg, #cc2200 0px, #cc2200 18px, transparent 18px, transparent 25px)', opacity: 0.35, zIndex: 1 }} />
+          <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '6px', background: 'repeating-linear-gradient(180deg, var(--accent) 0px, var(--accent) 18px, transparent 18px, transparent 25px)', zIndex: 1 }} />
+          <div style={{ position: 'absolute', left: '9px', top: 0, bottom: 0, width: '2px', background: 'repeating-linear-gradient(180deg, var(--accent) 0px, var(--accent) 18px, transparent 18px, transparent 25px)', opacity: 0.35, zIndex: 1 }} />
 
           {/* Header */}
           <div style={{ paddingLeft: '20px', paddingRight: '12px', paddingTop: '12px', paddingBottom: '8px', borderBottom: `1px solid ${dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, position: 'relative', zIndex: 2 }}>
@@ -256,19 +256,19 @@ export default function ProfileTab({
               <motion.button
                 whileTap={{ scale: 0.9 }}
                 onClick={() => setShowPicker(true)}
-                style={{ position: 'absolute', top: '-10px', right: '-10px', width: '30px', height: '30px', background: '#cc2200', border: `2px solid ${cardBorder}`, cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `2px 2px 0 ${cardBorder}`, zIndex: 3 }}
+                style={{ position: 'absolute', top: '-10px', right: '-10px', width: '30px', height: '30px', background: 'var(--accent)', border: `2px solid ${cardBorder}`, cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `2px 2px 0 ${cardBorder}`, zIndex: 3 }}
               >✏️</motion.button>
 
               {/* Emblem to the right of the photo */}
               <div style={{ position: 'absolute', top: '0', left: '155px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
                 <div style={{ background: innerBg, border: `2px solid ${cardBorder}`, padding: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', width: '110px' }}>
                   <img src="/emblem.svg" alt="emblem" style={{ width: '60px', height: '60px', objectFit: 'contain', filter: dark ? 'invert(1) sepia(1) saturate(2) hue-rotate(5deg)' : 'none' }} />
-                  <div style={{ fontFamily: 'BlambotClassic, sans-serif', fontSize: '8px', color: '#cc2200', lineHeight: 1.3, textAlign: 'center' }}>PUBLIC SAFETY<br />DEVIL HUNTERS</div>
+                  <div style={{ fontFamily: 'BlambotClassic, sans-serif', fontSize: '8px', color: 'var(--accent)', lineHeight: 1.3, textAlign: 'center' }}>PUBLIC SAFETY<br />DEVIL HUNTERS</div>
                   <div style={{ fontFamily: 'serif', fontSize: '7px', color: textSub }}>公安デビルハンター</div>
                 </div>
                 <div>
                   <div style={{ fontFamily: "'AnimeAce', sans-serif", fontSize: '8px', color: textSub, letterSpacing: '1px' }}>Designation</div>
-                  <div style={{ fontFamily: 'BlambotClassic, sans-serif', fontSize: '13px', color: '#cc2200', letterSpacing: '1px' }}>{avatar.name.toUpperCase()}</div>
+                  <div style={{ fontFamily: 'BlambotClassic, sans-serif', fontSize: '13px', color: 'var(--accent)', letterSpacing: '1px' }}>{avatar.name.toUpperCase()}</div>
                 </div>
               </div>
             </div>
@@ -321,7 +321,7 @@ export default function ProfileTab({
           <div style={{ padding: '10px 12px 12px 20px', position: 'relative', zIndex: 2 }}>
             <motion.button
               whileTap={{ x: 2, y: 2 }} onClick={onLogout}
-              style={{ width: '100%', padding: '10px', background: '#cc2200', color: '#fff', border: `2px solid ${cardBorder}`, fontFamily: 'BlambotClassic, sans-serif', fontSize: '13px', letterSpacing: '3px', cursor: 'pointer', boxShadow: `3px 3px 0 ${cardBorder}` }}
+              style={{ width: '100%', padding: '10px', background: 'var(--accent)', color: 'var(--on-accent)', border: `2px solid ${cardBorder}`, fontFamily: 'BlambotClassic, sans-serif', fontSize: '13px', letterSpacing: '3px', cursor: 'pointer', boxShadow: `3px 3px 0 ${cardBorder}` }}
             >
               TERMINATE SESSION 🌸
             </motion.button>
@@ -356,8 +356,8 @@ export default function ProfileTab({
         }}
       >
         {/* Red stripes */}
-        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '7px', background: 'repeating-linear-gradient(180deg, #cc2200 0px, #cc2200 20px, transparent 20px, transparent 28px)', zIndex: 1 }} />
-        <div style={{ position: 'absolute', left: '10px', top: 0, bottom: 0, width: '2px', background: 'repeating-linear-gradient(180deg, #cc2200 0px, #cc2200 20px, transparent 20px, transparent 28px)', opacity: 0.35, zIndex: 1 }} />
+        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '7px', background: 'repeating-linear-gradient(180deg, var(--accent) 0px, var(--accent) 20px, transparent 20px, transparent 28px)', zIndex: 1 }} />
+        <div style={{ position: 'absolute', left: '10px', top: 0, bottom: 0, width: '2px', background: 'repeating-linear-gradient(180deg, var(--accent) 0px, var(--accent) 20px, transparent 20px, transparent 28px)', opacity: 0.35, zIndex: 1 }} />
 
         {/* Header */}
         <div style={{ paddingLeft: '22px', paddingRight: '14px', paddingTop: '12px', paddingBottom: '10px', borderBottom: `1px solid ${dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`, position: 'relative', zIndex: 2 }}>
@@ -378,7 +378,7 @@ export default function ProfileTab({
               </div>
               <motion.button
                 whileTap={{ scale: 0.9 }} onClick={() => setShowPicker(true)}
-                style={{ position: 'absolute', top: '-10px', right: '-10px', width: '32px', height: '32px', background: '#cc2200', border: `2px solid ${cardBorder}`, cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `2px 2px 0 ${cardBorder}`, zIndex: 3 }}
+                style={{ position: 'absolute', top: '-10px', right: '-10px', width: '32px', height: '32px', background: 'var(--accent)', border: `2px solid ${cardBorder}`, cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `2px 2px 0 ${cardBorder}`, zIndex: 3 }}
               >✏️</motion.button>
             </div>
 
@@ -386,12 +386,12 @@ export default function ProfileTab({
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <div style={{ background: innerBg, border: `2px solid ${cardBorder}`, padding: '7px 8px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
                 <img src="/emblem.svg" alt="emblem" style={{ width: '80px', height: '80px', objectFit: 'contain', filter: dark ? 'invert(1) sepia(1) saturate(2) hue-rotate(5deg)' : 'none' }} />
-                <div style={{ fontFamily: 'BlambotClassic, sans-serif', fontSize: '11px', letterSpacing: '1px', color: '#cc2200', lineHeight: 1.35 }}>PUBLIC SAFETY<br />DEVIL HUNTERS</div>
+                <div style={{ fontFamily: 'BlambotClassic, sans-serif', fontSize: '11px', letterSpacing: '1px', color: 'var(--accent)', lineHeight: 1.35 }}>PUBLIC SAFETY<br />DEVIL HUNTERS</div>
                 <div style={{ fontFamily: 'serif', fontSize: '10px', color: textSub }}>公安デビルハンター</div>
               </div>
               <div>
                 <div style={{ fontFamily: "'AnimeAce', sans-serif", fontSize: '8px', color: textSub, letterSpacing: '1px' }}>Designation</div>
-                <div style={{ fontFamily: 'BlambotClassic, sans-serif', fontSize: '16px', color: '#cc2200', letterSpacing: '1px' }}>{avatar.name.toUpperCase()}</div>
+                <div style={{ fontFamily: 'BlambotClassic, sans-serif', fontSize: '16px', color: 'var(--accent)', letterSpacing: '1px' }}>{avatar.name.toUpperCase()}</div>
               </div>
             </div>
           </div>
@@ -435,7 +435,7 @@ export default function ProfileTab({
         <div style={{ padding: '10px 14px 14px 22px', position: 'relative', zIndex: 2 }}>
           <motion.button
             whileTap={{ x: 2, y: 2 }} onClick={onLogout}
-            style={{ width: '100%', padding: '9px', background: '#cc2200', color: '#fff', border: `2px solid ${cardBorder}`, fontFamily: 'BlambotClassic, sans-serif', fontSize: '12px', letterSpacing: '3px', cursor: 'pointer', boxShadow: `3px 3px 0 ${cardBorder}` }}
+            style={{ width: '100%', padding: '9px', background: 'var(--accent)', color: 'var(--on-accent)', border: `2px solid ${cardBorder}`, fontFamily: 'BlambotClassic, sans-serif', fontSize: '12px', letterSpacing: '3px', cursor: 'pointer', boxShadow: `3px 3px 0 ${cardBorder}` }}
           >
             TERMINATE SESSION 🌸
           </motion.button>

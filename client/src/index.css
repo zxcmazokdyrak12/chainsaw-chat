@@ -39,3 +39,53 @@ a[href*="/auth/"]:focus-visible {
 .login-overlay > * {
   pointer-events: auto;
 }
+
+/* ── Manga palette ──────────────────────────────────────────────
+   Ink on newsprint. --accent is "the strong colour" (was red) and simply
+   flips with the page. Red survives only as --blood: recording, live call. */
+:root {
+  --ink: #111;
+  --paper: #f5f2ea;
+  --accent: #111;
+  --on-accent: #f5f2ea;
+  --blood: #b3140c;
+  --tone-dot: rgba(17, 17, 17, 0.9);
+}
+:root[data-theme="dark"] {
+  --ink: #f2efe6;
+  --paper: #0e0e0e;
+  --accent: #f2efe6;
+  --on-accent: #111;
+  --tone-dot: rgba(242, 239, 230, 0.85);
+}
+
+/* screentone: printed grey made of dots */
+.tone {
+  background-image: radial-gradient(var(--tone-dot) 0.9px, transparent 1.3px);
+  background-size: 5px 5px;
+}
+.tone-light {
+  background-image: radial-gradient(var(--tone-dot) 0.65px, transparent 1.05px);
+  background-size: 5px 5px;
+}
+
+/* newsprint grain over the whole app */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10000;
+  opacity: 0.06;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>");
+}
+
+/* nav tabs: hovering an inactive tab lets a faint tone show through */
+.manga-tab:not(.tone):hover {
+  background-image: radial-gradient(var(--tone-dot) 0.5px, transparent 0.9px) !important;
+  background-size: 5px 5px;
+}
+/* nav tabs are square panel cells — keep the global soft-button radius off them */
+button.manga-tab {
+  border-radius: 0 !important;
+}

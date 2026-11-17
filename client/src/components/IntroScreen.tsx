@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 const CHAINSAW_IMG = '/hand.png'
@@ -10,7 +11,7 @@ interface IntroScreenProps {
 
 export default function IntroScreen({ phase, onStart }: IntroScreenProps) {
   return (
-    <div style={{ height: '100vh', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ height: '100vh', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden', '--accent': '#f2efe6', '--on-accent': '#111', '--paper': '#0e0e0e', '--ink': '#f2efe6' } as CSSProperties}>
       
       {/* Top Splitting Pane */}
       <motion.div 
@@ -28,7 +29,7 @@ export default function IntroScreen({ phase, onStart }: IntroScreenProps) {
       
       {/* Slash Effect Line */}
       {phase === 'slashing' && (
-        <motion.div initial={{ scaleX: 0, opacity: 1 }} animate={{ scaleX: 1, opacity: 0 }} transition={{ duration: 0.5 }} style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: '3px', background: '#cc2200', zIndex: 5, transformOrigin: 'left', boxShadow: '0 0 12px #cc2200' }} />
+        <motion.div initial={{ scaleX: 0, opacity: 1 }} animate={{ scaleX: 1, opacity: 0 }} transition={{ duration: 0.5 }} style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: '3px', background: 'var(--accent)', zIndex: 5, transformOrigin: 'left', boxShadow: '0 0 12px var(--accent)' }} />
       )}
       
       {/* Animated Chainsaw Blade */}
@@ -38,7 +39,7 @@ export default function IntroScreen({ phase, onStart }: IntroScreenProps) {
         initial={{ x: '-60vw', y: '60vh', rotate: -35, opacity: 0 }} 
         animate={phase === 'slashing' ? { x: '60vw', y: '-60vh', rotate: -35, opacity: [0, 1, 1, 0] } : { opacity: 0 }} 
         transition={{ duration: 0.7, ease: 'easeIn' }} 
-        style={{ position: 'absolute', width: '340px', objectFit: 'contain', zIndex: 3, filter: 'drop-shadow(0 0 20px rgba(204,34,0,0.7))' }} 
+        style={{ position: 'absolute', width: '340px', objectFit: 'contain', zIndex: 3, filter: 'drop-shadow(0 0 20px rgba(17,17,17,0.7))' }} 
       />
       
       <AnimatePresence>

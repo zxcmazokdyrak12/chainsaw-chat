@@ -68,7 +68,7 @@ interface Rect { top: number; left: number; width: number; height: number }
 
 const PAD = 8
 const DIE_CUT =
-  'drop-shadow(2.5px 0 0 #fff) drop-shadow(-2.5px 0 0 #fff) drop-shadow(0 2.5px 0 #fff) ' +
+  'grayscale(1) contrast(1.12) drop-shadow(2.5px 0 0 #fff) drop-shadow(-2.5px 0 0 #fff) drop-shadow(0 2.5px 0 #fff) ' +
   'drop-shadow(0 -2.5px 0 #fff) drop-shadow(3px 5px 4px rgba(0,0,0,0.4))'
 
 function findTarget(step: TourStep): HTMLElement | null {
@@ -171,7 +171,7 @@ export default function Tutorial({ open, onClose, steps = TOUR_STEPS }: Tutorial
   return (
     <div
       role="dialog" aria-modal aria-label="Tutorial"
-      style={{ position: 'fixed', inset: 0, zIndex: 9999, pointerEvents: 'auto' }}
+      style={{ position: 'fixed', inset: 0, zIndex: 9999, pointerEvents: 'auto', '--accent': '#111', '--on-accent': '#f5f2ea', '--paper': '#f5f2ea', '--ink': '#111' } as CSSProperties}
     >
       {/* spotlight: a box whose huge shadow is the dim layer, so the "hole" is the target */}
       <motion.div
@@ -182,7 +182,7 @@ export default function Tutorial({ open, onClose, steps = TOUR_STEPS }: Tutorial
           position: 'fixed',
           borderRadius: 16,
           boxShadow: '0 0 0 9999px rgba(10, 10, 10, 0.78)',
-          border: centered ? 'none' : '3px solid #cc2200',
+          border: centered ? 'none' : '3px solid #f5f2ea',
           pointerEvents: 'none',
         }}
       >
@@ -190,7 +190,7 @@ export default function Tutorial({ open, onClose, steps = TOUR_STEPS }: Tutorial
           <motion.div
             animate={{ scale: [1, 1.08, 1], opacity: [0.8, 0, 0.8] }}
             transition={{ repeat: Infinity, duration: 1.6 }}
-            style={{ position: 'absolute', inset: -8, borderRadius: 20, border: '3px solid #cc2200' }}
+            style={{ position: 'absolute', inset: -8, borderRadius: 20, border: '3px solid #f5f2ea' }}
           />
         )}
       </motion.div>
@@ -205,9 +205,10 @@ export default function Tutorial({ open, onClose, steps = TOUR_STEPS }: Tutorial
           transition={{ type: 'spring', stiffness: 400, damping: 26 }}
           style={{
             position: 'fixed', top: cardTop, left: cardLeft, width: cardW,
-            background: '#fff', color: '#111',
+            background: '#f5f2ea', color: '#111',
             border: '3px solid #111', borderRadius: 18,
-            boxShadow: '5px 5px 0 #cc2200',
+            boxShadow: '5px 5px 0 #111',
+            backgroundImage: 'none',
             padding: isMobile ? '16px 16px 14px' : '18px 20px 16px',
             paddingRight: isMobile ? 92 : 108,
             minHeight: 150,
@@ -225,14 +226,14 @@ export default function Tutorial({ open, onClose, steps = TOUR_STEPS }: Tutorial
               objectFit: 'contain', filter: DIE_CUT, pointerEvents: 'none',
               ...(step.sticker.endsWith('.jpg') ? {
                 objectFit: 'cover', borderRadius: 14, border: '4px solid #fff',
-                filter: 'drop-shadow(3px 5px 4px rgba(0,0,0,0.4))', background: '#fff',
+                filter: 'grayscale(1) contrast(1.12) drop-shadow(3px 5px 4px rgba(0,0,0,0.4))', background: '#fff',
               } : {}),
             }}
           />
 
           <div style={{
             fontFamily: 'BlambotClassic, sans-serif', fontSize: isMobile ? 20 : 22,
-            letterSpacing: 2, color: '#cc2200', marginBottom: 6, lineHeight: 1.1,
+            letterSpacing: 2, color: 'var(--accent)', marginBottom: 6, lineHeight: 1.1,
           }}>
             {step.title}
           </div>
@@ -246,7 +247,7 @@ export default function Tutorial({ open, onClose, steps = TOUR_STEPS }: Tutorial
               {steps.map((_, i) => (
                 <div key={i} style={{
                   width: i === index ? 16 : 7, height: 7, borderRadius: 999,
-                  background: i === index ? '#cc2200' : i < index ? '#111' : '#ccc',
+                  background: i === index ? 'var(--accent)' : i < index ? '#111' : '#ccc',
                   transition: 'all 0.2s',
                 }} />
               ))}
@@ -272,8 +273,8 @@ export default function Tutorial({ open, onClose, steps = TOUR_STEPS }: Tutorial
 function btn(kind: 'main' | 'ghost'): CSSProperties {
   return {
     padding: '8px 14px',
-    background: kind === 'main' ? '#cc2200' : 'transparent',
-    color: kind === 'main' ? '#fff' : '#111',
+    background: kind === 'main' ? 'var(--accent)' : 'transparent',
+    color: kind === 'main' ? 'var(--on-accent)' : '#111',
     border: `2px solid ${kind === 'main' ? '#111' : 'transparent'}`,
     boxShadow: kind === 'main' ? '3px 3px 0 #111' : 'none',
     fontFamily: 'BlambotClassic, sans-serif', fontSize: 14, letterSpacing: 1.5,
