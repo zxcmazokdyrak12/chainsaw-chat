@@ -64,7 +64,7 @@ function layout(density: StickerDensity, mode: 'edges' | 'everywhere', seed: str
       }
       const y = (r / rows) * 100 + rand() * (100 / rows) - 8
       const sticker = pick(i)
-      const base = sticker.kind === 'sfx' ? 90 : sticker.kind === 'card' ? 92 : 130
+      const base = sticker.kind === 'sfx' ? 90 : sticker.kind === 'card' ? (sticker.ratio === 'auto' ? 120 : 92) : 140
       out.push({
         sticker, x, y,
         size: base * (0.75 + rand() * 0.6),
@@ -87,7 +87,7 @@ function StickerBody({ sticker, size }: { sticker: Sticker; size: number }) {
   if (sticker.kind === 'cut') {
     return (
       <img
-        src={sticker.src} alt="" draggable={false}
+        src={sticker.src} alt="" draggable={false} loading="lazy"
         style={{ width: size, height: size, objectFit: 'contain', filter: DIE_CUT, display: 'block' }}
       />
     )
@@ -107,7 +107,7 @@ function StickerBody({ sticker, size }: { sticker: Sticker; size: number }) {
         }} />
         <img
           src={sticker.src} alt="" draggable={false}
-          style={{ width: '100%', aspectRatio: '4 / 5', objectFit: 'cover', borderRadius: 8, display: 'block' }}
+          style={{ width: '100%', aspectRatio: sticker.ratio ?? '4 / 5', objectFit: 'cover', borderRadius: 8, display: 'block' }}
         />
       </div>
     )
