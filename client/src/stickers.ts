@@ -14,13 +14,6 @@ export type Sticker =
   | { kind: 'sfx';  text: string; color: string }
 
 export const STICKERS: Sticker[] = [
-  // cut-outs already in the project
-  { kind: 'cut', src: '/denji.png',   name: 'Denji' },
-  { kind: 'cut', src: '/makima.png',  name: 'Makima' },
-  { kind: 'cut', src: '/aki.png',     name: 'Aki' },
-  { kind: 'cut', src: '/reze.png',    name: 'Reze' },
-  { kind: 'cut', src: '/pochita.png', name: 'Pochita' },
-
   // manga cut-outs (client/public/stickers)
   { kind: 'cut', src: '/stickers/aki_smoke.webp',      name: 'Aki' },
   { kind: 'cut', src: '/stickers/aki_sketch.webp',     name: 'Aki' },
@@ -40,19 +33,19 @@ export const STICKERS: Sticker[] = [
   { kind: 'card', src: '/stickers/panel_asa_selfie.jpg',     name: 'Asa & Denji',    ratio: 'auto' },
   { kind: 'card', src: '/stickers/panel_sleepover.jpg',      name: 'Sleepover',      ratio: 'auto' },
 
-  // portraits from the avatar set
-  { kind: 'card', src: '/avatars/avatar_asa.png',     name: 'Asa' },
-  { kind: 'card', src: '/avatars/avatar_nayuta.png',  name: 'Nayuta' },
-  { kind: 'card', src: '/avatars/avatar_kishibe.png', name: 'Kishibe' },
-  { kind: 'card', src: '/avatars/avatar_power.png',   name: 'Power' },
-  { kind: 'card', src: '/avatars/avatar_yoru.png',    name: 'Yoru' },
-  { kind: 'card', src: '/avatars/avatar_kobeni.png',  name: 'Kobeni' },
-  { kind: 'card', src: '/avatars/avatar_himeno.png',  name: 'Himeno' },
-  { kind: 'card', src: '/avatars/avatar_beam.png',    name: 'Beam' },
+  // close-ups cut from the same panels
+  { kind: 'card', src: '/stickers/crop_makima_eyes.jpg',      name: 'Makima',      ratio: 'auto' },
+  { kind: 'card', src: '/stickers/crop_makima_face.jpg',      name: 'Makima',      ratio: 'auto' },
+  { kind: 'card', src: '/stickers/crop_makima_hall.jpg',      name: 'Makima',      ratio: 'auto' },
+  { kind: 'card', src: '/stickers/crop_denji_hall.jpg',       name: 'Denji',       ratio: 'auto' },
+  { kind: 'card', src: '/stickers/crop_denji_tongue.jpg',     name: 'Denji',       ratio: 'auto' },
+  { kind: 'card', src: '/stickers/crop_denji_grin.jpg',       name: 'Denji',       ratio: 'auto' },
+  { kind: 'card', src: '/stickers/crop_asa_laugh.jpg',        name: 'Asa',         ratio: 'auto' },
+  { kind: 'card', src: '/stickers/crop_asa_denji_selfie.jpg', name: 'Asa & Denji', ratio: 'auto' },
+  { kind: 'card', src: '/stickers/crop_kishibe_face.jpg',     name: 'Kishibe',     ratio: 'auto' },
 
   // lettering
   { kind: 'sfx', text: 'BRRRRM!',      color: '#cc2200' },
-  { kind: 'sfx', text: 'WOOF!',        color: '#ff8a00' },
   { kind: 'sfx', text: 'DEVIL HUNTER', color: '#111' },
   { kind: 'sfx', text: 'ZUDOM',        color: '#cc2200' },
   { kind: 'sfx', text: '♥',            color: '#ff4f8b' },

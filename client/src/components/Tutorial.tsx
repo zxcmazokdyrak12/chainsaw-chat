@@ -18,7 +18,7 @@ export const TOUR_STEPS: TourStep[] = [
   {
     title: 'WOOF! WELCOME',
     text: "This is Chainsaw Chat. Let me show you around — it takes 30 seconds, promise.",
-    sticker: '/pochita.png',
+    sticker: '/stickers/asa_hug.webp',
   },
   {
     target: 'rooms,tab-rooms',
@@ -30,13 +30,13 @@ export const TOUR_STEPS: TourStep[] = [
     target: 'input',
     title: 'TALK',
     text: 'Type here and hit Enter to send. Turn on CAPS LOCK if you want the chainsaw to roar.',
-    sticker: '/denji.png',
+    sticker: '/stickers/crop_denji_tongue.jpg',
   },
   {
     target: 'mic',
     title: 'VOICE MESSAGES',
     text: 'Hold this button to record. Let go and it sends.',
-    sticker: '/reze.png',
+    sticker: '/stickers/crop_makima_eyes.jpg',
   },
   {
     target: 'bubble,messages',
@@ -55,12 +55,12 @@ export const TOUR_STEPS: TourStep[] = [
     target: 'tab-settings',
     title: 'SETTINGS',
     text: 'Theme, sounds and how many stickers get slapped on the walls. You can replay this tour from there too.',
-    sticker: '/stickers/asa_pochita.webp',
+    sticker: '/stickers/aki_sketch.webp',
   },
   {
     title: "YOU'RE READY",
     text: 'That\'s everything. Now go make some noise.',
-    sticker: '/stickers/asa_hug.webp',
+    sticker: '/stickers/asa_carry.webp',
   },
 ]
 
@@ -223,6 +223,10 @@ export default function Tutorial({ open, onClose, steps = TOUR_STEPS }: Tutorial
               position: 'absolute', right: -22, top: -38,
               width: isMobile ? 110 : 130, height: isMobile ? 110 : 130,
               objectFit: 'contain', filter: DIE_CUT, pointerEvents: 'none',
+              ...(step.sticker.endsWith('.jpg') ? {
+                objectFit: 'cover', borderRadius: 14, border: '4px solid #fff',
+                filter: 'drop-shadow(3px 5px 4px rgba(0,0,0,0.4))', background: '#fff',
+              } : {}),
             }}
           />
 
