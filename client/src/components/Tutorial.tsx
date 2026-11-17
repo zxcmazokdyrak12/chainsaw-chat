@@ -18,7 +18,7 @@ export const TOUR_STEPS: TourStep[] = [
   {
     title: 'WOOF! WELCOME',
     text: "This is Chainsaw Chat. Let me show you around — it takes 30 seconds, promise.",
-    sticker: '/stickers/asa_hug.webp',
+    sticker: '/stickers/reze_flowers.webp',
   },
   {
     target: 'rooms,tab-rooms',
@@ -30,7 +30,7 @@ export const TOUR_STEPS: TourStep[] = [
     target: 'input',
     title: 'TALK',
     text: 'Type here and hit Enter to send. Turn on CAPS LOCK if you want the chainsaw to roar.',
-    sticker: '/stickers/crop_denji_tongue.jpg',
+    sticker: '/stickers/power_salute.webp',
   },
   {
     target: 'mic',
@@ -55,12 +55,12 @@ export const TOUR_STEPS: TourStep[] = [
     target: 'tab-settings',
     title: 'SETTINGS',
     text: 'Theme, sounds and how many stickers get slapped on the walls. You can replay this tour from there too.',
-    sticker: '/stickers/aki_sketch.webp',
+    sticker: '/stickers/kobeni_peace.webp',
   },
   {
     title: "YOU'RE READY",
     text: 'That\'s everything. Now go make some noise.',
-    sticker: '/stickers/asa_carry.webp',
+    sticker: '/stickers/yoru_point.webp',
   },
 ]
 

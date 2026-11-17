@@ -23,6 +23,19 @@ export const STICKERS: Sticker[] = [
   { kind: 'cut', src: '/stickers/asa_hug.webp',        name: 'Yoru' },
   { kind: 'cut', src: '/stickers/asa_carry.webp',      name: 'Asa & Denji' },
   { kind: 'cut', src: '/stickers/asa_pochita.webp',    name: 'Asa & Pochita' },
+  { kind: 'cut', src: '/stickers/power_salute.webp',   name: 'Power' },
+  { kind: 'cut', src: '/stickers/power_meowy.webp',    name: 'Power & Meowy' },
+  { kind: 'cut', src: '/stickers/reze_smile.webp',     name: 'Reze' },
+  { kind: 'cut', src: '/stickers/reze_flowers.webp',   name: 'Reze' },
+  { kind: 'cut', src: '/stickers/kobeni_face.webp',    name: 'Kobeni' },
+  { kind: 'cut', src: '/stickers/kobeni_peace.webp',   name: 'Kobeni' },
+  { kind: 'cut', src: '/stickers/kobeni_sweat.webp',   name: 'Kobeni' },
+  { kind: 'cut', src: '/stickers/himeno_cig.webp',     name: 'Himeno' },
+  { kind: 'cut', src: '/stickers/himeno_wink.webp',    name: 'Himeno' },
+  { kind: 'cut', src: '/stickers/yoru_face.webp',      name: 'Yoru' },
+  { kind: 'cut', src: '/stickers/yoru_point.webp',     name: 'Yoru' },
+  { kind: 'cut', src: '/stickers/yoru_side.webp',      name: 'Yoru' },
+  { kind: 'cut', src: '/stickers/denji_asa_teeth.webp', name: 'Denji & Asa' },
 
   // manga panels — taped on as photo cards
   { kind: 'card', src: '/stickers/panel_kishibe_note.jpg',   name: 'Kishibe',        ratio: 'auto' },
@@ -32,6 +45,7 @@ export const STICKERS: Sticker[] = [
   { kind: 'card', src: '/stickers/panel_makima_lighter.jpg', name: 'Makima',         ratio: 'auto' },
   { kind: 'card', src: '/stickers/panel_asa_selfie.jpg',     name: 'Asa & Denji',    ratio: 'auto' },
   { kind: 'card', src: '/stickers/panel_sleepover.jpg',      name: 'Sleepover',      ratio: 'auto' },
+  { kind: 'card', src: '/stickers/panel_denji_kobeni.jpg',   name: 'Denji & Kobeni', ratio: 'auto' },
 
   // close-ups cut from the same panels
   { kind: 'card', src: '/stickers/crop_makima_eyes.jpg',      name: 'Makima',      ratio: 'auto' },
