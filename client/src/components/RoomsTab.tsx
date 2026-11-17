@@ -157,7 +157,7 @@ export default function RoomsTab({
             <div>{room.name}</div>
             <div style={{ fontSize: '11px', letterSpacing: '3px', opacity: 0.5, marginTop: '4px', fontFamily: 'Impact, sans-serif' }}>{room.code}</div>
             <div style={{ fontSize: '9px', opacity: 0.4, fontFamily: "'AnimeAce', sans-serif", marginTop: '2px' }}>{room.count} сообщ.</div>
-            {currentRoom === room.id && <div style={{ fontSize: '10px', color: 'var(--accent)', marginTop: '4px' }}>● YOU ARE HERE</div>}
+            {currentRoom === room.id && <div style={{ fontSize: '10px', color: 'inherit', marginTop: '4px' }}>● YOU ARE HERE</div>}
           </motion.button>
         ))}
       </div>

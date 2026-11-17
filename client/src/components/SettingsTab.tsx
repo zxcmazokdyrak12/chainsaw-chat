@@ -10,6 +10,7 @@ export interface Settings {
   pochitaEnabled: boolean
   showTyping: boolean
   stickerBomb: 'off' | 'light' | 'full'
+  sfxEnabled: boolean
 }
 
 interface FontLabelDetail {
@@ -64,7 +65,7 @@ function Toggle({ checked, onChange, T }: ToggleProps) {
         style={{
           position: 'absolute', top: '2px',
           width: '18px', height: '18px', borderRadius: '50%',
-          background: checked ? '#fff' : T.inputBorder,
+          background: checked ? 'var(--on-accent)' : T.inputBorder,
         }}
       />
     </div>
@@ -286,6 +287,17 @@ export default function SettingsTab({ T, settings, onUpdate, onReplayTutorial }:
           <Toggle
             checked={settings.pochitaEnabled ?? true}
             onChange={(v) => onUpdate('pochitaEnabled', v)}
+            T={T}
+          />
+        </Row>
+        <Row
+          label="💥 Manga SFX"
+          desc="DOOOM on caps, DON when you send, ZAP! when someone joins"
+          T={T}
+        >
+          <Toggle
+            checked={settings.sfxEnabled ?? true}
+            onChange={(v) => onUpdate('sfxEnabled', v)}
             T={T}
           />
         </Row>

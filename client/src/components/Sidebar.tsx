@@ -24,18 +24,18 @@ interface SidebarProps {
 
 export default function Sidebar({ rooms, currentRoom, theme, T, onJoinRoom }: SidebarProps) {
   return (
-    <div data-tour="rooms" style={{ width: '155px', background: T.sidebarBg, borderRight: `3px solid ${T.sidebarBorder}`, display: 'flex', flexDirection: 'column', flexShrink: 0, overflowY: 'auto' }}>
+    <div data-tour="rooms" style={{ width: '155px', background: T.sidebarBg, display: 'flex', flexDirection: 'column', flexShrink: 0, overflowY: 'auto' }}>
       <div style={{ padding: '8px 12px', fontSize: '10px', letterSpacing: '2px', color: theme === 'light' ? '#999' : '#555', borderBottom: `2px solid ${T.sidebarBorder}`, fontFamily: 'BlambotClassic, sans-serif' }}>
-        ROOMS
+        CHAPTERS
       </div>
-      {rooms.map(room => (
+      {rooms.map((room, i) => (
         <motion.button 
           key={room.id} 
           whileTap={{ scale: 0.97 }} 
           onClick={() => onJoinRoom(room.id)} 
           style={{ background: currentRoom === room.id ? (theme === 'light' ? '#111' : '#fff') : 'transparent', color: currentRoom === room.id ? (theme === 'light' ? '#fff' : '#111') : T.titleColor, border: 'none', cursor: 'pointer', padding: '10px 12px', textAlign: 'left', fontFamily: 'BlambotClassic, sans-serif', fontSize: '13px', letterSpacing: '1px', borderBottom: `1px solid ${theme === 'light' ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)'}`, transition: 'all 0.15s' }}
         >
-          {room.name}
+          {i + 1}. {room.name}
           <span style={{ display: 'block', fontSize: '9px', opacity: 0.5, fontFamily: "'AnimeAce', sans-serif", marginTop: '2px' }}>
             {room.count} MSGS
           </span>

@@ -158,6 +158,7 @@ function AvatarPicker({
                   aspectRatio: '1/1',
                   objectFit: 'cover', 
                   display: 'block',
+                  filter: 'grayscale(1) contrast(1.12)',
                   border: `2px solid ${avatar.id === av.id ? 'var(--accent)' : 'transparent'}` 
                 }} 
               />
@@ -251,7 +252,7 @@ export default function ProfileTab({
           <div style={{ paddingLeft: '20px', paddingRight: '12px', paddingTop: '14px', position: 'relative', zIndex: 2 }}>
             <div style={{ position: 'relative', display: 'inline-block' }}>
               <div style={{ width: '140px', height: '170px', border: `2px solid ${cardBorder}`, background: dark ? '#2a2a2a' : '#ddd8cc', overflow: 'hidden' }}>
-                <img src={avatar.src} alt={avatar.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                <img src={avatar.src} alt={avatar.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: 'grayscale(1) contrast(1.12)' }} />
               </div>
               <motion.button
                 whileTap={{ scale: 0.9 }}
@@ -262,7 +263,7 @@ export default function ProfileTab({
               {/* Emblem to the right of the photo */}
               <div style={{ position: 'absolute', top: '0', left: '155px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
                 <div style={{ background: innerBg, border: `2px solid ${cardBorder}`, padding: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', width: '110px' }}>
-                  <img src="/emblem.svg" alt="emblem" style={{ width: '60px', height: '60px', objectFit: 'contain', filter: dark ? 'invert(1) sepia(1) saturate(2) hue-rotate(5deg)' : 'none' }} />
+                  <img src="/emblem.svg" alt="emblem" style={{ width: '60px', height: '60px', objectFit: 'contain', filter: dark ? 'invert(1)' : 'none' }} />
                   <div style={{ fontFamily: 'BlambotClassic, sans-serif', fontSize: '8px', color: 'var(--accent)', lineHeight: 1.3, textAlign: 'center' }}>PUBLIC SAFETY<br />DEVIL HUNTERS</div>
                   <div style={{ fontFamily: 'serif', fontSize: '7px', color: textSub }}>公安デビルハンター</div>
                 </div>
@@ -371,7 +372,7 @@ export default function ProfileTab({
             {/* Photo */}
             <div style={{ flexShrink: 0, position: 'relative' }}>
               <div style={{ width: '190px', height: '225px', border: `2px solid ${cardBorder}`, background: dark ? '#2a2a2a' : '#ddd8cc', overflow: 'hidden' }}>
-                <img src={avatar.src} alt={avatar.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                <img src={avatar.src} alt={avatar.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: 'grayscale(1) contrast(1.12)' }} />
               </div>
               <div style={{ fontFamily: 'BlambotClassic, sans-serif', fontSize: '26px', letterSpacing: '2px', color: textMain, textAlign: 'center', marginTop: '6px' }}>
                 {username}
@@ -385,7 +386,7 @@ export default function ProfileTab({
             {/* data */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <div style={{ background: innerBg, border: `2px solid ${cardBorder}`, padding: '7px 8px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                <img src="/emblem.svg" alt="emblem" style={{ width: '80px', height: '80px', objectFit: 'contain', filter: dark ? 'invert(1) sepia(1) saturate(2) hue-rotate(5deg)' : 'none' }} />
+                <img src="/emblem.svg" alt="emblem" style={{ width: '80px', height: '80px', objectFit: 'contain', filter: dark ? 'invert(1)' : 'none' }} />
                 <div style={{ fontFamily: 'BlambotClassic, sans-serif', fontSize: '11px', letterSpacing: '1px', color: 'var(--accent)', lineHeight: 1.35 }}>PUBLIC SAFETY<br />DEVIL HUNTERS</div>
                 <div style={{ fontFamily: 'serif', fontSize: '10px', color: textSub }}>公安デビルハンター</div>
               </div>

@@ -123,7 +123,6 @@ export default function InputBar({
   return (
     <div style={{
       background: T.inputZoneBg,
-      borderTop: `3px solid ${T.inputBorder}`,
       transition: 'background 0.4s',
       padding: '8px 12px',
       display: 'flex', flexDirection: 'column', gap: '4px',

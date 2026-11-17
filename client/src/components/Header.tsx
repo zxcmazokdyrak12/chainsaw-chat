@@ -53,8 +53,9 @@ export default function Header({
   return (
     <div style={{
       background: T.headerBg,
-      borderBottom: `4px solid ${T.headerBorder}`,
-      boxShadow: T.shadow,
+      border: `4px solid ${T.headerBorder}`,
+      borderRadius: '4px',
+      overflow: 'hidden',
       position: 'relative', zIndex: 10,
       transition: 'background 0.4s',
     }}>
@@ -70,17 +71,23 @@ export default function Header({
             fontSize: isMobile ? '16px' : '22px',
             letterSpacing: isMobile ? '1px' : '3px',
             color: T.titleColor,
-            textShadow: theme === 'light' ? '3px 3px 0 var(--accent)' : '3px 3px 0 #444',
+            textShadow: 'none',
             whiteSpace: 'nowrap',
           }}>
             CHAINSAW <span style={{ color: T.titleAccent }}>CHAT</span>
           </h1>
           {!isMobile && (
+            // the room reads as a chapter of the story
             <span style={{
-              fontSize: '13px', color: theme === 'light' ? 'var(--accent)' : '#fff',
+              fontSize: '12px', color: T.titleColor,
               fontFamily: "'AnimeAce', sans-serif", letterSpacing: '1px',
+              border: `3px solid ${T.headerBorder}`, padding: '3px 10px',
+              whiteSpace: 'nowrap',
             }}>
-              {rooms.find(r => r.id === currentRoom)?.name || ''}
+              {(() => {
+                const i = rooms.findIndex(r => r.id === currentRoom)
+                return i >= 0 ? `CHAPTER ${i + 1} — ${rooms[i]?.name ?? ''}` : ''
+              })()}
             </span>
           )}
         </div>

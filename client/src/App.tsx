@@ -22,6 +22,7 @@ import { useVideoCall } from './hooks/useVideoCall'
 import VideoCall from './components/VideoCall'
 import StickerBomb from './components/StickerBomb'
 import Tutorial from './components/Tutorial'
+import SfxLayer, { makeBurst, type SfxBurst } from './components/SfxLayer'
 import { API_URL } from './config'
 
 const socket: Socket = io(API_URL, {
@@ -172,6 +173,19 @@ export default function App() {
   }, [phase])
 
   const { settings, update: updateSetting, resolveTheme } = useSettings()
+
+  // manga SFX bursts over the feed; refs keep socket handlers from reading stale values
+  const [sfx, setSfx] = useState<SfxBurst[]>([])
+  const sfxOn = useRef<boolean>(true)
+  sfxOn.current = settings.sfxEnabled ?? true
+  const meRef = useRef<string>('')
+  meRef.current = username
+  const popSfx = (kind: 'shout' | 'send' | 'join', own: boolean): void => {
+    if (!sfxOn.current) return
+    const b = makeBurst(kind, own)
+    setSfx(p => [...p.slice(-3), b])
+    setTimeout(() => setSfx(p => p.filter(x => x.id !== b.id)), kind === 'shout' ? 1100 : 750)
+  }
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark' | 'system'>(() => resolveTheme() as 'light' | 'dark' | 'system')
 
   useEffect(() => {
@@ -310,6 +324,11 @@ export default function App() {
     socket.on('receive_message', (msg: MessageItem) => {
       setMessages(p => [...p, msg])
       triggerPochita(msg.content)
+      const text = msg.content || ''
+      const own = msg.username === meRef.current
+      const shout = text === text.toUpperCase() && text.replace(/[^a-zA-Zа-яА-Я]/g, '').length > 2
+      if (shout) popSfx('shout', own)
+      else if (own) popSfx('send', true)
     })
     socket.on('room_created', ({ id }: { id: string, code: string, name: string }) => {
       joinRoom(id)
@@ -328,6 +347,7 @@ export default function App() {
     })
     socket.on('typing_update', (users: string[]) => setTypingUsers(users))
     socket.on('user_joined', ({ username: who }: { username: string }) => {
+      popSfx('join', false)
       setMessages(p => [...p, {
         id: Date.now(), system: true,
         content: `${who} joined the room`,
@@ -608,8 +628,9 @@ export default function App() {
         fontSize: 'var(--font-size-base, 14px)',
         position: 'relative', 
         overflow: 'hidden',
-        backgroundImage: `radial-gradient(circle, ${T.halftone} 1px, transparent 1px)`,
-        backgroundSize: '10px 10px',
+        // the page: panels separated by white gutters, like a manga spread
+        padding: isMobile ? '6px' : '10px',
+        gap: isMobile ? '6px' : '10px',
         transition: 'background 0.4s',
       }}
     >
@@ -646,16 +667,21 @@ export default function App() {
         
         {/* ВКЛАДКА ЧАТА */}
         {activeTab === 'chat' && (
-          <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', flex: 1, overflow: 'hidden', gap: isMobile ? '6px' : '10px' }}>
             {/* fix #2: Hide Sidebar on mobile to prevent layout issues */}
             {!isMobile && (
-              <Sidebar
-                rooms={rooms} currentRoom={currentRoom}
-                theme={theme} T={T} onJoinRoom={joinRoom}
-              />
+              <div style={{ display: 'flex', border: `4px solid ${T.headerBorder}`, borderRadius: '4px', overflow: 'hidden', background: T.appBg }}>
+                <Sidebar
+                  rooms={rooms} currentRoom={currentRoom}
+                  theme={theme} T={T} onJoinRoom={joinRoom}
+                />
+              </div>
             )}
             
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', gap: isMobile ? '6px' : '10px' }}>
+            {/* feed panel */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', border: `4px solid ${T.headerBorder}`, borderRadius: '4px', overflow: 'hidden', background: T.appBg }}>
+              <SfxLayer bursts={sfx} />
               {/* stickerbomb layer — behind messages, one layout per room */}
               <StickerBomb
                 density={settings.stickerBomb ?? 'light'}
@@ -778,7 +804,9 @@ export default function App() {
               </div>
 
               {/* fix #3: Input field (now always at the bottom of the chat section and above BottomNav) */}
-              <div style={{ paddingBottom: isMobile ? '60px' : '0', position: 'relative', zIndex: 2 }}>
+            </div>
+              {/* input panel */}
+              <div style={{ marginBottom: isMobile ? '62px' : '0', position: 'relative', zIndex: 2, border: `4px solid ${T.headerBorder}`, borderRadius: '4px', overflow: 'hidden', background: T.appBg }}>
                 <InputBar
                   input={input}
                   onInputChange={handleInputChange}
@@ -797,7 +825,7 @@ export default function App() {
 
         {/*_rooms tab */}
         {activeTab === 'rooms' && (
-          <div style={{ flex: 1, overflowY: 'auto', paddingBottom: isMobile ? '70px' : '0' }}>
+          <div style={{ flex: 1, overflowY: 'auto', marginBottom: isMobile ? '62px' : '0', border: `4px solid ${T.headerBorder}`, borderRadius: '4px', background: T.appBg }}>
             <RoomsTab
               rooms={rooms} currentRoom={currentRoom}
               theme={theme} T={T}
@@ -815,7 +843,7 @@ export default function App() {
 
         {/* fix #4: SETTINGS TAB (Added internal scroll, so it scrolls on mobile) */}
         {activeTab === 'settings' && (
-          <div style={{ flex: 1, overflowY: 'auto', paddingBottom: isMobile ? '70px' : '0' }}>
+          <div style={{ flex: 1, overflowY: 'auto', marginBottom: isMobile ? '62px' : '0', border: `4px solid ${T.headerBorder}`, borderRadius: '4px', background: T.appBg }}>
             <SettingsTab
               T={T}
               settings={settings}
@@ -827,7 +855,7 @@ export default function App() {
 
         {/* profile */}
         {activeTab === 'profile' && (
-          <div style={{ flex: 1, overflowY: 'auto', paddingBottom: isMobile ? '70px' : '0' }}>
+          <div style={{ flex: 1, overflowY: 'auto', marginBottom: isMobile ? '62px' : '0', border: `4px solid ${T.headerBorder}`, borderRadius: '4px', background: T.appBg }}>
             <ProfileTab
               avatar={avatar} username={username}
               rooms={rooms} currentRoom={currentRoom}
