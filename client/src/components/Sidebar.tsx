@@ -24,7 +24,7 @@ interface SidebarProps {
 
 export default function Sidebar({ rooms, currentRoom, theme, T, onJoinRoom }: SidebarProps) {
   return (
-    <div style={{ width: '155px', background: T.sidebarBg, borderRight: `3px solid ${T.sidebarBorder}`, display: 'flex', flexDirection: 'column', flexShrink: 0, overflowY: 'auto' }}>
+    <div data-tour="rooms" style={{ width: '155px', background: T.sidebarBg, borderRight: `3px solid ${T.sidebarBorder}`, display: 'flex', flexDirection: 'column', flexShrink: 0, overflowY: 'auto' }}>
       <div style={{ padding: '8px 12px', fontSize: '10px', letterSpacing: '2px', color: theme === 'light' ? '#999' : '#555', borderBottom: `2px solid ${T.sidebarBorder}`, fontFamily: 'BlambotClassic, sans-serif' }}>
         ROOMS
       </div>

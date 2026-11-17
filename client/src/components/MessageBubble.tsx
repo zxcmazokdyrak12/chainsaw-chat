@@ -218,6 +218,14 @@ interface MessageBubbleProps {
 
 export default function MessageBubble({ msg, index, isOwn, theme, T, username, seen, onReact, onContextMenu }: MessageBubbleProps) {
   const reactions = Object.entries(msg.reactions ?? {}).filter(([, users]) => users.length > 0)
+
+  // long-press → context menu on touch screens
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const longPressFired = useRef<boolean>(false)
+  const cancelPress = () => {
+    if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null }
+  }
+  useEffect(() => cancelPress, [])
   const ink = theme === 'dark' ? '#fff' : '#111'
   const contentStr = msg.content || ''
   const isShout = contentStr === contentStr.toUpperCase()
@@ -309,11 +317,28 @@ export default function MessageBubble({ msg, index, isOwn, theme, T, username, s
             }} />
 
             <div
+              data-tour="bubble"
               onDoubleClick={() => onReact?.('🔥')}
               onContextMenu={(e: React.MouseEvent<HTMLDivElement>) => {
                 e.preventDefault()
+                if (longPressFired.current) return
                 onContextMenu({ x: e.clientX, y: e.clientY, msg })
               }}
+              onTouchStart={(e: React.TouchEvent<HTMLDivElement>) => {
+                const t = e.touches[0]
+                if (!t) return
+                longPressFired.current = false
+                const { clientX, clientY } = t
+                if (pressTimer.current) clearTimeout(pressTimer.current)
+                pressTimer.current = setTimeout(() => {
+                  longPressFired.current = true
+                  navigator.vibrate?.(15)
+                  onContextMenu({ x: clientX, y: clientY, msg })
+                }, 480)
+              }}
+              onTouchMove={cancelPress}
+              onTouchEnd={cancelPress}
+              onTouchCancel={cancelPress}
               style={{
                 position: 'relative',
                 maxWidth: '280px',

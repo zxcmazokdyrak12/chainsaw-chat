@@ -41,6 +41,7 @@ export default function BottomNav({ activeTab, theme, T, onTabChange }: BottomNa
             key={tab.id}
             whileTap={{ scale: 0.85 }}
             onClick={() => onTabChange(tab.id)}
+            data-tour={`tab-${tab.id}`}
             style={{
               flex: 1,
               background: 'transparent', border: 'none',

@@ -133,6 +133,7 @@ export default function InputBar({
         {/* mic button */}
         <motion.button
           whileTap={{ scale: 0.9 }}
+          data-tour="mic"
           onMouseDown={onStartRecording}
           onMouseUp={onStopRecording}
           onTouchStart={onStartRecording}
@@ -180,6 +181,7 @@ export default function InputBar({
           ) : (
             <motion.textarea
               key="input"
+              data-tour="input"
               ref={textareaRef}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -215,6 +217,7 @@ export default function InputBar({
           whileTap={{ scale: 0.92, skewX: -5 }}
           whileHover={{ skewX: -5 }}
           onClick={onSend}
+          data-tour="send"
           style={{
             padding: '0 14px', height: '36px',
             background: T.btnBg, color: T.btnColor,

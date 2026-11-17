@@ -139,9 +139,10 @@ interface SettingsTabProps {
   T: Record<string, string>
   settings: Settings
   onUpdate: <K extends keyof Settings>(key: K, value: Settings[K]) => void
+  onReplayTutorial?: () => void
 }
 
-export default function SettingsTab({ T, settings, onUpdate }: SettingsTabProps) {
+export default function SettingsTab({ T, settings, onUpdate, onReplayTutorial }: SettingsTabProps) {
   return (
     <div style={{
       flex: 1, overflowY: 'auto', padding: '24px 16px',
@@ -289,6 +290,25 @@ export default function SettingsTab({ T, settings, onUpdate }: SettingsTabProps)
           />
         </Row>
       </Section>
+
+      {/* TUTORIAL */}
+      {onReplayTutorial && (
+        <Section title="TUTORIAL" T={T}>
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={onReplayTutorial}
+            style={{
+              width: '100%', padding: '12px 8px',
+              background: '#cc2200', color: '#fff',
+              border: `2px solid ${T.inputBorder}`,
+              fontFamily: 'BlambotClassic, sans-serif',
+              fontSize: '15px', letterSpacing: '2px', cursor: 'pointer',
+            }}
+          >
+            📖 REPLAY THE TOUR
+          </motion.button>
+        </Section>
+      )}
 
       {/* PRIVACY & BROADCAST CONFIGURATIONS */}
       <Section title="PRIVACY" T={T}>

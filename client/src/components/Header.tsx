@@ -99,6 +99,7 @@ export default function Header({
               whileTap={{ scale: 0.9 }}
               whileHover={{ skewX: -5 }}
               onClick={onCall}
+              data-tour="call"
               title={callCount ? 'Join the video call' : 'Start a video call in this room'}
               animate={callCount ? { scale: [1, 1.08, 1] } : { scale: 1 }}
               transition={callCount ? { repeat: Infinity, duration: 1.2 } : {}}
@@ -119,6 +120,7 @@ export default function Header({
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={onThemeToggle}
+            data-tour="theme"
             style={{
               background: theme === 'light' ? '#111' : '#fff',
               color: theme === 'light' ? '#fff' : '#111',
@@ -148,6 +150,7 @@ export default function Header({
             <motion.button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
+              data-tour={`tab-${tab.id}`}
               whileTap={{ y: -12, transition: { type: 'spring', stiffness: 500, damping: 12 } }}
               whileHover={{ y: -4 }}
               style={{

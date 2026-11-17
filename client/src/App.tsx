@@ -21,6 +21,7 @@ import { useWindowSize } from './hooks/useWindowSize'
 import { useVideoCall } from './hooks/useVideoCall'
 import VideoCall from './components/VideoCall'
 import StickerBomb from './components/StickerBomb'
+import Tutorial from './components/Tutorial'
 import { API_URL } from './config'
 
 const socket: Socket = io(API_URL, {
@@ -142,6 +143,22 @@ export default function App() {
   const lastMarked = useRef<number>(0)
 
   const call = useVideoCall(socket, currentRoom, username)
+
+  // onboarding tour — shown once after the first time you get into the chat
+  const [tourOpen, setTourOpen] = useState<boolean>(false)
+  const startTour = (): void => { setActiveTab('chat'); setTimeout(() => setTourOpen(true), 350) }
+  const closeTour = (): void => {
+    setTourOpen(false)
+    try { localStorage.setItem('chainsaw_tutorial_done', '1') } catch { /* private mode */ }
+  }
+  useEffect(() => {
+    if (phase !== 'chat') return
+    let done = false
+    try { done = localStorage.getItem('chainsaw_tutorial_done') === '1' } catch { /* ignore */ }
+    if (done) return
+    const t = setTimeout(() => setTourOpen(true), 1200) // let the room load first
+    return () => clearTimeout(t)
+  }, [phase])
 
   const { settings, update: updateSetting, resolveTheme } = useSettings()
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark' | 'system'>(() => resolveTheme() as 'light' | 'dark' | 'system')
@@ -624,6 +641,7 @@ export default function App() {
               />
               {/* message area */}
               <div
+                data-tour="messages"
                 onScroll={() => setContextMenu(null)}
                 style={{ 
                   position: 'relative', zIndex: 1,
@@ -769,6 +787,7 @@ export default function App() {
               T={T}
               settings={settings}
               onUpdate={updateSetting}
+              onReplayTutorial={startTour}
             />
           </div>
         )}
@@ -799,6 +818,7 @@ export default function App() {
         </div>
       )}
 
+      <Tutorial open={tourOpen} onClose={closeTour} />
       <VideoCall call={call} theme={theme} username={username} avatar={avatar.src} isMobile={isMobile} />
 
       <PochitaEgg visible={pochitaVisible} hearts={hearts} />
