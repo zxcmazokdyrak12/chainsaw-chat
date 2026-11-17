@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react'
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import StickerBomb from './StickerBomb'
+import { API_URL } from '../config'
 
 // describe the structure of an avatar object
 export interface AvatarItem {
@@ -83,7 +84,7 @@ export default function UsernameScreen({
 
       <div style={{ display:'flex', flexDirection:'column', gap:'12px', width:'300px' }}>
         <motion.a
-          href="https://chainsaw-chat.onrender.com/auth/github"
+          href={`${API_URL}/auth/github`}
           whileHover={{ skewX:-5, scale:1.03 }}
           whileTap={{ scale:0.97 }}
           style={{
@@ -101,7 +102,7 @@ export default function UsernameScreen({
         </motion.a>
 
         <motion.a
-          href="https://chainsaw-chat.onrender.com/auth/google"
+          href={`${API_URL}/auth/google`}
           whileHover={{ skewX:-5, scale:1.03 }}
           whileTap={{ scale:0.97 }}
           style={{

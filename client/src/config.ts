@@ -1,5 +1,6 @@
-// single place for the backend address
-export const API_URL = 'https://chainsaw-chat.onrender.com'
+// single place for the backend address.
+// Locally: put VITE_API_URL=http://localhost:3001 into client/.env.local
+export const API_URL = (import.meta.env.VITE_API_URL as string | undefined) || 'https://chainsaw-chat.onrender.com'
 
 // public STUN servers for WebRTC (NAT traversal). For strict NATs add a TURN server here.
 // Without TURN, people behind mobile internet / strict NAT can't reach each other directly.
