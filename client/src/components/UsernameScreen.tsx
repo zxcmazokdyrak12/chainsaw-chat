@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import StickerBomb from './StickerBomb'
 
 // describe the structure of an avatar object
 export interface AvatarItem {
@@ -70,7 +71,10 @@ export default function UsernameScreen({
   const switchMode = (m: 'guest' | 'account') => { setMode(m); onClearError() }
 
   return (
-    <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} style={{ height:'100vh', background:'#0d0d0d', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:'24px', fontFamily:'BlambotClassic, sans-serif', overflowY:'auto', padding:'20px' }}>
+    <div style={{ position:'relative', height:'100vh', overflow:'hidden', background:'#0d0d0d' }}>
+    {/* login screen gets the full stickerbomb; stickers can be poked */}
+    <StickerBomb density="full" dark mode="everywhere" seed="login" interactive />
+    <motion.div className="login-overlay" initial={{ opacity:0 }} animate={{ opacity:1 }} style={{ position:'relative', zIndex:1, height:'100vh', background:'radial-gradient(ellipse at center, rgba(13,13,13,0.9) 0%, rgba(13,13,13,0.6) 40%, transparent 75%)', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:'24px', fontFamily:'BlambotClassic, sans-serif', overflowY:'auto', padding:'20px', pointerEvents:'none' }}>
 
       <h1 style={{ fontSize:'36px', color:'#fff', letterSpacing:'4px', textShadow:'4px 4px 0 #cc2200', margin:0 }}>
         CHAINSAW <span style={{ color:'#cc2200' }}>CHAT</span>
@@ -264,5 +268,6 @@ export default function UsernameScreen({
         </AnimatePresence>
       </div>
     </motion.div>
+    </div>
   )
 }

@@ -1,2 +1,41 @@
 @import "tailwindcss";
 
+
+/* ── Soft buttons ────────────────────────────────────────────────
+   Components style buttons inline (slanted clip-path, square corners).
+   This rounds them globally: no slant cut, soft pill-ish corners, smooth colour changes.
+   Round buttons (border-radius: 50%) and buttons with their own radius keep their shape. */
+:root {
+  --soft-radius: 14px;
+}
+
+button:not([style*="border-radius"]),
+a[href*="/auth/"],
+input[type="text"],
+input[type="password"],
+input:not([type]),
+textarea {
+  clip-path: none !important;
+  border-radius: var(--soft-radius) !important;
+}
+
+button,
+a[href*="/auth/"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:not(:disabled):active,
+a[href*="/auth/"]:active {
+  filter: brightness(0.92);
+}
+
+button:focus-visible,
+a[href*="/auth/"]:focus-visible {
+  outline: 3px solid #cc2200;
+  outline-offset: 3px;
+}
+
+/* login screen: the overlay lets clicks through to the stickers, the form itself stays clickable */
+.login-overlay > * {
+  pointer-events: auto;
+}

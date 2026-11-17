@@ -20,6 +20,7 @@ import BottomNav from './components/BottomNav'
 import { useWindowSize } from './hooks/useWindowSize'
 import { useVideoCall } from './hooks/useVideoCall'
 import VideoCall from './components/VideoCall'
+import StickerBomb from './components/StickerBomb'
 import { API_URL } from './config'
 
 const socket: Socket = io(API_URL, {
@@ -140,7 +141,7 @@ export default function App() {
   const [seenMarks, setSeenMarks] = useState<Record<string, number>>({})
   const lastMarked = useRef<number>(0)
 
-  const call = useVideoCall(socket, currentRoom)
+  const call = useVideoCall(socket, currentRoom, username)
 
   const { settings, update: updateSetting, resolveTheme } = useSettings()
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark' | 'system'>(() => resolveTheme() as 'light' | 'dark' | 'system')
@@ -329,6 +330,26 @@ export default function App() {
     }
   }, [username, avatar])
 
+  // socket.io reconnects by itself (Render naps, phone goes to background), but the new socket
+  // is not in any room — rejoin, otherwise reactions / calls / messages silently go nowhere
+  const sessionRef = useRef({ phase, username, currentRoom, avatarSrc: avatar.src })
+  sessionRef.current = { phase, username, currentRoom, avatarSrc: avatar.src }
+  useEffect(() => {
+    let firstConnect = true
+    const onConnect = () => {
+      if (firstConnect) { firstConnect = false; return }
+      const s = sessionRef.current
+      if (s.phase !== 'chat' || !s.username) return
+      socket.emit('get_rooms', { username: s.username })
+      socket.emit('join_room', { roomId: s.currentRoom, username: s.username, avatar: s.avatarSrc })
+    }
+    const onReactError = (msg: string) => console.warn('[reaction]', msg)
+    if (socket.connected) firstConnect = false
+    socket.on('connect', onConnect)
+    socket.on('react_error', onReactError)
+    return () => { socket.off('connect', onConnect); socket.off('react_error', onReactError) }
+  }, [])
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, typingUsers])
@@ -340,7 +361,7 @@ export default function App() {
       const last = [...messages].reverse().find(m => !m.system && typeof m.id === 'number')
       if (!last || (last.id as number) <= lastMarked.current) return
       lastMarked.current = last.id as number
-      socket.emit('mark_seen', { roomId: currentRoom, messageId: last.id })
+      socket.emit('mark_seen', { roomId: currentRoom, messageId: last.id, username })
     }
     markSeen()
     document.addEventListener('visibilitychange', markSeen)
@@ -541,7 +562,7 @@ export default function App() {
     .reduce<number>((max, [, id]) => Math.max(max, Number(id)), 0)
 
   const reactTo = (messageId: string | number, emoji: string): void => {
-    socket.emit('react_message', { messageId, roomId: currentRoom, emoji })
+    socket.emit('react_message', { messageId, roomId: currentRoom, emoji, username })
   }
 
   return (
@@ -593,11 +614,19 @@ export default function App() {
               />
             )}
             
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
+              {/* stickerbomb layer — behind messages, one layout per room */}
+              <StickerBomb
+                density={settings.stickerBomb ?? 'light'}
+                dark={theme === 'dark'}
+                mode={settings.stickerBomb === 'full' ? 'everywhere' : 'edges'}
+                seed={currentRoom}
+              />
               {/* message area */}
               <div
                 onScroll={() => setContextMenu(null)}
                 style={{ 
+                  position: 'relative', zIndex: 1,
                   flex: 1, 
                   overflowY: 'auto', 
                   padding: isMobile ? '12px 16px' : '16px 24px', 
@@ -698,7 +727,7 @@ export default function App() {
               </div>
 
               {/* fix #3: Input field (now always at the bottom of the chat section and above BottomNav) */}
-              <div style={{ paddingBottom: isMobile ? '60px' : '0' }}>
+              <div style={{ paddingBottom: isMobile ? '60px' : '0', position: 'relative', zIndex: 2 }}>
                 <InputBar
                   input={input}
                   onInputChange={handleInputChange}

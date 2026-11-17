@@ -8,6 +8,7 @@ export interface Settings {
   soundEnabled: boolean
   pochitaEnabled: boolean
   showTyping: boolean
+  stickerBomb: 'off' | 'light' | 'full'
 }
 
 const DEFAULTS: Settings = {
@@ -17,6 +18,7 @@ const DEFAULTS: Settings = {
   soundEnabled: true,   // sounds chainsaw on startup and when CAPS LOCK is on
   pochitaEnabled: true, // show Pochita hearts on cute words
   showTyping: true,     // send typing events
+  stickerBomb: 'light', // manga stickers slapped on the chat background
 }
 
 export function useSettings() {

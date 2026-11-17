@@ -9,6 +9,7 @@ export interface Settings {
   soundEnabled: boolean
   pochitaEnabled: boolean
   showTyping: boolean
+  stickerBomb: 'off' | 'light' | 'full'
 }
 
 interface FontLabelDetail {
@@ -210,6 +211,35 @@ export default function SettingsTab({ T, settings, onUpdate }: SettingsTabProps)
               </motion.button>
             )
           })}
+        </div>
+      </Section>
+
+      {/* STICKERBOMB BACKGROUND */}
+      <Section title="STICKERBOMB" T={T}>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {([
+            { value: 'off',   label: '🚫 Off' },
+            { value: 'light', label: '🩹 Light' },
+            { value: 'full',  label: '💣 Full' },
+          ] as const).map(opt => (
+            <motion.button
+              key={opt.value}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => onUpdate('stickerBomb', opt.value)}
+              style={{
+                flex: 1, padding: '10px 8px',
+                background: (settings.stickerBomb ?? 'light') === opt.value ? '#cc2200' : T.inputBg,
+                color: (settings.stickerBomb ?? 'light') === opt.value ? '#fff' : T.titleColor,
+                border: `2px solid ${(settings.stickerBomb ?? 'light') === opt.value ? '#cc2200' : T.inputBorder}`,
+                fontFamily: "'AnimeAce', sans-serif",
+                fontSize: '11px', cursor: 'pointer',
+                letterSpacing: '0.5px',
+                transition: 'all 0.15s',
+              }}
+            >
+              {opt.label}
+            </motion.button>
+          ))}
         </div>
       </Section>
 

@@ -33,7 +33,7 @@ interface SignalMsg<T> {
   payload: T
 }
 
-export function useVideoCall(socket: Socket, roomId: string): VideoCallApi {
+export function useVideoCall(socket: Socket, roomId: string, username: string): VideoCallApi {
   const [inCall, setInCall]             = useState<boolean>(false)
   const [joining, setJoining]           = useState<boolean>(false)
   const [participants, setParticipants] = useState<string[]>([])
@@ -47,6 +47,20 @@ export function useVideoCall(socket: Socket, roomId: string): VideoCallApi {
   const localRef = useRef<MediaStream | null>(null)
   const roomRef  = useRef<string>(roomId)
   const inCallRef = useRef<boolean>(false)
+  // ICE candidates that arrive before setRemoteDescription() finished — adding them early throws,
+  // and losing them all means the peers never connect (everyone ends up alone in the call)
+  const pendingIce = useRef<Map<string, RTCIceCandidateInit[]>>(new Map())
+  const joinTimer  = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const nameRef    = useRef<string>(username)
+  nameRef.current  = username
+
+  const flushIce = (socketId: string) => {
+    const pc = pcs.current.get(socketId)
+    const queued = pendingIce.current.get(socketId)
+    if (!pc || !queued?.length) return
+    pendingIce.current.delete(socketId)
+    queued.forEach(c => pc.addIceCandidate(c).catch(err => console.warn('[WebRTC ice]', err)))
+  }
 
   const upsertRemote = (socketId: string, username: string, stream: MediaStream | null) => {
     setRemotes(prev => {
@@ -59,6 +73,7 @@ export function useVideoCall(socket: Socket, roomId: string): VideoCallApi {
   const removePeer = (socketId: string) => {
     pcs.current.get(socketId)?.close()
     pcs.current.delete(socketId)
+    pendingIce.current.delete(socketId)
     setRemotes(prev => prev.filter(p => p.socketId !== socketId))
   }
 
@@ -78,7 +93,10 @@ export function useVideoCall(socket: Socket, roomId: string): VideoCallApi {
       upsertRemote(socketId, username, e.streams[0] ?? new MediaStream([e.track]))
     }
     pc.onconnectionstatechange = () => {
-      if (pc.connectionState === 'failed' || pc.connectionState === 'closed') removePeer(socketId)
+      if (pc.connectionState === 'failed') {
+        console.warn('[WebRTC] connection failed with', username, '— strict NAT? add a TURN server (VITE_TURN_URL)')
+        removePeer(socketId)
+      }
     }
 
     if (initiator) {
@@ -91,8 +109,10 @@ export function useVideoCall(socket: Socket, roomId: string): VideoCallApi {
   }
 
   const teardown = () => {
+    if (joinTimer.current) { clearTimeout(joinTimer.current); joinTimer.current = null }
     pcs.current.forEach(pc => pc.close())
     pcs.current.clear()
+    pendingIce.current.clear()
     localRef.current?.getTracks().forEach(t => t.stop())
     localRef.current = null
     inCallRef.current = false
@@ -135,7 +155,13 @@ export function useVideoCall(socket: Socket, roomId: string): VideoCallApi {
     setLocalStream(stream)
     setInCall(true)
     setJoining(false)
-    socket.emit('call_join', { roomId: roomRef.current })
+    socket.emit('call_join', { roomId: roomRef.current, username: nameRef.current })
+    // old backend (or a dead socket) never answers — don't leave the user alone on a fake call screen
+    joinTimer.current = setTimeout(() => {
+      joinTimer.current = null
+      setError('Server did not answer the call — check the backend deploy')
+      teardown()
+    }, 8000)
   }, [socket, joining])
 
   const toggleMic = () => {
@@ -160,6 +186,8 @@ export function useVideoCall(socket: Socket, roomId: string): VideoCallApi {
     }
     // we just joined: call everyone who is already there
     const onPeers = ({ peers }: { roomId: string; peers: { socketId: string; username: string }[] }) => {
+      if (joinTimer.current) { clearTimeout(joinTimer.current); joinTimer.current = null }
+      if (!inCallRef.current) return
       peers.forEach(p => createPeer(p.socketId, p.username, true))
     }
     const onOffer = async ({ from, username, payload }: SignalMsg<RTCSessionDescriptionInit>) => {
@@ -167,16 +195,33 @@ export function useVideoCall(socket: Socket, roomId: string): VideoCallApi {
       const pc = createPeer(from, username ?? '???', false)
       try {
         await pc.setRemoteDescription(payload)
+        flushIce(from)
         const answer = await pc.createAnswer()
         await pc.setLocalDescription(answer)
         socket.emit('webrtc_answer', { to: from, payload: pc.localDescription })
       } catch (err) { console.error('[WebRTC answer]', err) }
     }
     const onAnswer = ({ from, payload }: SignalMsg<RTCSessionDescriptionInit>) => {
-      pcs.current.get(from)?.setRemoteDescription(payload).catch(err => console.error('[WebRTC remote]', err))
+      const pc = pcs.current.get(from)
+      if (!pc || pc.signalingState !== 'have-local-offer') return
+      pc.setRemoteDescription(payload)
+        .then(() => flushIce(from))
+        .catch(err => console.error('[WebRTC remote]', err))
     }
     const onIce = ({ from, payload }: SignalMsg<RTCIceCandidateInit>) => {
-      pcs.current.get(from)?.addIceCandidate(payload).catch(() => {})
+      const pc = pcs.current.get(from)
+      if (pc?.remoteDescription) {
+        pc.addIceCandidate(payload).catch(err => console.warn('[WebRTC ice]', err))
+        return
+      }
+      // offer/answer not applied yet → hold the candidate until it is
+      const q = pendingIce.current.get(from) ?? []
+      q.push(payload)
+      pendingIce.current.set(from, q)
+    }
+    // the socket dropped: the server already forgot our call membership, so end it cleanly
+    const onDisconnect = () => {
+      if (inCallRef.current) { setError('Connection lost — call ended'); teardown() }
     }
     const onPeerLeft = ({ socketId }: { socketId: string }) => removePeer(socketId)
     const onCallError = (msg: string) => { setError(msg); teardown() }
@@ -188,7 +233,9 @@ export function useVideoCall(socket: Socket, roomId: string): VideoCallApi {
     socket.on('webrtc_ice', onIce)
     socket.on('call_peer_left', onPeerLeft)
     socket.on('call_error', onCallError)
+    socket.on('disconnect', onDisconnect)
     return () => {
+      socket.off('disconnect', onDisconnect)
       socket.off('call_state', onState)
       socket.off('call_peers', onPeers)
       socket.off('webrtc_offer', onOffer)

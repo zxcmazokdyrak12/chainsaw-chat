@@ -250,6 +250,9 @@ async function getRoomHistory(roomId: string) {
 // ── Auth routes ──────────────────────────────────────────────────
 
 app.get('/ping', (_req: Request, res: Response) => res.send('ok'))
+// open https://<backend>/version after a deploy to make sure Render runs the fresh build
+const BUILD = 'reactions-calls-v2'
+app.get('/version', (_req: Request, res: Response) => res.json({ build: BUILD, features: ['reactions', 'seen', 'calls'] }))
 
 app.get('/auth/github', passport.authenticate('github', { scope: ['user:email'] }))
 app.get(
@@ -400,6 +403,18 @@ io.on('connection', (socket: Socket) => {
   const data = socket.data as SocketData
   console.log('connected:', socket.id)
 
+  // after a reconnect the socket is brand new: no username, not in any room.
+  // events that carry roomId/username restore that instead of being silently dropped
+  const ensureMember = (roomId?: string, username?: string): string | undefined => {
+    if (!data.username && username) data.username = username
+    if (roomId && !socket.rooms.has(roomId)) {
+      socket.rooms.forEach(room => { if (room !== socket.id) socket.leave(room) })
+      socket.join(roomId)
+      data.currentRoom = roomId
+    }
+    return data.username
+  }
+
   socket.on('get_rooms', async ({ username }: { username: string }) => {
     const list = await getUserRooms(username)
     socket.emit('rooms_list', list)
@@ -531,9 +546,10 @@ io.on('connection', (socket: Socket) => {
   })
 
   // ── Reactions ──────────────────────────────────────────────────
-  socket.on('react_message', async ({ messageId, roomId, emoji }: { messageId: number; roomId: string; emoji: string }) => {
-    const who = data.username
-    if (!who || !(REACTIONS as readonly string[]).includes(emoji)) return
+  socket.on('react_message', async ({ messageId, roomId, emoji, username }: { messageId: number; roomId: string; emoji: string; username?: string }) => {
+    const who = ensureMember(roomId, username)
+    if (!who) { socket.emit('react_error', 'Not in a room — reload the page'); return }
+    if (!(REACTIONS as readonly string[]).includes(emoji)) return
     try {
       const msg = await prisma.message.findUnique({ where: { id: BigInt(messageId) }, select: { reactions: true, roomId: true } })
       if (!msg || msg.roomId !== roomId) return
@@ -546,12 +562,15 @@ io.on('connection', (socket: Socket) => {
 
       await prisma.message.update({ where: { id: BigInt(messageId) }, data: { reactions } })
       io.to(roomId).emit('message_reacted', { messageId, reactions })
-    } catch (err) { console.error('[React Error]:', err) }
+    } catch (err) {
+      console.error('[React Error]:', err)
+      socket.emit('react_error', 'Reaction failed (run prisma db push?)')
+    }
   })
 
   // ── Seen flags ─────────────────────────────────────────────────
-  socket.on('mark_seen', async ({ roomId, messageId }: { roomId: string; messageId: number }) => {
-    const who = data.username
+  socket.on('mark_seen', async ({ roomId, messageId, username }: { roomId: string; messageId: number; username?: string }) => {
+    const who = ensureMember(roomId, username)
     if (!who || !roomId || !messageId) return
     try {
       const id = BigInt(messageId)
@@ -567,9 +586,10 @@ io.on('connection', (socket: Socket) => {
   })
 
   // ── Video calls (WebRTC signaling) ─────────────────────────────
-  socket.on('call_join', ({ roomId }: { roomId: string }) => {
-    const who = data.username
-    if (!who || !roomId) return
+  socket.on('call_join', ({ roomId, username }: { roomId: string; username?: string }) => {
+    const who = ensureMember(roomId, username)
+    if (!who || !roomId) { socket.emit('call_error', 'Not in a room — reload the page'); return }
+    if (data.callRoom && data.callRoom !== roomId) leaveCall(socket)
     const call = calls[roomId] ?? (calls[roomId] = {})
     if (Object.keys(call).length >= MAX_CALL_PEERS && !call[socket.id]) {
       socket.emit('call_error', 'Call is full')
