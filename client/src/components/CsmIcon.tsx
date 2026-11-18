@@ -7,7 +7,7 @@ export type CsmIconName =
   | 'chat' | 'chapters' | 'settings' | 'profile' | 'chainsaw' | 'heart' | 'sfx'
   | 'book' | 'keyboard' | 'sun' | 'moon' | 'video' | 'mic' | 'send' | 'edit'
   | 'trash' | 'pin' | 'copy' | 'drop' | 'door' | 'logout' | 'plus' | 'key'
-  | 'panel' | 'reply' | 'search' | 'close' | 'bell'
+  | 'panel' | 'reply' | 'search' | 'close' | 'bell' | 'page'
 
 // sprocket: alternating outer/inner points = saw teeth around a hub
 const sprocket = (() => {
@@ -165,6 +165,12 @@ const ICONS: Record<CsmIconName, ReactNode> = {
   </>,
   close: <>
     <path d="M6 6l12 12M18 6L6 18" />
+  </>,
+  // a manga page with panels and a dog-ear — save the chapter
+  page: <>
+    <path d="M6 3h9l4 4v14H6z" />
+    <path d="M15 3v4h4" />
+    <path d="M8.5 9.5h4v4h-4zM14 10.5h2.5M8.5 16h8" />
   </>,
   bell: <>
     <path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z" />

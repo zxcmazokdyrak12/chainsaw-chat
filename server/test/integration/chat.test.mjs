@@ -182,6 +182,24 @@ test('uploads: pictures yes, HTML pretending to be a picture no', { skip }, asyn
   assert.equal(pic.media, id)
 })
 
+test('contracts: members seal them, only the author closes them', { skip }, async () => {
+  const c = await say(denji, 'general', '/poll Where do we eat? | Ramen | Pizza')
+  assert.equal(c.type, 'contract')
+  assert.deepEqual(c.poll.options.map(o => o.label), ['Ramen', 'Pizza'])
+
+  let upd = waitFor(denji, 'poll_updated')
+  power.emit('poll_vote', { messageId: c.id, roomId: 'general', optionId: 'o2' })
+  assert.deepEqual((await upd).poll.votes, { o2: [nick('P')] })
+
+  const ignored = waitFor(denji, 'poll_updated', 700)
+  power.emit('poll_close', { messageId: c.id, roomId: 'general' })
+  assert.equal(await ignored, undefined)
+
+  upd = waitFor(power, 'poll_updated')
+  denji.emit('poll_close', { messageId: c.id, roomId: 'general' })
+  assert.equal((await upd).poll.closed, true)
+})
+
 test('room codes can not be brute-forced', { skip }, async () => {
   const errors = []
   for (let i = 0; i < 10; i++) {

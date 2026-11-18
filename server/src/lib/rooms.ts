@@ -20,6 +20,7 @@ export const serializeMessage = (r: {
   mediaId?: string | null
   replyToId?: bigint | number | null
   replyPreview?: unknown
+  poll?: unknown
 }) => ({
   id:        Number(r.id),
   username:  r.username,
@@ -37,6 +38,7 @@ export const serializeMessage = (r: {
   replyTo:   r.replyToId != null && r.replyPreview && typeof r.replyPreview === 'object'
     ? { id: Number(r.replyToId), ...(r.replyPreview as Record<string, unknown>) }
     : null,
+  poll:      r.poll && typeof r.poll === 'object' ? r.poll : null,
 })
 
 export async function getUserRooms(username: string) {

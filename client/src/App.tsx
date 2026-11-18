@@ -28,6 +28,9 @@ import Lightbox from './components/Lightbox'
 import { uploadMedia, preparePicture } from './lib/media'
 import { findCommand, HELP_TEXT, type ChatCommand } from './lib/commands'
 import { useUnreadBadge } from './hooks/useUnreadBadge'
+import { maskSpoilers } from './lib/spoiler'
+import ShortcutsHelp from './components/ShortcutsHelp'
+import ExportDialog from './components/ExportDialog'
 import { API_URL } from './config'
 import { socket, connectSocket } from './lib/socket'
 import { getToken, getAccountToken, setAccountToken, setGuestToken, clearTokens } from './lib/auth'
@@ -103,10 +106,26 @@ export default function App() {
   const rootRef = useRef<HTMLDivElement>(null)
   useEffect(() => { if (!notice) return; const t = setTimeout(() => setNotice(''), 3200); return () => clearTimeout(t) }, [notice])
 
-  // Ctrl/Cmd+K opens the search
+  // keyboard: the whole chat works without a mouse (see ShortcutsHelp for the list)
+  const [keysOpen, setKeysOpen] = useState<boolean>(false)
+  const [exportOpen, setExportOpen] = useState<boolean>(false)
+  const keyActions = useRef<{ room: (i: number) => void }>({ room: () => {} })
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && phase === 'chat') { e.preventDefault(); setActiveTab('chat'); setSearchOpen(true) }
+      if (phase !== 'chat') return
+      const t = e.target as HTMLElement | null
+      const typing = !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && e.code === 'KeyK') { e.preventDefault(); setActiveTab('chat'); setSearchOpen(true); return }
+      // e.code, not e.key: on a Mac ⌥+1 types "¡"
+      if (e.altKey && !e.ctrlKey && !e.metaKey) {
+        const digit = /^Digit([1-9])$/.exec(e.code)
+        if (digit) { e.preventDefault(); keyActions.current.room(Number(digit[1]) - 1); return }
+        const tab = ({ KeyC: 'chat', KeyR: 'rooms', KeyS: 'settings', KeyP: 'profile' } as Record<string, string>)[e.code]
+        if (tab) { e.preventDefault(); setActiveTab(tab); return }
+        if (e.code === 'KeyE') { e.preventDefault(); setActiveTab('chat'); setExportOpen(true); return }
+        if (e.code === 'Slash') { e.preventDefault(); setKeysOpen(o => !o); return }
+      }
+      if (e.key === '?' && !typing) { e.preventDefault(); setKeysOpen(o => !o) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -229,11 +248,13 @@ export default function App() {
 
   useEffect(() => {
     socket.on('rooms_list', (list: RoomItem[]) => setRooms(list))
+    socket.on('poll_updated', ({ messageId, poll }: { messageId: number; poll: MessageItem['poll'] }) =>
+      setMessages(p => p.map(m => (m.id === messageId ? { ...m, poll } : m))))
     socket.on('room_history', (history: MessageItem[]) => setMessages(history))
     socket.on('receive_message', (msg: MessageItem) => {
       setMessages(p => [...p, msg])
       const own = msg.username === meRef.current
-      if (!own) notifyRef.current(msg.username ?? 'Chainsaw Chat', msg.type === 'image' ? '🖼 picture' : msg.type === 'audio' ? '🎤 voice message' : msg.content)
+      if (!own) notifyRef.current(msg.username ?? 'Chainsaw Chat', msg.type === 'image' ? '🖼 picture' : msg.type === 'audio' ? '🎤 voice message' : maskSpoilers(msg.content))
       const cmd = msg.type === 'text' || !msg.type ? findCommand(msg.content) : null
       if (cmd) { runCommandRef.current(cmd); return }
       triggerPochita(msg.content)
@@ -279,6 +300,7 @@ export default function App() {
 
     return () => {
       socket.off('rooms_list')
+      socket.off('poll_updated')
       socket.off('room_history')
       socket.off('receive_message')
       socket.off('typing_update')
@@ -309,6 +331,19 @@ export default function App() {
     document.addEventListener('visibilitychange', markSeen)
     return () => document.removeEventListener('visibilitychange', markSeen)
   }, [messages, activeTab, currentRoom, phase])
+
+  keyActions.current.room = (i: number) => {
+    const room = rooms[i]
+    if (!room) { setNotice(`There is no chapter ${i + 1}`); return }
+    setActiveTab('chat')
+    if (room.id !== currentRoom) joinRoom(room.id)
+  }
+
+  // ↑ in an empty input: reply to the newest real message
+  const quickReply = (): void => {
+    const last = [...messages].reverse().find(m => !m.system && typeof m.id === 'number')
+    if (last) setReplyTo(last)
+  }
 
   const joinRoom = (roomId: string): void => {
     setCurrentRoom(roomId)
@@ -509,6 +544,7 @@ export default function App() {
         inCall={call.inCall}
         onCall={() => { setActiveTab('chat'); call.join() }}
         onSearch={() => { setActiveTab('chat'); setSearchOpen(o => !o) }}
+        onExport={() => { setActiveTab('chat'); setExportOpen(true) }}
       />
 
       {/* main content */}
@@ -571,6 +607,10 @@ export default function App() {
               {/* message area */}
               <div
                 data-tour="messages"
+                role="log"
+                aria-live="polite"
+                aria-relevant="additions"
+                aria-label={`Messages in ${rooms.find(r => r.id === currentRoom)?.name ?? 'the room'}`}
                 onScroll={() => setContextMenu(null)}
                 style={{ 
                   position: 'relative', zIndex: 1,
@@ -666,6 +706,9 @@ export default function App() {
                       onQuoteClick={jumpTo}
                       onOpenImage={setLightbox}
                       highlight={highlightId === msg.id}
+                      onVote={(id, optionId) => socket.emit('poll_vote', { messageId: id, roomId: currentRoom, optionId })}
+                      onPollClose={(id) => socket.emit('poll_close', { messageId: id, roomId: currentRoom })}
+                      onReply={(m) => setReplyTo(m as MessageItem)}
                     />
                   )
                 })}
@@ -705,6 +748,8 @@ export default function App() {
                   uploading={uploading}
                   reply={replyTo ? { username: replyTo.username ?? null, content: replyTo.content, type: replyTo.type } : null}
                   onCancelReply={() => setReplyTo(null)}
+                  onQuickReply={quickReply}
+                  onSetInput={setInput}
                 />
               </div>
             </div>
@@ -773,6 +818,16 @@ export default function App() {
 
       <PochitaEgg visible={pochitaVisible} hearts={hearts} />
       {lightbox && <Lightbox src={lightbox} onClose={() => setLightbox(null)} />}
+      {keysOpen && <ShortcutsHelp onClose={() => setKeysOpen(false)} />}
+      {exportOpen && (
+        <ExportDialog
+          messages={messages}
+          roomName={rooms.find(r => r.id === currentRoom)?.name ?? '# GENERAL'}
+          chapter={Math.max(1, rooms.findIndex(r => r.id === currentRoom) + 1)}
+          me={username}
+          onClose={() => setExportOpen(false)}
+        />
+      )}
       {/* /bang */}
       {flash > 0 && (
         <motion.div key={flash} aria-hidden initial={{ opacity: 0.95 }} animate={{ opacity: 0 }} transition={{ duration: 0.45 }}

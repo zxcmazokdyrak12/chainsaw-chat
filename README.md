@@ -57,6 +57,20 @@
   </tr>
 </table>
 
+### 📖 Save a chapter as a manga page
+
+<img src="client/public/manga_page_demo.png" width="360" align="right" alt="A chat chapter exported as an A4 manga page: panels, speech balloons, a shout burst, screentone">
+
+`Alt+E` (or the page icon) lays the chat out again as a real A4 manga page:
+- each line becomes a panel, with the speaker's portrait inked in grayscale;
+- oval balloons for short lines, a jagged burst for CAPS, screentone and speed lines;
+- reaction stickers in the corner;
+- spoilers stay blacked out.
+
+It's drawn on canvas by hand, not a screenshot of the UI. One page saves as PNG; a whole chapter becomes a multi-page PDF, written byte by byte without a PDF library.
+
+<br clear="right">
+
 ### 🧩 Pictures, replies, commands
 
 <img src="client/public/features_screen.png" width="100%" alt="A reply quoting an earlier line and a picture posted as a manga panel">
@@ -138,7 +152,17 @@ On the first visit, three manga panels slam in. Then a detailed recoil starter a
 - **Reactions**: seven hand-picked manga stickers. **✓ SENT → ✓✓ SEEN** read flags. Typing indicator.
 - **Search** in the room (`Ctrl+K`): server-side, so older lines are found too; results jump to the line and flash it.
 - **Commands** play for the whole room: `/pochita` `/power` `/brrr` `/bang` `/pudding` (`/help` lists them).
+- **Contracts & votes**: `/contract Raid the Gun Devil tonight` lets people sign it in blood. `/poll Where do we eat? | Ramen | Pizza` gives one seal per person, with a screentone bar showing the share. Only the author can close it.
+- **Spoilers**: `||the twist||` (or `Ctrl+Shift+S` on a selection) hides it behind rough black hatching until clicked. It stays hidden in quotes, search, notifications and exported pages.
 - **Background alerts**: `(3)` in the tab title, a blood-red counter on the favicon, and optional system notifications.
+
+### ⌨️ Without a mouse
+Press `?` for the full list. The main keys:
+- `Alt+1…9` jumps to a chapter (room); `Alt+C/R/S/P` switches tabs.
+- `Ctrl+K` searches; `↑` in an empty line replies to the last message.
+- Tab to any balloon, then `R` to reply or `Enter` to open its menu (arrow keys, Esc).
+
+The feed is an ARIA live log, and focus is always visible.
 
 ### 🚪 Rooms
 Create a room and share its code (e.g. `KAIRYU4821`). The chapters drawer lists your rooms like a table of contents.
@@ -218,7 +242,7 @@ chainsaw-chat/
 │       ├── index.ts           ← wiring: middleware, routes, sockets
 │       ├── config.ts          ← env, secrets policy, build tag
 │       ├── passport.ts        ← GitHub / Google OAuth
-│       ├── lib/               ← tokens, validation, sniffing, storage (DB / R2), SigV4, rooms
+│       ├── lib/               ← tokens, validation, sniffing, storage (DB / R2), SigV4, rooms, polls
 │       ├── routes/            ← auth, profile, media, ice, meta
 │       └── sockets/           ← auth middleware, rooms, messages, calls, presence
 └── client/
@@ -226,7 +250,7 @@ chainsaw-chat/
     │   ├── App.tsx            ← screen layout; state lives in hooks
     │   ├── components/        ← intro, balloons, input, search, lightbox, ID card, settings, …
     │   ├── hooks/             ← calls, voice, settings, unread badge, tour, …
-    │   └── lib/               ← socket, auth tokens, media upload, ICE, commands, sounds
+    │   └── lib/               ← socket, auth, media, ICE, commands, spoilers, manga page + PDF export
     ├── public/                ← stickers, reactions, avatars, fonts, sounds
     └── vercel.json            ← CSP and security headers
 ```

@@ -76,6 +76,8 @@ model Message {
   // reply: the id we answer + a small snapshot, so the quote survives the original being deleted
   replyToId    BigInt? @map("reply_to_id")
   replyPreview Json?   @map("reply_preview")
+  // contracts / polls: { kind, title, options: [{ id, label }], votes: { optionId: [username] }, closed }
+  poll         Json?
   createdAt DateTime @default(now()) @map("created_at")
 
   room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)

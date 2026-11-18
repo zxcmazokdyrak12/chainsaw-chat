@@ -102,3 +102,26 @@ button.manga-tab {
   0%, 30% { outline: 3px dashed var(--ink); outline-offset: 6px; }
   100%    { outline: 3px dashed transparent; outline-offset: 12px; }
 }
+
+/* ||spoiler||: black bar with rough diagonal hatching, like a censored panel */
+.csm-spoiler {
+  display: inline;
+  cursor: pointer;
+  border-radius: 2px;
+  padding: 0 2px;
+  background-color: var(--ink);
+  background-image:
+    repeating-linear-gradient(-55deg, transparent 0 3px, color-mix(in srgb, var(--paper) 28%, transparent) 3px 4px),
+    repeating-linear-gradient(35deg, transparent 0 6px, color-mix(in srgb, var(--paper) 14%, transparent) 6px 7px);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  transition: transform .12s;
+  user-select: none;
+}
+.csm-spoiler:hover { background-color: color-mix(in srgb, var(--ink) 85%, var(--paper)); }
+
+/* keyboard users always see where they are */
+:focus-visible {
+  outline: 3px dashed var(--ink);
+  outline-offset: 3px;
+}

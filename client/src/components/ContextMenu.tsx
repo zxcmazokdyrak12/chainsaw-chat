@@ -1,3 +1,4 @@
+import { useEffect, useRef, type KeyboardEvent, type CSSProperties } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { REACTIONS } from '../config'
 
@@ -38,23 +39,55 @@ export default function ContextMenu({
   onReply,
   onClose 
 }: ContextMenuProps) {
+  const ref = useRef<HTMLDivElement>(null)
+  const ink = theme === 'dark' ? '#fff' : '#111'
+
+  // keyboard: focus the first item, arrows move, Esc closes and gives focus back
+  useEffect(() => {
+    if (!contextMenu) return
+    const back = document.activeElement as HTMLElement | null
+    requestAnimationFrame(() => ref.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus())
+    return () => { back?.focus?.() }
+  }, [contextMenu])
+
+  const onKeyDown = (e: KeyboardEvent) => {
+    const items = Array.from(ref.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])
+    const i = items.indexOf(document.activeElement as HTMLElement)
+    if (e.key === 'Escape' || e.key === 'Tab') { e.preventDefault(); onClose(); return }
+    const step = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? -1 : 0
+    if (step) { e.preventDefault(); items[(i + step + items.length) % items.length]?.focus() }
+  }
+
+  // keep the whole menu on screen
+  const left = contextMenu ? Math.max(8, Math.min(contextMenu.x, window.innerWidth - 300)) : 0
+  const top = contextMenu ? Math.max(8, Math.min(contextMenu.y, window.innerHeight - 200)) : 0
+
+  const item: CSSProperties = {
+    display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', cursor: 'pointer',
+    background: 'transparent', border: 'none', color: ink, fontFamily: 'inherit', fontSize: 'inherit',
+  }
+
   return (
     <AnimatePresence>
       {contextMenu && (
         <motion.div
+          ref={ref}
+          role="menu"
+          aria-label="Message actions"
+          onKeyDown={onKeyDown}
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.9 }}
           style={{
             position: 'fixed',
-            top: contextMenu.y,
-            left: contextMenu.x,
+            top,
+            left,
             background: theme === 'dark' ? '#222' : '#fff',
-            border: `3px solid ${theme === 'dark' ? '#fff' : '#111'}`,
+            border: `3px solid ${ink}`,
             padding: '4px',
             zIndex: 9999,
             borderRadius: '8px',
-            boxShadow: theme === 'dark' ? '4px 4px 0 #fff' : '4px 4px 0 #111',
+            boxShadow: `4px 4px 0 ${ink}`,
             fontFamily: "'AnimeAce', sans-serif",
             fontSize: '12px',
             width: '282px',
@@ -67,52 +100,44 @@ export default function ContextMenu({
           <div style={{
             display: 'flex', justifyContent: 'space-between',
             padding: '4px 4px 6px',
-            borderBottom: `2px solid ${theme === 'dark' ? '#fff' : '#111'}`,
+            borderBottom: `2px solid ${ink}`,
             marginBottom: '2px',
           }}>
             {REACTIONS.map(r => (
-              <motion.img
+              <motion.button
                 key={r.id}
-                src={r.src}
-                alt={r.label}
+                role="menuitem"
+                aria-label={`React: ${r.label}`}
                 title={r.label}
                 whileHover={{ scale: 1.5, rotate: -8, zIndex: 2 }}
                 whileTap={{ scale: 0.8 }}
                 onClick={(e) => { e.stopPropagation(); onReact(contextMenu.msg.id, r.id) }}
                 style={{
-                  cursor: 'pointer', width: '34px', height: '34px', borderRadius: '50%',
-                  objectFit: 'cover', border: `2px solid ${theme === 'dark' ? '#fff' : '#111'}`,
-                  position: 'relative', background: '#fff',
+                  cursor: 'pointer', width: '34px', height: '34px', borderRadius: '50%', padding: 0, overflow: 'hidden',
+                  border: `2px solid ${ink}`, position: 'relative', background: '#fff',
                 }}
-              />
+              >
+                <img src={r.src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              </motion.button>
             ))}
           </div>
 
           {onReply && typeof contextMenu.msg.id === 'number' && (
-            <div
-              onClick={() => onReply(contextMenu.msg)}
-              style={{ padding: '8px 12px', cursor: 'pointer', color: theme === 'dark' ? '#fff' : '#111', fontWeight: 900 }}
-            >
+            <button role="menuitem" onClick={() => onReply(contextMenu.msg)} style={{ ...item, fontWeight: 900 }}>
               REPLY ↩
-            </div>
+            </button>
           )}
 
           {/* Only show DELETE if the message owner matches the current logged-in user */}
           {contextMenu.msg.username === username && (
-            <div
-              onClick={() => onDelete(contextMenu.msg.id)}
-              style={{ padding: '8px 12px', cursor: 'pointer', color: '#ff4a4a', fontWeight: 900 }}
-            >
+            <button role="menuitem" onClick={() => onDelete(contextMenu.msg.id)} style={{ ...item, color: '#ff4a4a', fontWeight: 900 }}>
               DELETE 🗑️
-            </div>
+            </button>
           )}
 
-          <div
-            onClick={() => onCopy(contextMenu.msg.content || '')}
-            style={{ padding: '8px 12px', cursor: 'pointer', color: theme === 'dark' ? '#fff' : '#111' }}
-          >
+          <button role="menuitem" onClick={() => onCopy(contextMenu.msg.content || '')} style={item}>
             COPY 📋
-          </div>
+          </button>
         </motion.div>
       )}
     </AnimatePresence>

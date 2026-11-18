@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { socket } from '../lib/socket'
 import CsmIcon from './CsmIcon'
+import { maskSpoilers } from '../lib/spoiler'
 
 export interface SearchHit { id: number; username: string | null; content: string | null; time: string | null; at: string; type: string }
 
@@ -88,7 +89,7 @@ export default function SearchPanel({ roomId, roomName, onJump, onClose }: {
             <span style={{ fontFamily: 'BlambotClassic, sans-serif', letterSpacing: '1px' }}>{h.username}</span>
             <span style={{ opacity: 0.5 }}> · {new Date(h.at).toLocaleDateString()} {h.time}</span>
             <br />
-            {h.type === 'image' && '🖼 '}{mark(h.content ?? '')}
+            {h.type === 'image' && '🖼 '}{mark(maskSpoilers(h.content))}
           </button>
         ))}
       </div>
