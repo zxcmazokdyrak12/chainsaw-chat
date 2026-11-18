@@ -193,11 +193,14 @@ export default function RoomsTab({
             <div style={{ display: 'flex', gap: '10px', flexDirection: 'column', paddingTop: '2px' }}>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <input
-                  style={{ ...field, letterSpacing: '6px', textAlign: 'center', fontSize: '18px', borderStyle: joinError ? 'dashed' : 'solid' }}
-                  placeholder="KAIRYU42"
-                  maxLength={8}
+                  style={{ ...field, minWidth: 0, letterSpacing: '3px', textAlign: 'center', fontSize: '17px', borderStyle: joinError ? 'dashed' : 'solid' }}
+                  placeholder="KAIRYU4821"
+                  // codes are 10 chars now (older rooms: 8); the server takes 4–16
+                  maxLength={16}
+                  autoCapitalize="characters" autoComplete="off" spellCheck={false}
                   value={joinCode}
-                  onChange={e => { setJoinCode(e.target.value.toUpperCase()); setJoinError('') }}
+                  // pasted "kairyu 4821" or "#KAIRYU4821" still works
+                  onChange={e => { setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '')); setJoinError('') }}
                   onKeyDown={e => e.key === 'Enter' && onJoinByCode()}
                 />
                 <motion.button whileTap={{ scale: 0.95 }} onClick={onJoinByCode} style={goBtn}>
