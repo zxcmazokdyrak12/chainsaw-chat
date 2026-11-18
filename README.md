@@ -1,10 +1,15 @@
-# 🪚 Chainsaw Chat (Fullstack Real-time Messenger)
+# 🪚 Chainsaw Chat
 
-> A dark, fast, and noisy fullstack messenger set in the **Chainsaw Man** universe. Built for those who appreciate the silence of the night city, clean code, and Tatsuki Fujimoto's unique manga aesthetic.
+[![CI](https://github.com/zxcmazokdyrak12/chainsaw-chat/actions/workflows/ci.yml/badge.svg)](https://github.com/zxcmazokdyrak12/chainsaw-chat/actions/workflows/ci.yml)
+
+> A real-time messenger drawn like a black-and-white manga page, set in the **Chainsaw Man** universe.
+> Rooms, voice notes, pictures, video calls, reactions — and you start it by pulling a chainsaw cord.
+
+<p align="center"><img src="client/public/intro_demo.gif" width="600" alt="Chapter 0: manga panels, pulling the starter cord, the engine roars, the screen is cut open"></p>
 
 ---
 
-## 🖼️ Preview
+## 🖼️ Screens
 
 ### 🖥️ Desktop Version
 
@@ -52,6 +57,52 @@
   </tr>
 </table>
 
+### 🧩 Pictures, replies, commands
+
+<img src="client/public/features_screen.png" width="100%" alt="A reply quoting an earlier line and a picture posted as a manga panel">
+
+---
+
+## 🏗️ Architecture
+
+```mermaid
+flowchart LR
+  subgraph Browser["Browser (React + Vite, Vercel)"]
+    UI[Manga UI<br/>framer-motion]
+    SIO[Socket.IO client]
+    RTC[WebRTC peers]
+  end
+  subgraph Server["Node.js server (Express + Socket.IO, Render)"]
+    AUTH[Auth<br/>JWT · bcrypt · OAuth]
+    WS[Socket handlers<br/>rooms · messages · calls]
+    MEDIA[/media<br/>uploads/]
+    ICE[/ice<br/>TURN credentials/]
+  end
+  DB[(PostgreSQL<br/>Neon · Prisma)]
+  R2[(Cloudflare R2<br/>optional)]
+  TURN[TURN relay<br/>Cloudflare / Metered / coturn]
+
+  UI -- REST --> AUTH
+  SIO <-- "signed token, events" --> WS
+  UI -- "pictures / voice" --> MEDIA
+  WS --> DB
+  AUTH --> DB
+  MEDIA --> DB
+  MEDIA -.-> R2
+  RTC -- "fetch credentials" --> ICE
+  RTC <-. "audio / video (P2P)" .-> RTC
+  RTC -. "behind strict NAT" .-> TURN
+```
+
+- **Identity is server-side.** Every socket presents a signed JWT on connect. The server takes the username from the token and never from event payloads.
+- **Rooms are private by membership.** `general` is the lobby; any other room is reached only through its join code.
+- **Media** is checked by magic bytes and stored in Postgres, or in Cloudflare R2 when configured (hand-written SigV4, no AWS SDK). It is served sandboxed under an unguessable id.
+- **Calls** are a P2P mesh (up to 4). Socket.IO only relays signaling; `/ice` mints short-lived TURN credentials.
+
+More in [SECURITY.md](SECURITY.md).
+
+---
+
 ### Frontend
 ![TypeScript](https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)
 ![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)
@@ -65,194 +116,125 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
 ![Prisma](https://img.shields.io/badge/Prisma-3982CE?style=for-the-badge&logo=Prisma&logoColor=white)
 ![Neon](https://img.shields.io/badge/Neon-00E599?style=for-the-badge&logo=neon&)
+![GitHub Actions](https://img.shields.io/badge/github%20actions-%232671E5.svg?style=for-the-badge&logo=githubactions&logoColor=white)
 
 ---
 
-## ✨ Key Features
+## ✨ Features
 
+### 🪚 Chapter 0 — the intro
+On the first visit, three manga panels slam in. Then a detailed recoil starter appears: pull the T-grip down and let go.
+- It sputters twice: two-stroke *put-put*, synthesized live with WebAudio.
+- The third pull catches the engine and the cord whips back into the port.
+- The screen is cut open diagonally onto the login page.
+- Guests sign a **contract** in blood.
+- Skippable, keyboard-friendly (Enter / Space), and calm under `prefers-reduced-motion`.
 
-### 📱 Mobile Adaptation & UI/UX Optimization
+### 💬 Chat
+- **Speech balloons**: ovals for short lines, boxes for long ones. CAPS turns a line into a jagged **shout**, and a manga SFX (DOOOM, DON, ZAP!) pops over the feed.
+- **Replies** quote the original line; click the quote to jump to it.
+- **Pictures**: paste, drag & drop, or the panel button. Shrunk to webp in the browser, shown as a cut-out panel, full-screen on click.
+- **Voice notes**: hold the mic.
+- **Reactions**: seven hand-picked manga stickers. **✓ SENT → ✓✓ SEEN** read flags. Typing indicator.
+- **Search** in the room (`Ctrl+K`): server-side, so older lines are found too; results jump to the line and flash it.
+- **Commands** play for the whole room: `/pochita` `/power` `/brrr` `/bang` `/pudding` (`/help` lists them).
+- **Background alerts**: `(3)` in the tab title, a blood-red counter on the favicon, and optional system notifications.
 
-Chainsaw Chat is fully optimized for mobile devices, adapting the aggressive manga-style layout for seamless one-handed use.
+### 🚪 Rooms
+Create a room and share its code (e.g. `KAIRYU4821`). The chapters drawer lists your rooms like a table of contents.
 
-- 🛠 What Was Done
+### 📹 Video calls
+WebRTC mesh for up to 4 hunters, each in a manga panel. Mic and camera toggles; falls back to voice-only. TURN relay for strict networks.
 
-* **Dynamic Viewport (`100dvh`):** Replaced `100vh` with `100dvh` to prevent mobile browser navigation bars from cutting off the bottom of the interface.
-* **Streamlined Header:** Heavy character tabs are hidden on mobile, leaving a compact top bar with a theme toggle.
-* **Bottom Navigation (`BottomNav`):** Added a sticky bottom nav bar for easy thumb-reach switching between Chats, Rooms, Settings, and Profile.
-* **Isolated Scroll Containers:** Added independent vertical scrolling (`overflow-y: auto`) to each tab panel to prevent page-wide layout locks and scroll freezing.
-* **Smart Input Layout:** Added dynamic padding to the `InputBar` to keep it perfectly visible right above the mobile navigation bar without overlaps.
-* **Responsive Sidebar:** The room `Sidebar` is automatically hidden on mobile screens, giving 100% width to the active chat.
+### 🪪 Profile
+A Public Safety devil-hunter ID that flips over to a service record: lines, shouts, reactions, rank, stamps. Plus a character page others can open from your avatar.
 
-### 🔐 Multi-Provider OAuth 2.0
-Instant, secure authentication using your **Google** or **GitHub** profiles. The backend automatically provisions users, signs secure JWT session tokens, and fetches raw profile assets (names, avatars) directly into the environment.
+### 🔐 Accounts
+- Guest: a signed name that lives for one tab.
+- Nickname + password: bcrypt, 8+ characters.
+- GitHub or Google OAuth, with `state` and the token returned in the URL fragment.
 
-### 🔑 Login & Password Accounts
-- Sign up with just a nickname + password — no Google/GitHub needed.
-- Passwords are hashed with **bcrypt**, sessions live in a **JWT** (30 days).
-- Your chosen character and rooms are kept between visits (guests are still wiped on disconnect).
-- Brute-force protection: separate rate limit on `/auth/login` and `/auth/register`.
-
-### 📹 Video Calls (WebRTC)
-- Hit **📹 CALL** in the header to start a call in the current room, others see a **BZZZT! JOIN** banner.
-- Peer-to-peer **mesh** for up to 4 hunters — video and audio go directly between browsers, Socket.io only relays signaling (offer / answer / ICE).
-- Every participant is a manga panel with halftone overlay and SFX; mic / camera toggles; falls back to voice-only without a camera.
-
-### 🔥 Reactions & Seen Flags
-- React to any message with 🔥 🩸 😂 ❤️ 😱 🪚 from the context menu, or **double-click** a bubble for an instant 🔥.
-- Reactions are stored in PostgreSQL and synced live for everyone in the room.
-- Your own messages show **✓ SENT** → **✓✓ SEEN** once someone else in the room has read them.
-
-### 🚪 Dynamic Room System & Persistent Storage
-- Powered by **PostgreSQL** and **Prisma**, all users, rooms, and chat histories are safely stored in the cloud.
-- Create your own room with a custom name
-- Each room gets a unique **8-character invite code** (e.g. `KAIRYU42`)
-- Share the code — anyone can join instantly
-- Per-room message history is fully persistent
-
-### 💬 Real-time Messaging
-Zero-latency event synchronization powered by WebSockets. Chat state updates concurrently for all session members, handling text dispatch, message deletion, and pinning.
-
-### 🖱️ Tactical Context Menu
-Right-click on any message bubble to summon a custom inline action frame. Instantly delete messages from the database across all clients in real time or copy raw string content to the clipboard.
-
-### ⌨️ Alive Typing System
-Live typing status indicator that updates instantly. Uses a localized debounce throttle to register who is actively typing in the room, displaying animated bouncing manga dots.
-
-### 🎤 High-Fidelity Voice Notes
-Hold down the mic button to record, release to push. Encodes live microphone input into an optimized audio blob via the browser-native **MediaRecorder API** and streams it directly to the socket pipeline.
-
-### ⚙️ Granular Control & Settings Tab
-- Fully interactive settings panel keeping state variables in perfect synchronization.
-- Dynamic Font Scaling: Instantly switch layout bounds between Small, Medium, and Large typographic frames.
-- Keybind Pipelines: Toggle message submission behavior (Enter vs Ctrl+Enter).
-- Audio & Privacy Toggles: Hot-swap your chainsaw SFX triggers and typing state broadcasting natively.
-
-### 🪚 Public Safety Bureau License (Profile Tab)
-- Your presence inside the app is stylized as an official Devil Hunter Identification License.
-- Pulls live context like data of issue (28/06/2026) and unique barcode sequences.
-- Integrated Terminate Session sequence built with aggressive red manga tones for safe account de-authentication.
-
-### 👤 User Identity & Profile Customization
-- Automatic avatar and name fetching from Google/GitHub profiles.
-- Integrated fully functional **Profile Tab** with an interactive **Log Out** mechanics for seamless account switching.
-- System notifications when users join.
-
-### 🎨 Manga-Style UI
-- Custom **Chainsaw Man favicon** guarding your browser tabs.
-- Two themes: **light** (classic manga paper) and **dark** (grim noir).
-- Halftone dot background — like a printed manga page.
-- Angular speech bubbles with side tails.
-- Random tilt on each message bubble.
-- SFX words above every bubble: **VROOM!, SLASH!, BANG!, GRAAA!**
-- CAPS messages render in a special "shout" style with Death Rattle font.
-- Custom **Chainsaw Man fonts**: BlambotClassic, CCDoohickey, DeathRattle, AnimeAce, Broadband.
-
-### 🧭 Chibi Navigation
-Denji, Aki, Makima, and Reze sit on top of the nav icons. Active tab — character is full color. Inactive — greyed out and shrunk. Click — they jump.
-
-### 🐾 Easter Eggs
-
-- **🪚 CAPS-LOCK chainsaw** — writing in ALL CAPS has a 10% chance of triggering a chainsaw revving sound effect.
-- **❤️ Pochita love trigger** — typing 'honey', 'baby', 'darling', 'cute', 'love', 'sweet', 'aww', '🥺', '💕', '😍', '🐾' or sending ❤️ has a 40% chance of making Pochita leap from the bottom of the screen with a fountain of hand-drawn hearts.
+### ⚙️ Settings
+Light / dark / system theme, font size, stickerbomb density, sounds, SFX, Pochita hearts, Enter-to-send, typing privacy, background alerts, and a replayable tour.
 
 ---
 
-## 🚀 Installation & Environment
+## 🧪 Tests
 
-### 1. Clone the repository
+```bash
+cd server
+npm test                    # unit: validation, JWT, magic bytes, SigV4 (AWS doc vector), TURN creds
+TEST_DATABASE_URL=postgres://… npm run test:integration
+                            # HTTP + Socket.IO + Postgres: impersonation, private rooms, uploads, brute force…
+```
+
+Both run on every push in [GitHub Actions](.github/workflows/ci.yml). The integration suite gets a throwaway Postgres there.
+**Never point `TEST_DATABASE_URL` at the production database** — the tests create users and rooms.
+
+---
+
+## 🚀 Run it locally
+
 ```bash
 git clone https://github.com/zxcmazokdyrak12/chainsaw-chat.git
 cd chainsaw-chat
 ```
 
-### 2. Backend Setup (`/server`)
-Create a `.env` file in the `server/` directory:
-```env
-DATABASE_URL="postgresql://user:password@neon-host/dbname?sslmode=require"
-JWT_SECRET="your_jwt_secret"
-GOOGLE_CLIENT_ID="your_google_id"
-GOOGLE_CLIENT_SECRET="your_google_secret"
-GITHUB_CLIENT_ID="your_github_id"
-GITHUB_CLIENT_SECRET="your_github_secret"
-CLIENT_URL="http://localhost:5173"
-```
-Install dependencies and run migrations:
+**Server**: copy `server/.env.example` to `server/.env` and fill in at least `DATABASE_URL` and `JWT_SECRET`.
+
 ```bash
 cd server
 npm install
-npx prisma db push
-npm run dev
+npm run prisma:push      # create / update the tables
+npm run dev              # http://localhost:3001
 ```
 
-### 3. Frontend Setup (`/client`)
-Create a `.env` file in the `client/` directory:
-```env
-VITE_API_URL="http://localhost:5000"
-```
-Install and run:
+**Client**: `client/.env` → `VITE_API_URL="http://localhost:3001"`
+
 ```bash
-cd ../client
+cd client
 npm install
-npm run dev
+npm run dev              # http://localhost:5173
 ```
+
+Optional env:
+- `CF_TURN_KEY_ID` / `CF_TURN_API_TOKEN`: TURN for calls across networks.
+- `R2_*`: store uploads in Cloudflare R2 instead of Postgres.
+
+See `server/.env.example`.
 
 ---
 
-## 📁 Project Structure
+## 📁 Project structure
+
 ```text
 chainsaw-chat/
+├── .github/workflows/ci.yml   ← type check, unit + integration tests, client build
+├── SECURITY.md                ← threat model and the measures against it
 ├── server/
-│   ├── prisma/schema.prisma   ← models: users, rooms, messages, read marks, profiles
+│   ├── prisma/schema.prisma   ← users, rooms, messages, attachments, read marks, profiles
+│   ├── test/                  ← unit/ and integration/ (node:test)
 │   └── src/
-│       ├── index.ts           ← entry point: middleware + routes + sockets wiring
-│       ├── config.ts          ← env (.env), URLs, build tag
-│       ├── passport.ts        ← GitHub / Google OAuth strategies
-│       ├── types.ts           ← shared types (JWT payload, socket data, reactions)
-│       ├── lib/               ← prisma client, JWT helpers, room/message helpers
-│       ├── routes/            ← auth.ts, profile.ts, meta.ts (/ping, /version)
-│       └── sockets/           ← rooms, messages, calls (WebRTC signaling), presence
+│       ├── index.ts           ← wiring: middleware, routes, sockets
+│       ├── config.ts          ← env, secrets policy, build tag
+│       ├── passport.ts        ← GitHub / Google OAuth
+│       ├── lib/               ← tokens, validation, sniffing, storage (DB / R2), SigV4, rooms
+│       ├── routes/            ← auth, profile, media, ice, meta
+│       └── sockets/           ← auth middleware, rooms, messages, calls, presence
 └── client/
     ├── src/
     │   ├── App.tsx            ← screen layout; state lives in hooks
-    │   ├── hooks/             ← useSettings, useVideoCall, useVoiceRecorder, useTabs, useTour, …
-    │   ├── components/        ← balloons, chapters drawer, ID card, settings, stickerbomb, …
-    │   ├── lib/               ← socket singleton, sounds
-    │   ├── theme.ts           ← ink / newsprint theme tokens
-    │   ├── profileData.ts     ← service record, ranks, achievements
-    │   ├── stickers.ts        ← stickerbomb pack
-    │   └── index.css          ← manga palette, screentone, soft buttons
-    └── public/                ← stickers, avatars, fonts, sounds
+    │   ├── components/        ← intro, balloons, input, search, lightbox, ID card, settings, …
+    │   ├── hooks/             ← calls, voice, settings, unread badge, tour, …
+    │   └── lib/               ← socket, auth tokens, media upload, ICE, commands, sounds
+    ├── public/                ← stickers, reactions, avatars, fonts, sounds
+    └── vercel.json            ← CSP and security headers
 ```
-
-🛤 Road Map
-
-    [x] Cloud Database Sync (Neon Serverless Cloud Architecture)
-
-    [x] Prisma ORM configuration layer
-
-    [x] Full Backend Migration to Strict TypeScript
-
-    [x] Frontend refactoring into full Type Safety (.tsx architecture alignment)
-
-    [x] Google & GitHub Provider integration (OAuth 2.0)
-
-    [x] Persistent session tracking via JSON Web Tokens
-
-    [x] Live interactive context action layouts
-
-    [x] Async Video transmission framework via WebRTC
-
-    [x] Mobile-responsive UI improvements
-
-    [x] Per-message emoticons and reactive status flags
-
-    [x] Independent login/pass legacy security framework
-
-Created with love for Nayuta and clean code. 🩸
 
 ---
 
+Created with love for Nayuta and clean code. 🩸
+
 ## ⚖️ License & Disclaimer
 
-Chainsaw Chat is a non-commercial fan project created purely for educational and portfolio demonstration purposes. All structural visual assets, original concepts, audio SFX samples, and character artwork references belong to Tatsuki Fujimoto and Shueisha / MAPPA.
+Chainsaw Chat is a non-commercial fan project made for learning and as a portfolio piece. Characters, artwork references and the original concept belong to Tatsuki Fujimoto and Shueisha / MAPPA.

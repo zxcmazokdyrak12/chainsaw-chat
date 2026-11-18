@@ -28,6 +28,7 @@ interface HeaderProps {
   callCount?: number
   inCall?: boolean
   onCall?: () => void
+  onSearch?: () => void
 }
 
 interface TabItem {
@@ -40,7 +41,7 @@ interface TabItem {
 export default function Header({
   T, theme, username, rooms, currentRoom,
   activeTab, onTabChange, onThemeToggle,
-  callCount = 0, inCall = false, onCall,
+  callCount = 0, inCall = false, onCall, onSearch,
 }: HeaderProps) {
   const { isMobile } = useWindowSize()
 
@@ -102,6 +103,21 @@ export default function Header({
             }}>
               {username}
             </span>
+          )}
+          {onSearch && (
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={onSearch}
+              title="Search this room (Ctrl+K)"
+              aria-label="Search messages"
+              style={{
+                background: 'transparent', color: T.titleColor, border: `2px solid ${T.headerBorder}`,
+                padding: isMobile ? '2px 5px' : '3px 7px', cursor: 'pointer', display: 'flex', alignItems: 'center',
+                clipPath: 'polygon(6px 0,100% 0,calc(100% - 6px) 100%,0 100%)',
+              }}
+            >
+              <CsmIcon name="search" size={isMobile ? 15 : 17} />
+            </motion.button>
           )}
           {onCall && !inCall && (
             <motion.button

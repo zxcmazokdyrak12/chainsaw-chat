@@ -1,19 +1,7 @@
-import crypto from 'crypto'
 import { prisma } from './prisma.js'
 import type { Reactions } from '../types.js'
 
-const SYLLABLES = [
-  'KAI','ZEN','RYU','KEN','MAI','SHI','DEN','AKI',
-  'REZ','POW','CUT','SAW','DEV','HUN','CHI','BLO',
-]
-
-// 2 syllables + 4 digits ≈ 2.5 million codes; with the per-socket try limit that's not guessable
-export const generateCode = (): string => {
-  const a = SYLLABLES[crypto.randomInt(SYLLABLES.length)]
-  const b = SYLLABLES[crypto.randomInt(SYLLABLES.length)]
-  const n = crypto.randomInt(10_000).toString().padStart(4, '0')
-  return `${a}${b}${n}`
-}
+export { generateCode } from './codes.js'
 
 export const serializeMessage = (r: {
   id: bigint | number
@@ -29,6 +17,9 @@ export const serializeMessage = (r: {
   isEdited: boolean
   isPinned: boolean
   reactions?: unknown
+  mediaId?: string | null
+  replyToId?: bigint | number | null
+  replyPreview?: unknown
 }) => ({
   id:        Number(r.id),
   username:  r.username,
@@ -42,6 +33,10 @@ export const serializeMessage = (r: {
   isEdited:  r.isEdited,
   isPinned:  r.isPinned,
   reactions: (r.reactions && typeof r.reactions === 'object' ? r.reactions : {}) as Reactions,
+  media:     r.mediaId ?? null,
+  replyTo:   r.replyToId != null && r.replyPreview && typeof r.replyPreview === 'object'
+    ? { id: Number(r.replyToId), ...(r.replyPreview as Record<string, unknown>) }
+    : null,
 })
 
 export async function getUserRooms(username: string) {

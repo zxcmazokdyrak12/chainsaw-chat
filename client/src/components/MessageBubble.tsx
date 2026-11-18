@@ -4,6 +4,8 @@ import { AudioPlayer } from './AudioPlayer'
 import { BalloonTail, ShoutBalloon } from './Balloon'
 import { isShout as looksLikeShout } from '../lib/sound'
 import { reactionInfo } from '../config'
+import { mediaUrl } from '../lib/media'
+import { findCommand } from '../lib/commands'
 
 // kept for older imports
 export { AudioPlayer }
@@ -20,6 +22,8 @@ export interface MessageData {
   audioData?: any // Ослабим тип для гибкости приходящих данных от сокетов
   system?: boolean
   reactions?: Record<string, string[]>
+  media?: string | null
+  replyTo?: { id: number; username: string | null; content: string; type: string } | null
 }
 
 
@@ -38,9 +42,12 @@ interface MessageBubbleProps {
   onReact?: (emoji: string) => void
   onContextMenu: (data: { x: number; y: number; msg: MessageData }) => void
   onAvatarClick?: (username: string, avatar?: string) => void
+  onQuoteClick?: (id: number) => void
+  onOpenImage?: (src: string) => void
+  highlight?: boolean
 }
 
-export default function MessageBubble({ msg, index, isOwn, theme, T, username, seen, onReact, onContextMenu, onAvatarClick }: MessageBubbleProps) {
+export default function MessageBubble({ msg, index, isOwn, theme, T, username, seen, onReact, onContextMenu, onAvatarClick, onQuoteClick, onOpenImage, highlight }: MessageBubbleProps) {
   const reactions = Object.entries(msg.reactions ?? {}).filter(([, users]) => users.length > 0)
 
   // long-press → context menu on touch screens
@@ -52,11 +59,15 @@ export default function MessageBubble({ msg, index, isOwn, theme, T, username, s
   useEffect(() => cancelPress, [])
   const ink = 'var(--ink)'
   const contentStr = msg.content || ''
-  const isShout = looksLikeShout(contentStr)
-  const isShort = msg.type !== 'audio' && contentStr.length <= 34 && !contentStr.includes('\n')
+  const isImage = msg.type === 'image' && !!msg.media
+  const command = msg.type === 'text' || !msg.type ? findCommand(contentStr) : null
+  const isShout = !isImage && !command && looksLikeShout(contentStr)
+  const isShort = msg.type !== 'audio' && !isImage && !msg.replyTo && contentStr.length <= 34 && !contentStr.includes('\n')
+  const audioSrc = msg.type === 'audio' ? (msg.media ? mediaUrl(msg.media) : msg.audioData) : null
 
   return (
     <motion.div
+      id={`msg-${msg.id}`}
       initial={{ x: isOwn ? 50 : -50, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ type: 'spring', stiffness: 320, damping: 28 }}
@@ -64,6 +75,9 @@ export default function MessageBubble({ msg, index, isOwn, theme, T, username, s
         display: 'flex',
         justifyContent: isOwn ? 'flex-end' : 'flex-start',
         transform: `rotate(${msg.rotate || 0}deg)`,
+        scrollMarginTop: '80px',
+        // jumped to from search / a quote: a short ink flash
+        animation: highlight ? 'csm-flash 1.4s ease-out' : undefined,
       }}
     >
       <div style={{
@@ -131,7 +145,7 @@ export default function MessageBubble({ msg, index, isOwn, theme, T, username, s
 
             <div
               data-tour="bubble"
-              className={isOwn && !isShout ? 'tone-light' : undefined}
+              className={isOwn && !isShout && !isImage ? 'tone-light' : undefined}
               onDoubleClick={() => onReact?.('like')}
               onContextMenu={(e: React.MouseEvent<HTMLDivElement>) => {
                 e.preventDefault()
@@ -155,12 +169,12 @@ export default function MessageBubble({ msg, index, isOwn, theme, T, username, s
               onTouchCancel={cancelPress}
               style={{
                 position: 'relative',
-                maxWidth: isShout ? '320px' : '300px',
+                maxWidth: isShout ? '320px' : isImage ? '340px' : '300px',
                 minWidth: isShout ? '150px' : undefined,
-                padding: isShout ? '26px 34px' : isShort ? '14px 26px' : '13px 20px',
+                padding: isShout ? '26px 34px' : isImage ? '10px' : isShort ? '14px 26px' : '13px 20px',
                 textAlign: isShort || isShout ? 'center' : 'left',
                 // manga balloons: ovals for short lines, rounded boxes for long ones
-                borderRadius: isShout ? 0 : isShort ? '50% / 50%' : '26px',
+                borderRadius: isShout ? 0 : isImage ? '6px' : isShort ? '50% / 50%' : '26px',
                 backgroundColor: isShout ? 'transparent' : 'var(--paper)',
                 border: isShout ? 'none' : '3px solid var(--ink)',
                 color: 'var(--ink)',
@@ -173,8 +187,49 @@ export default function MessageBubble({ msg, index, isOwn, theme, T, username, s
                 cursor: 'context-menu',
               }}
             >
-              {msg.type === 'audio' && msg.audioData ? (
-                <AudioPlayer src={msg.audioData} theme={theme} />
+              {msg.replyTo && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onQuoteClick?.(msg.replyTo!.id) }}
+                  title="Jump to the quoted line"
+                  style={{
+                    width: '100%', textAlign: 'left', cursor: 'pointer',
+                    margin: '0 0 8px', padding: '4px 8px', boxSizing: 'border-box',
+                    background: 'var(--paper)', color: 'var(--ink)',
+                    border: 'none', borderLeft: '4px solid var(--ink)',
+                    fontFamily: "'AnimeAce', sans-serif", fontSize: '10px', lineHeight: 1.45, opacity: 0.8,
+                    overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                  } as React.CSSProperties}
+                >
+                  <b style={{ fontFamily: 'BlambotClassic, sans-serif', letterSpacing: '1px' }}>{msg.replyTo.username}</b>{' '}
+                  {msg.replyTo.type === 'image' ? '🖼 picture ' : msg.replyTo.type === 'audio' ? '🎤 voice ' : ''}
+                  {msg.replyTo.content}
+                </button>
+              )}
+              {command ? (
+                // a chat command: lettering instead of words
+                <span style={{
+                  display: 'inline-block', fontFamily: "'DeathRattle', 'BlambotClassic', sans-serif",
+                  fontSize: '22px', letterSpacing: '1px', color: 'var(--paper)',
+                  WebkitTextStroke: '1.5px var(--ink)', textShadow: '2px 2px 0 var(--ink)', transform: 'rotate(-3deg)',
+                }}>
+                  {command.sfx}
+                </span>
+              ) : isImage ? (
+                <>
+                  {/* a picture is pasted in like a cut-out manga panel */}
+                  <img
+                    src={mediaUrl(msg.media!)} alt={contentStr || 'picture'} loading="lazy"
+                    onClick={(e) => { e.stopPropagation(); onOpenImage?.(mediaUrl(msg.media!)) }}
+                    style={{
+                      display: 'block', maxWidth: '100%', maxHeight: '320px', minWidth: '120px', minHeight: '80px',
+                      objectFit: 'cover', cursor: 'zoom-in', background: 'var(--ink)',
+                      border: '3px solid var(--ink)', boxShadow: '3px 3px 0 var(--ink)', transform: 'rotate(-0.8deg)',
+                    }}
+                  />
+                  {contentStr && <div style={{ marginTop: '8px' }}>{msg.content}</div>}
+                </>
+              ) : audioSrc ? (
+                <AudioPlayer src={audioSrc} theme={theme} />
               ) : isOwn && !isShout ? (
                 // own lines sit on a paper strip so the screentone never eats the letters
                 <span style={{

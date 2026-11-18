@@ -206,7 +206,7 @@ function StarterPort({ taut }: { taut: boolean }) {
           </g>
         ))}
         {/* corner bolts */}
-        {[[24, 24], [196, 24], [24, 98], [196, 98]].map(([x, y], i) => (
+        {([[24, 24], [196, 24], [24, 98], [196, 98]] as const).map(([x, y], i) => (
           <g key={i}>
             <circle cx={x} cy={y} r="7" fill={BG} strokeWidth="3" />
             <path d={`M${x - 4} ${y + 2}l8 -4`} strokeWidth="2.5" />
@@ -470,18 +470,18 @@ export function SlashOverlay({ onEnd }: { onEnd: () => void }) {
   endRef.current = onEnd
   useEffect(() => { const t = setTimeout(() => endRef.current(), 900); return () => clearTimeout(t) }, [])
   if (prefersReducedMotion()) return null
-  const half = (clip: string, to: string) => (
+  const half = (clip: string, to: [string, string, number]) => (
     <motion.div
       initial={{ x: 0, y: 0, rotate: 0 }}
-      animate={{ x: to.split(' ')[0], y: to.split(' ')[1], rotate: Number(to.split(' ')[2]) }}
+      animate={{ x: to[0], y: to[1], rotate: to[2] }}
       transition={{ delay: 0.24, duration: 0.55, ease: [0.6, 0, 0.8, 0.4] }}
       style={{ position: 'fixed', inset: 0, background: BG, clipPath: clip, zIndex: 9000 }}
     />
   )
   return (
     <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 9000, pointerEvents: 'none' }}>
-      {half('polygon(0 0, 100% 0, 0 100%)', '-60% -60% -6')}
-      {half('polygon(100% 0, 100% 100%, 0 100%)', '60% 60% 6')}
+      {half('polygon(0 0, 100% 0, 0 100%)', ['-60%', '-60%', -6])}
+      {half('polygon(100% 0, 100% 100%, 0 100%)', ['60%', '60%', 6])}
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', zIndex: 9001 }}>
         <motion.line
           x1="100" y1="0" x2="0" y2="100" stroke={INK} strokeWidth="0.8" strokeLinecap="round"

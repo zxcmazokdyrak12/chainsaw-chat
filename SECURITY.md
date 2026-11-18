@@ -24,6 +24,7 @@ Every socket must present a signed JWT on connect (`handshake.auth.token`). The 
 | Tokens | HS256 only (`alg` pinned on verify). In production a missing `JWT_SECRET` produces a random per-boot secret, never a hardcoded one |
 | OAuth | `state` parameter against login CSRF. The token returns in the URL `#fragment`, so it never reaches server logs or `Referer` headers |
 | Messages | delete/edit only your own. Text ≤ 2000 chars, control characters stripped. Voice must be a `data:audio/*;base64` URL ≤ ~3 MB |
+| Uploads | `POST /media` needs a token and a membership of the room. Type is decided by magic bytes (webp/jpeg/png/gif, webm/ogg/m4a/mp3), never by the header. ≤ 2.5 MB, 40 per 10 min per user. Served with `Content-Security-Policy: sandbox` under a random UUID. A message can only use an upload made by the same user, in the same room |
 | Avatars | only `/avatars/*` or the GitHub/Google avatar CDNs, so no tracking pixels in other people's chat |
 | Room codes | 2.5 M combinations, crypto RNG, 8 wrong tries per minute per socket |
 | Flooding | HTTP: 120 req/min per IP; 20 auth attempts per 15 min. Sockets: 150 events / 10 s, 30 messages / min, 10 new rooms / hour |
@@ -35,4 +36,5 @@ Every socket must present a signed JWT on connect (`handshake.auth.token`). The 
 
 - Account tokens live in `localStorage`. The CSP blocks injected scripts, but an XSS would still be able to read them. Moving them to `httpOnly` cookies needs the API and the client on one site.
 - Rate limits and presence live in memory: one server instance, reset on restart.
-- Voice messages are stored in the database as base64. Fine for a demo, but object storage would be better at scale.
+- Uploads live in Postgres unless `R2_*` is set; at scale, object storage is the right place.
+- Anyone holding a media link can open it (the id is the capability, like most chat CDNs).

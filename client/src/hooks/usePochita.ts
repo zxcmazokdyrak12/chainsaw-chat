@@ -11,11 +11,11 @@ export function usePochita(enabled: boolean) {
   const on = useRef<boolean>(enabled)
   on.current = enabled
 
-  const triggerPochita = (text: string): void => {
+  const triggerPochita = (text: string, force = false): void => {
     if (!on.current) return
     const lower = (text || '').toLowerCase()
     const isCute = CUTE_WORDS.some(w => lower.includes(w))
-    if (!isCute || Math.random() > 0.4) return
+    if (!force && (!isCute || Math.random() > 0.4)) return
     const newHearts = Array.from({ length: 9 }, (_, i) => ({
       id: i, x: 10 + Math.random() * 75,
       delay: Math.random() * 0.5, size: 40 + Math.random() * 40,

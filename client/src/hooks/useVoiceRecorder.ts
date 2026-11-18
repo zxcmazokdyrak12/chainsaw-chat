@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react'
 import { socket } from '../lib/socket'
+import { uploadMedia } from '../lib/media'
 
-// hold-to-record voice messages: MediaRecorder → base64 → socket
+// hold-to-record voice messages: MediaRecorder → upload to /media → socket
 export function useVoiceRecorder(currentRoom: string, username: string, avatarSrc: string) {
   const [isRecording, setIsRecording] = useState<boolean>(false)
   const mediaRecorder = useRef<MediaRecorder | null>(null)
@@ -56,40 +57,29 @@ export function useVoiceRecorder(currentRoom: string, username: string, avatarSr
           return;
         }
    
-        // Обернем FileReader в Promise, чтобы гарантировать отправку ТЕКСТА, а не битого объекта
-        const readBlobAsBase64 = (audioBlob: Blob): Promise<string> => {
-          return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-              let res = reader.result as string;
-              if (res && res.includes('data:application/octet-stream;base64,')) {
-                res = res.replace('data:application/octet-stream;base64,', `data:${finalType};base64,`);
-              }
-              resolve(res);
-            };
-            reader.onerror = () => reject(reader.error);
-            reader.readAsDataURL(audioBlob);
-          });
-        };
+        // voice goes to /media like pictures; an old server without /media still gets inline base64
+        const sendInline = () => new Promise<void>((resolve) => {
+          const reader = new FileReader()
+          reader.onloadend = () => {
+            let res = reader.result as string
+            if (res?.startsWith('data:application/octet-stream;base64,')) {
+              res = res.replace('data:application/octet-stream;base64,', `data:${finalType};base64,`)
+            }
+            if (res && res.length > 100) {
+              socket.emit('send_message', { roomId: currentRoom, username, avatar: avatar.src, content: '🎤 voice message', type: 'audio', audioData: res })
+            }
+            resolve()
+          }
+          reader.onerror = () => resolve()
+          reader.readAsDataURL(blob)
+        })
 
         try {
-          const base64Audio = await readBlobAsBase64(blob);
-
-          if (!base64Audio || base64Audio.length < 100) {
-            console.error('Сгенерирована слишком короткая или пустая Base64 строка');
-            return;
-          }
-
-          socket.emit('send_message', {
-            roomId: currentRoom,
-            username,
-            avatar: avatar.src,
-            content: '🎤 voice message',
-            type: 'audio',
-            audioData: base64Audio,
-          });
+          const mediaId = await uploadMedia(blob, currentRoom)
+          socket.emit('send_message', { roomId: currentRoom, username, avatar: avatar.src, type: 'audio', mediaId })
         } catch (err) {
-          console.error('Ошибка при чтении Blob в Base64:', err);
+          console.warn('[voice] upload failed, sending inline:', err)
+          await sendInline()
         }
 
         // Выключаем микрофон
