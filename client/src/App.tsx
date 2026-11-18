@@ -361,8 +361,9 @@ export default function App() {
       if (isShout(msg.content || '')) popSfx('shout', own)
       else if (own) popSfx('send', true)
     })
-    socket.on('room_created', ({ id }: { id: string, code: string, name: string }) => {
-      joinRoom(id)
+    socket.on('room_created', ({ id, code }: { id: string, code: string, name: string }) => {
+      joinRoomRef.current(id)
+      setCreatedCode(code) // the "share the code" banner on the rooms page
       setShowCreateRoom(false)
       setNewRoomName('')
     })

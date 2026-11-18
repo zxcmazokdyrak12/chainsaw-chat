@@ -69,3 +69,57 @@ jobs:
         run: npm run lint
       - name: Production build
         run: npm run build
+
+  e2e:
+    name: E2E — two browsers against the real stack
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: chainsaw
+          POSTGRES_PASSWORD: chainsaw
+          POSTGRES_DB: chainsaw_e2e
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U chainsaw" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://chainsaw:chainsaw@localhost:5432/chainsaw_e2e
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Server — install, schema, build
+        working-directory: server
+        run: |
+          npm install --no-audit --no-fund
+          npx prisma generate
+          npx prisma db push --skip-generate
+          npm run build
+      - name: Client — production build pointing at the local server
+        working-directory: client
+        env:
+          VITE_API_URL: http://localhost:3001
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+      - name: Playwright
+        working-directory: e2e
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: E2E tests
+        working-directory: e2e
+        env:
+          CI: 'true'
+        run: npx playwright test
+      - name: Report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+          retention-days: 7

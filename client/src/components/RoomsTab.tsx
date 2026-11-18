@@ -124,7 +124,7 @@ export default function RoomsTab({
               <div style={{ fontSize: '10px', fontFamily: "'AnimeAce', sans-serif", letterSpacing: '1px', opacity: 0.7, marginBottom: '2px' }}>
                 NEW CHAPTER OPEN — SHARE THE CODE
               </div>
-              <div style={{ fontSize: '32px', letterSpacing: '8px', fontFamily: 'BlambotClassic, sans-serif' }}>{createdCode}</div>
+              <div data-testid="created-code" style={{ fontSize: '32px', letterSpacing: '8px', fontFamily: 'BlambotClassic, sans-serif' }}>{createdCode}</div>
             </div>
             <button
               onClick={() => { navigator.clipboard.writeText(createdCode) }}
