@@ -31,4 +31,4 @@ export const PORT = process.env.PORT ?? 3001
 export const PUBLIC_ROOM = 'general'
 
 // open /version after a deploy to make sure Render runs the fresh build
-export const BUILD = 'secure-v5'
+export const BUILD = 'manga-v6'
