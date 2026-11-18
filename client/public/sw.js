@@ -30,7 +30,7 @@ self.addEventListener('fetch', (e) => {
 
 // a push from the server: { title, body, roomId, tag }
 self.addEventListener('push', (e) => {
-  let data = {}
+  let data
   try { data = e.data ? e.data.json() : {} } catch { data = { title: 'Chainsaw Chat', body: e.data ? e.data.text() : '' } }
   e.waitUntil(self.registration.showNotification(data.title || 'Chainsaw Chat', {
     body: data.body || '',
