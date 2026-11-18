@@ -238,7 +238,7 @@ export default function SettingsTab({ settings, onUpdate, onReplayTutorial }: Se
             <Row icon="sfx" label="MANGA SFX" desc="DOOOM on caps, DON on send, ZAP! on join">
               <Stamp label="Manga SFX" checked={settings.sfxEnabled ?? true} onChange={v => onUpdate('sfxEnabled', v)} />
             </Row>
-            <Row icon="chainsaw" label="BERSERK MODE" desc="message bursts: ink splatters, chain scratches, a rev counter">
+            <Row icon="chainsaw" label="BERSERK MODE" desc="message bursts rev a tachometer in the corner">
               <Stamp label="Berserk mode" checked={settings.berserk ?? true} onChange={v => onUpdate('berserk', v)} />
             </Row>
             <Row icon="heart" label="POCHITA HEARTS" desc="hearts rain on cute words">

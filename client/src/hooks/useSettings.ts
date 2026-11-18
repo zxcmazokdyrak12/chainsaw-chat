@@ -24,7 +24,7 @@ const DEFAULTS: Settings = {
   stickerBomb: 'light', // manga stickers slapped on the chat background
   sfxEnabled: true,     // DOOOM / DON / ZAP! lettering pops over the feed
   desktopNotify: false, // system notifications while the tab is in the background
-  berserk: true,        // ink splatters + a rev counter when messages fly in bursts
+  berserk: true,        // a rev counter when messages fly in bursts
 }
 
 export function useSettings() {
