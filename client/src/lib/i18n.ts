@@ -85,6 +85,14 @@ const RU: Dict = {
   'Theme, sounds and how many stickers get slapped on the walls. You can replay this tour from there too.': 'Тема, звуки и сколько стикеров клеить на стены. Отсюда же можно повторить экскурсию.',
   "YOU'RE READY": 'ТЫ ГОТОВ', "That's everything. Now go make some noise.": 'Вот и всё. Иди пошуми.',
   'NEXT': 'ДАЛЕЕ', 'ON': 'ВКЛ', 'SMALL': 'МЕЛКИЙ', 'MEDIUM': 'СРЕДНИЙ', 'LARGE': 'КРУПНЫЙ', 'you are reading this': 'ты читаешь это', 'CHAPTERS_TITLE': 'ГЛАВЫ', 'OFF': 'ВЫКЛ', 'LIGHT': 'ЧУТЬ', 'FULL': 'ВЕЗДЕ', 'S': 'S', 'M': 'M', 'L': 'L', 'Upload failed': 'Не удалось загрузить', 'BACK': 'НАЗАД', 'SKIP': 'ПРОПУСТИТЬ', 'DONE': 'ГОТОВО',
+  // companions
+  'COMPANION': 'КОМПАНЬОН', 'INK IMP': 'ЧЕРНИЛЬНЫЙ БЕС', 'STATIC DEVIL': 'ДЕМОН ПОМЕХ', 'SEAL DEVIL': 'ДЕМОН ПЕЧАТИ',
+  'a blot that dozes off when the chat goes quiet': 'клякса, которая засыпает, когда в чате тихо',
+  'an old TV that turns to snow when the line drops': 'старый телик, который рябит, когда пропадает связь',
+  'a hanko stamp that stamps along to your CAPS': 'печать-ханко, которая топает в такт твоему капсу',
+  'a contract devil peeks over the input bar: dozes when it is quiet, rages at CAPS, listens to voice notes, panics when the line drops. Write “nom” and it eats the narration boxes.': 'контрактный демон выглядывает из-за поля ввода: спит, когда тихо, бесится на капс, слушает голосовые, паникует, когда пропадает связь. Напиши «ням» — и он съест системные плашки.',
+  'Where did the server go?!': 'Куда делся сервер?!', 'Poke it': 'Ткни его', 'Your companion — poke it': 'Твой компаньон — ткни его',
+  '…nothing to eat.': '…а есть-то нечего.', 'THE PAGE IS BLANK': 'СТРАНИЦА ПУСТА', 'draw the first panel — say something': 'нарисуй первый кадр — напиши что-нибудь',
 }
 
 const JA: Dict = {
@@ -152,6 +160,14 @@ const JA: Dict = {
   'Theme, sounds and how many stickers get slapped on the walls. You can replay this tour from there too.': 'テーマ、音、ステッカーの量。ツアーもここから見直せます。',
   "YOU'RE READY": '準備完了', "That's everything. Now go make some noise.": 'これで全部。さあ、騒ごう。',
   'NEXT': '次へ', 'ON': 'オン', 'SMALL': '小', 'MEDIUM': '中', 'LARGE': '大', 'you are reading this': '今読んでいる', 'CHAPTERS_TITLE': '目次', 'OFF': 'オフ', 'LIGHT': '少なめ', 'FULL': '全面', 'Upload failed': 'アップロードに失敗しました', 'BACK': '戻る', 'SKIP': 'スキップ', 'DONE': '完了',
+  // companions
+  'COMPANION': '相棒', 'INK IMP': 'インクの小鬼', 'STATIC DEVIL': '砂嵐の悪魔', 'SEAL DEVIL': '判子の悪魔',
+  'a blot that dozes off when the chat goes quiet': 'チャットが静かになると居眠りするインクのしみ',
+  'an old TV that turns to snow when the line drops': '回線が切れると砂嵐になる古いテレビ',
+  'a hanko stamp that stamps along to your CAPS': '大文字に合わせてドンと押す判子',
+  'a contract devil peeks over the input bar: dozes when it is quiet, rages at CAPS, listens to voice notes, panics when the line drops. Write “nom” and it eats the narration boxes.': '契約悪魔が入力欄から顔を出す：静かだと眠り、大文字で暴れ、ボイスを聞き、回線が切れると慌てる。「いただきます」と書くとナレーションを食べる。',
+  'Where did the server go?!': 'サーバーどこ行った？！', 'Poke it': 'つつく', 'Your companion — poke it': '相棒 — つついてみて',
+  '…nothing to eat.': '…食べるものがない。', 'THE PAGE IS BLANK': 'まっさらなページ', 'draw the first panel — say something': '最初のコマを描こう — 何か書いて',
 }
 
 const DICTS: Record<Lang, Dict> = { en: { CHAPTERS_TITLE: 'CHAPTERS' }, ru: RU, ja: JA }

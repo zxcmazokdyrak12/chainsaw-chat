@@ -1,4 +1,6 @@
 import React from 'react'
+import CompanionArt, { COMPANIONS } from './companions/art'
+import type { Settings } from '../hooks/useSettings'
 import { motion } from 'framer-motion'
 import { enablePush, disablePush, pushSupported } from '../lib/push'
 import { getAccountToken } from '../lib/auth'
@@ -6,19 +8,8 @@ import CsmIcon, { type CsmIconName } from './CsmIcon'
 import { useT, LANGS, setLang, getLang } from '../lib/i18n'
 
 // Reusing the same strict interface for settings structure
-export interface Settings {
-  theme: 'light' | 'dark' | 'system'
-  fontSize: 'small' | 'medium' | 'large'
-  sendOnEnter: boolean
-  soundEnabled: boolean
-  pochitaEnabled: boolean
-  showTyping: boolean
-  stickerBomb: 'off' | 'light' | 'full'
-  sfxEnabled: boolean
-  desktopNotify: boolean
-  berserk: boolean
-  push: boolean
-}
+// one source of truth for the settings shape
+export type { Settings }
 
 interface SettingsTabProps {
   T: Record<string, string>
@@ -250,6 +241,24 @@ export default function SettingsTab({ settings, onUpdate, onReplayTutorial }: Se
                   <BombPreview level={lv} />
                 </Tile>
               ))}
+            </div>
+          </Panel>
+
+          <Panel title={t("COMPANION")} icon="heart" wide>
+            <div style={{ fontFamily: "'AnimeAce', sans-serif", fontSize: '10px', opacity: 0.75, marginBottom: '10px', lineHeight: 1.5 }}>
+              {t('a contract devil peeks over the input bar: dozes when it is quiet, rages at CAPS, listens to voice notes, panics when the line drops. Write “nom” and it eats the narration boxes.')}
+            </div>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              {COMPANIONS.map(c => (
+                <Tile key={c.id} selected={(settings.companion ?? 'inkling') === c.id} onClick={() => onUpdate('companion', c.id)} caption={t(c.name)}>
+                  <div title={t(c.blurb)} style={{ height: '64px', display: 'flex', justifyContent: 'center', alignItems: 'flex-end', overflow: 'hidden' }}>
+                    <CompanionArt kind={c.id} mood="idle" size={70} style={{ marginBottom: '-12px' }} />
+                  </div>
+                </Tile>
+              ))}
+              <Tile selected={settings.companion === 'off'} onClick={() => onUpdate('companion', 'off')} caption={t('OFF')}>
+                <div style={{ height: '64px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontFamily: 'serif', fontSize: '30px', opacity: 0.45 }}>無</div>
+              </Tile>
             </div>
           </Panel>
 

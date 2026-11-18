@@ -52,6 +52,10 @@ import { useTabs } from './hooks/useTabs'
 import { useChapterNav } from './hooks/useChapterNav'
 import { useTour } from './hooks/useTour'
 import { useRejoinOnReconnect } from './hooks/useRejoinOnReconnect'
+import { useCompanion, isNom } from './hooks/useCompanion'
+import Companion from './components/companions/Companion'
+import Cameo, { type CameoRun } from './components/companions/Cameo'
+import EmptyRoom from './components/companions/EmptyRoom'
 
 // types used to live here — re-exported so older imports keep working
 export type { MessageItem, RoomItem, AvatarItem, ContextMenuState } from './chatTypes'
@@ -357,6 +361,7 @@ export default function App() {
       if (!own) notifyRef.current(msg.username ?? 'Chainsaw Chat', msg.type === 'image' ? '🖼 picture' : msg.type === 'audio' ? '🎤 voice message' : maskSpoilers(msg.content))
       const cmd = msg.type === 'text' || !msg.type ? findCommand(msg.content) : null
       if (cmd) { runCommandRef.current(cmd); return }
+      if ((msg.type === 'text' || !msg.type) && isNom(msg.content)) nomRef.current()
       triggerPochita(msg.content)
       if (isShout(msg.content || '')) popSfx('shout', own)
       else if (own) popSfx('send', true)
@@ -567,6 +572,28 @@ export default function App() {
   }
   const runCommandRef = useRef(runCommand)
   runCommandRef.current = runCommand
+
+  // companion: the devil over the input bar + its "nom" cameo
+  const companionKind = settings.companion ?? 'inkling'
+  const companionOn = companionKind !== 'off'
+  const companion = useCompanion({ input, isRecording, activity: messages.length, enabled: companionOn })
+  const [cameo, setCameo] = useState<CameoRun | null>(null)
+  const [chomping, setChomping] = useState(false)
+  const messagesRef = useRef(messages)
+  messagesRef.current = messages
+  const nom = (): void => {
+    if (!companionOn) return
+    const id = Date.now()
+    const empty = !messagesRef.current.some(m => m.system)
+    setCameo({ id, empty })
+    if (!empty) {
+      setTimeout(() => setChomping(true), 380)
+      setTimeout(() => { setMessages(p => p.filter(m => !m.system)); setChomping(false) }, 1150)
+    }
+    setTimeout(() => setCameo(c => (c?.id === id ? null : c)), 1800)
+  }
+  const nomRef = useRef(nom)
+  nomRef.current = nom
 
   // scroll to a message (from the search or a quote) and flash it
   const jumpTo = (id: number): void => {
@@ -799,6 +826,8 @@ export default function App() {
                 mode={settings.stickerBomb === 'full' ? 'everywhere' : 'edges'}
                 seed={currentRoom}
               />
+              {!messages.some(m => !m.system) && <EmptyRoom key={currentRoom} dark={theme === 'dark'} />}
+              {companionOn && <Cameo kind={companionKind} run={cameo} />}
               {/* message area */}
               <div
                 data-tour="messages"
@@ -815,7 +844,7 @@ export default function App() {
                   position: 'relative', zIndex: 1,
                   flex: 1, 
                   overflowY: 'auto', 
-                  padding: isMobile ? '54px 16px 12px' : '16px 24px', 
+                  padding: isMobile ? `54px 16px ${companionOn ? 44 : 12}px` : `16px 24px ${companionOn ? 50 : 16}px`, 
                   display: 'flex', 
                   flexDirection: 'column', 
                   gap: '10px' 
@@ -879,7 +908,10 @@ export default function App() {
                   const msg = item.data
                   if (msg.system) return (
                     // narration caption — the rectangular box in a panel corner
-                    <motion.div key={msg.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} style={{ display: 'flex', justifyContent: 'center', padding: '4px 0' }}>
+                    <motion.div key={msg.id} initial={{ opacity: 0, x: -10 }}
+                      animate={chomping ? { opacity: 0, x: 420, scale: 0.2, rotate: 25 } : { opacity: 1, x: 0 }}
+                      transition={chomping ? { duration: 0.5, ease: 'easeIn', delay: (index % 6) * 0.04 } : undefined}
+                      style={{ display: 'flex', justifyContent: 'center', padding: '4px 0' }}>
                       <span style={{
                         display: 'inline-block', transform: 'rotate(-1deg)',
                         border: '3px solid var(--ink)', backgroundColor: 'var(--paper)',
@@ -934,7 +966,9 @@ export default function App() {
               {/* fix #3: Input field (now always at the bottom of the chat section and above BottomNav) */}
             </div>
               {/* input panel */}
-              <div style={{ marginBottom: isMobile ? '62px' : '0', position: 'relative', zIndex: 2, border: `4px solid ${T.headerBorder}`, borderRadius: '4px', overflow: 'hidden', background: T.appBg }}>
+              <div style={{ position: 'relative', marginBottom: isMobile ? '62px' : '0' }}>
+              {companionOn && <Companion kind={companionKind} mood={companion.mood} onPoke={companion.poke} left={isMobile ? 8 : 18} />}
+              <div style={{ position: 'relative', zIndex: 2, border: `4px solid ${T.headerBorder}`, borderRadius: '4px', overflow: 'hidden', background: T.appBg }}>
                 <InputBar
                   input={input}
                   onInputChange={handleInputChange}
@@ -956,6 +990,7 @@ export default function App() {
                   onCancelEdit={() => { setEditing(null); setInput('') }}
                   onSetInput={setInput}
                 />
+              </div>
               </div>
             </div>
           </div>

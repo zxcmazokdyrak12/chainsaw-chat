@@ -155,6 +155,7 @@ On the first visit, three manga panels slam in. Then a detailed recoil starter a
 - **Contracts & votes**: `/contract Raid the Gun Devil tonight` lets people sign it in blood. `/poll Where do we eat? | Ramen | Pizza` gives one seal per person, with a screentone bar showing the share. Only the author can close it.
 - **Spoilers**: `||the twist||` (or `Ctrl+Shift+S` on a selection) hides it behind rough black hatching until clicked. It stays hidden in quotes, search, notifications and exported pages.
 - **Berserk mode**: when lines fly in bursts (less than 2 s apart), a tachometer revs up in the corner of the feed: ×4 REV → ×8 BERSERK → ×12 DEVIL MODE, with a synthesized engine rev at each tier and a needle that shivers in the red zone. Can be turned off in Settings.
+- **Companions**: a little contract devil peeks over the input bar and reacts to the chat. It dozes after 25 s of quiet, takes a battle stance on CAPS or fast typing, listens while you record a voice note, and panics while the socket is reconnecting. Pick the Ink Imp, the Static Devil (an old TV that turns to snow) or the Seal Devil (a hanko stamp) in Settings, or turn it off. Write *nom* / *ням* and it leans in from the edge and eats the narration boxes. An empty chapter shows the three as parallax silhouettes. All three are original drawings (inline SVG, CSS animations that stop under `prefers-reduced-motion`).
 - **Background alerts**: `(3)` in the tab title, a blood-red counter on the favicon, and optional system notifications.
 
 ### 💬 A real messenger

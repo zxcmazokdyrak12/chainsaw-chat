@@ -13,6 +13,7 @@ export interface Settings {
   desktopNotify: boolean
   berserk: boolean
   push: boolean
+  companion: 'off' | 'inkling' | 'static' | 'seal'
 }
 
 const DEFAULTS: Settings = {
@@ -27,6 +28,7 @@ const DEFAULTS: Settings = {
   desktopNotify: false, // system notifications while the tab is in the background
   berserk: true,        // a rev counter when messages fly in bursts
   push: false,          // Web Push when every tab is closed (accounts only)
+  companion: 'inkling', // the little devil peeking over the input bar
 }
 
 export function useSettings() {

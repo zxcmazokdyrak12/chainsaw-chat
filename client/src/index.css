@@ -134,3 +134,30 @@ button.manga-tab {
 
 /* login title: the tagline only where it fits on one or two lines */
 @media (max-width: 440px) { .login-tagline { visibility: hidden; } }
+
+/* companions — small CSS loops (cheap: transform/opacity only) */
+.cmp-anim { transform-origin: 50% 100%; }
+.cmp-idle, .cmp-sleep { animation: cmp-breathe 3.2s ease-in-out infinite; }
+.cmp-hype { animation: cmp-bounce .32s ease-in-out infinite alternate; }
+.cmp-panic { animation: cmp-shake .12s linear infinite alternate; }
+.cmp-anim .cmp-blink { transform-box: fill-box; transform-origin: center; animation: cmp-blink 4.6s infinite; }
+.cmp-anim .cmp-z { animation: cmp-float 2.4s ease-in-out infinite; }
+.cmp-anim .cmp-eq { transform-box: fill-box; transform-origin: center; animation: cmp-eq .5s ease-in-out infinite alternate; }
+.cmp-anim .cmp-arcs { animation: cmp-pulse 1s ease-in-out infinite; }
+.cmp-anim .cmp-spin { transform-box: fill-box; transform-origin: center; animation: cmp-spin .9s linear infinite; }
+.cmp-anim .cmp-noise { animation: cmp-noise .16s steps(2) infinite; }
+.cmp-anim .cmp-wiggle { transform-box: fill-box; transform-origin: 50% 100%; animation: cmp-wiggle .6s ease-in-out infinite alternate; }
+.cmp-anim .cmp-drop { animation: cmp-pulse .8s ease-in-out infinite; }
+@keyframes cmp-breathe { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.02, .97); } }
+@keyframes cmp-bounce { from { transform: translateY(0) scale(1, 1); } to { transform: translateY(-4px) scale(.98, 1.04); } }
+@keyframes cmp-shake { from { transform: translateX(-1.5px) rotate(-1deg); } to { transform: translateX(1.5px) rotate(1deg); } }
+@keyframes cmp-blink { 0%, 93%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
+@keyframes cmp-float { 0%, 100% { transform: translateY(0); opacity: .9; } 50% { transform: translateY(-4px); opacity: .5; } }
+@keyframes cmp-eq { from { transform: scaleY(.35); } to { transform: scaleY(1.1); } }
+@keyframes cmp-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+@keyframes cmp-spin { to { transform: rotate(360deg); } }
+@keyframes cmp-noise { 0% { transform: translateX(0); } 100% { transform: translateX(3px); } }
+@keyframes cmp-wiggle { from { transform: rotate(-6deg); } to { transform: rotate(6deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .cmp-anim, .cmp-anim * { animation: none !important; }
+}
