@@ -120,27 +120,35 @@ export default function MessageBubble({ msg, index, isOwn, theme, T, username, s
             fontFamily: "'CCDoohickey', BlambotClassic, sans-serif",
             fontSize: '13px', fontWeight: 900, fontStyle: 'italic',
             color: T.sfxColor, letterSpacing: '1px',
+            // a paper halo so the lettering reads over the stickers behind it
+            textShadow: '1.5px 0 var(--paper), -1.5px 0 var(--paper), 0 1.5px var(--paper), 0 -1.5px var(--paper), 1px 1px var(--paper), -1px -1px var(--paper)',
             paddingLeft: isOwn ? 0 : '14px',
             paddingRight: isOwn ? '14px' : 0,
           }}>
             {SFX_WORDS[index % SFX_WORDS.length]}
           </span>
 
+          {/* name · time · sent/seen on a little caption label, so the stickers behind never swallow it */}
           <span style={{
-            fontSize: '10px', letterSpacing: '2px',
-            color: isOwn ? (theme === 'light' ? '#666' : '#555') : T.nameColor,
-            paddingLeft: isOwn ? 0 : '4px',
-            paddingRight: isOwn ? '4px' : 0,
+            fontSize: '10px', letterSpacing: '1.5px', lineHeight: 1.3,
+            color: 'var(--ink)', background: 'var(--paper)',
+            border: '1.5px solid var(--ink)', borderRadius: '3px', padding: '1px 6px',
+            marginLeft: isOwn ? 0 : '4px',
+            marginRight: isOwn ? '4px' : 0,
             fontFamily: "'AnimeAce', sans-serif",
-            display: 'flex', alignItems: 'center', gap: '4px',
+            display: 'flex', alignItems: 'center', gap: '6px',
             flexDirection: isOwn ? 'row-reverse' : 'row',
           }}>
-            {msg.username} · {msg.time}
-            {msg.isEdited && <span style={{ opacity: 0.5, fontSize: '9px' }}>✏️</span>}
+            <span><b style={{ fontWeight: 900 }}>{msg.username}</b> · {msg.time}</span>
+            {msg.isEdited && <span style={{ fontSize: '9px' }}>✏️</span>}
             {isOwn && (
               <span
                 title={seen ? 'Seen' : 'Sent'}
-                style={{ fontSize: '9px', letterSpacing: '1px', color: seen ? 'var(--accent)' : 'inherit', fontWeight: seen ? 900 : 'normal' }}
+                style={{
+                  fontSize: '9px', letterSpacing: '1px', fontWeight: 900, padding: '0 4px', borderRadius: '2px',
+                  // seen = inverted chip, the one you look for
+                  background: seen ? 'var(--ink)' : 'transparent', color: seen ? 'var(--paper)' : 'var(--ink)',
+                }}
               >
                 {seen ? '✓✓ SEEN' : '✓ SENT'}
               </span>
