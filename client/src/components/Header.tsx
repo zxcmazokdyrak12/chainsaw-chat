@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import CsmIcon from './CsmIcon'
 import { useWindowSize } from '../hooks/useWindowSize'
 
 export interface HeaderThemeTokens {
@@ -44,17 +45,18 @@ export default function Header({
   const { isMobile } = useWindowSize()
 
   const tabs: TabItem[] = [
-    { id: 'chat',     icon: '/icon_chat.png',     label: 'CHATS',    img: '/denji.png'  },
-    { id: 'rooms',    icon: '/icon_rooms.png',    label: 'ROOMS',    img: '/aki.png'    },
-    { id: 'settings', icon: '/icon_settings.png', label: 'SETTINGS', img: '/makima.png' },
-    { id: 'profile',  icon: '/icon_profile.png',  label: 'PROFILE',  img: '/reze.png'   },
+    { id: 'chat',     icon: '/icon_chat.png',     label: 'CHATS',    img: ''  },
+    { id: 'rooms',    icon: '/icon_rooms.png',    label: 'ROOMS',    img: ''    },
+    { id: 'settings', icon: '/icon_settings.png', label: 'SETTINGS', img: '' },
+    { id: 'profile',  icon: '/icon_profile.png',  label: 'PROFILE',  img: ''   },
   ]
 
   return (
     <div style={{
       background: T.headerBg,
-      borderBottom: `4px solid ${T.headerBorder}`,
-      boxShadow: T.shadow,
+      border: `4px solid ${T.headerBorder}`,
+      borderRadius: '4px',
+      overflow: 'hidden',
       position: 'relative', zIndex: 10,
       transition: 'background 0.4s',
     }}>
@@ -64,23 +66,30 @@ export default function Header({
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         borderBottom: isMobile ? 'none' : `2px solid ${T.headerBorder}`, // На мобилке убираем нижнюю рамку топбара, так как табов под ним не будет
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
           <h1 style={{
             margin: 0,
-            fontSize: isMobile ? '16px' : '22px',
+            fontSize: isMobile ? '15px' : '22px',
+            minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis',
             letterSpacing: isMobile ? '1px' : '3px',
             color: T.titleColor,
-            textShadow: theme === 'light' ? '3px 3px 0 #cc2200' : '3px 3px 0 #444',
+            textShadow: 'none',
             whiteSpace: 'nowrap',
           }}>
             CHAINSAW <span style={{ color: T.titleAccent }}>CHAT</span>
           </h1>
           {!isMobile && (
+            // the room reads as a chapter of the story
             <span style={{
-              fontSize: '13px', color: theme === 'light' ? '#cc2200' : '#fff',
+              fontSize: '12px', color: T.titleColor,
               fontFamily: "'AnimeAce', sans-serif", letterSpacing: '1px',
+              border: `3px solid ${T.headerBorder}`, padding: '3px 10px',
+              whiteSpace: 'nowrap',
             }}>
-              {rooms.find(r => r.id === currentRoom)?.name || ''}
+              {(() => {
+                const i = rooms.findIndex(r => r.id === currentRoom)
+                return i >= 0 ? `CHAPTER ${i + 1} — ${rooms[i]?.name ?? ''}` : ''
+              })()}
             </span>
           )}
         </div>
@@ -99,11 +108,12 @@ export default function Header({
               whileTap={{ scale: 0.9 }}
               whileHover={{ skewX: -5 }}
               onClick={onCall}
+              data-tour="call"
               title={callCount ? 'Join the video call' : 'Start a video call in this room'}
               animate={callCount ? { scale: [1, 1.08, 1] } : { scale: 1 }}
               transition={callCount ? { repeat: Infinity, duration: 1.2 } : {}}
               style={{
-                background: '#cc2200', color: '#fff',
+                background: 'var(--accent)', color: 'var(--on-accent)',
                 border: `2px solid ${T.headerBorder}`,
                 padding: isMobile ? '3px 7px' : '4px 10px',
                 fontSize: isMobile ? '10px' : '12px',
@@ -113,12 +123,16 @@ export default function Header({
                 whiteSpace: 'nowrap',
               }}
             >
-              {callCount ? `📹 JOIN (${callCount})` : '📹 CALL'}
+              {callCount > 0 && (
+                <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--blood)', marginRight: '6px', verticalAlign: '1px' }} />
+              )}
+              {callCount ? (isMobile ? `JOIN (${callCount})` : `JOIN CALL (${callCount})`) : 'CALL'}
             </motion.button>
           )}
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={onThemeToggle}
+            data-tour="theme"
             style={{
               background: theme === 'light' ? '#111' : '#fff',
               color: theme === 'light' ? '#fff' : '#111',
@@ -131,98 +145,62 @@ export default function Header({
               whiteSpace: 'nowrap',
             }}
           >
-            {theme === 'light' ? '◑ DARK' : '◐ LIGHT'}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+              <CsmIcon name={theme === 'light' ? 'moon' : 'sun'} size={isMobile ? 15 : 14} strokeWidth={2.4} />
+              {!isMobile && (theme === 'light' ? 'NEGATIVE' : 'PAPER')}
+            </span>
           </motion.button>
         </div>
       </div>
 
-      {/* Tabs — hidden on mobile, shown on desktop */}
+      {/* Tabs — hidden on mobile, shown on desktop. Manga style: ink frames,
+          the active one is filled with screentone and its label sits on a paper pill */}
       {!isMobile && (
         <div style={{
           display: 'flex',
-          justifyContent: 'space-around',
+          borderTop: `3px solid ${T.headerBorder}`,
           background: T.headerBg,
-          padding: '0 8px 8px',
         }}>
-          {tabs.map(tab => (
-            <motion.button
-              key={tab.id}
-              onClick={() => onTabChange(tab.id)}
-              whileTap={{ y: -12, transition: { type: 'spring', stiffness: 500, damping: 12 } }}
-              whileHover={{ y: -4 }}
-              style={{
-                background: 'transparent', border: 'none', cursor: 'pointer',
-                display: 'flex', flexDirection: 'column', alignItems: 'center',
-                padding: '4px 12px 0',
-                minWidth: '72px',
-                position: 'relative',
-                borderBottom: activeTab === tab.id
-                  ? `4px solid ${theme === 'light' ? '#cc2200' : '#fff'}`
-                  : '4px solid transparent',
-              }}
-            >
-              <div style={{ position: 'relative', marginTop: '8px' }}>
-                {/* Floating character above tab */}
-                <motion.img
-                  src={tab.img}
-                  animate={activeTab === tab.id
-                    ? { y: 0, opacity: 1, scale: 1 }
-                    : { y: 14, opacity: 0.25, scale: 0.7 }}
-                  transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                  style={{
-                    position: 'absolute', top: '-42px', left: '50%',
-                    transform: 'translateX(-50%)',
-                    height: '52px', objectFit: 'contain',
-                    pointerEvents: 'none', zIndex: 3,
-                    filter: activeTab === tab.id ? 'none' : 'grayscale(80%)',
-                    transition: 'filter 0.2s',
-                  }}
-                />
-
-                {/* Icon circle */}
-                <div style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '50%',
-                  background: activeTab === tab.id
-                    ? (theme === 'light' ? '#111' : '#fff')
-                    : (theme === 'light' ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)'),
+          {tabs.map((tab, i) => {
+            const on = activeTab === tab.id
+            return (
+              <button
+                key={tab.id}
+                onClick={() => onTabChange(tab.id)}
+                data-tour={`tab-${tab.id}`}
+                className={on ? 'tone manga-tab' : 'manga-tab'}
+                style={{
+                  flex: 1, cursor: 'pointer',
+                  padding: '9px 8px',
+                  backgroundColor: T.headerBg,
+                  border: 'none',
+                  borderRight: i < tabs.length - 1 ? `3px solid ${T.headerBorder}` : 'none',
+                  borderRadius: 0,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  border: activeTab === tab.id
-                    ? `3px solid ${theme === 'light' ? '#cc2200' : '#fff'}`
-                    : `2px solid ${theme === 'light' ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.15)'}`,
-                  transition: 'all 0.2s',
-                  position: 'relative', zIndex: 2, overflow: 'hidden',
+                }}
+              >
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '7px',
+                  fontFamily: 'BlambotClassic, sans-serif',
+                  fontSize: '15px', letterSpacing: '2px',
+                  color: T.titleColor,
+                  background: on ? T.headerBg : 'transparent',
+                  border: on ? `3px solid ${T.headerBorder}` : '3px solid transparent',
+                  borderRadius: '999px',
+                  padding: '2px 12px',
                 }}>
                   <img
-                    src={tab.icon}
+                    src={tab.icon} alt=""
                     style={{
-                      width: '28px',
-                      height: '28px',
-                      objectFit: 'contain',
-                      filter: activeTab === tab.id
-                        ? (theme === 'light' ? 'invert(1)' : 'invert(0)')
-                        : (theme === 'light' ? 'invert(0)' : 'invert(1)'),
-                      transition: 'filter 0.2s',
+                      width: '18px', height: '18px', objectFit: 'contain',
+                      filter: theme === 'light' ? 'none' : 'invert(1)',
                     }}
                   />
-                </div>
-              </div>
-
-              <span style={{
-                fontFamily: 'BlambotClassic, sans-serif',
-                fontSize: '10px',
-                letterSpacing: '2px',
-                color: activeTab === tab.id
-                  ? (theme === 'light' ? '#cc2200' : '#fff')
-                  : (theme === 'light' ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.4)'),
-                marginTop: '4px', marginBottom: '2px',
-                transition: 'color 0.2s',
-              }}>
-                {tab.label}
-              </span>
-            </motion.button>
-          ))}
+                  {tab.label}
+                </span>
+              </button>
+            )
+          })}
         </div>
       )}
     </div>

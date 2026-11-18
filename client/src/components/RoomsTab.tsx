@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
+import CsmIcon from './CsmIcon'
 
 // describe the structure of a room object
 export interface RoomItem {
@@ -64,60 +65,122 @@ export default function RoomsTab({
   onCreateRoom,
   onJoinByCode
 }: RoomsTabProps) {
+  const ink = 'var(--ink)'
+  const panel = (open: boolean) => ({
+    flex: 1, minWidth: 0,
+    padding: '14px 16px',
+    backgroundColor: open ? 'var(--ink)' : 'var(--paper)',
+    color: open ? 'var(--paper)' : ink,
+    border: `3px solid ${ink}`, borderRadius: '12px',
+    boxShadow: open ? 'none' : `4px 4px 0 ${ink}`,
+    cursor: 'pointer', textAlign: 'left' as const,
+    display: 'flex', alignItems: 'center', gap: '12px',
+  })
+  const field = {
+    flex: 1, minWidth: 0, padding: '10px 14px',
+    background: 'var(--paper)', border: `3px solid ${ink}`, borderRadius: '12px',
+    color: ink, fontSize: '15px', outline: 'none',
+    fontFamily: 'BlambotClassic, sans-serif', letterSpacing: '2px', textTransform: 'uppercase' as const,
+  }
+  const goBtn = {
+    padding: '10px 18px', background: 'var(--accent)', color: 'var(--on-accent)',
+    border: `3px solid ${ink}`, borderRadius: '12px',
+    fontFamily: 'BlambotClassic, sans-serif', fontSize: '15px', letterSpacing: '2px', cursor: 'pointer',
+    display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' as const,
+  }
+
   return (
-    <div style={{ flex: 1, padding: '20px', overflowY: 'auto' }}>
+    <div style={{ flex: 1, padding: '22px 22px 30px', overflowY: 'auto', color: ink, maxWidth: '760px', width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
 
-      {createdCode && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          style={{ background: theme === 'light' ? '#111' : '#fff', color: theme === 'light' ? '#fff' : '#111', padding: '16px 20px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', border: `3px solid #cc2200` }}
-        >
-          <div>
-            <div style={{ fontSize: '11px', opacity: 0.6, fontFamily: "'AnimeAce', sans-serif", marginBottom: '4px' }}>YOUR ROOM CODE - SHARE!</div>
-            <div style={{ fontSize: '28px', letterSpacing: '6px', fontFamily: 'Impact, sans-serif' }}>{createdCode}</div>
-          </div>
-          <button
-            onClick={() => { navigator.clipboard.writeText(createdCode); }}
-            style={{ background: '#cc2200', color: '#fff', border: 'none', padding: '8px 16px', fontFamily: 'Impact, sans-serif', fontSize: '13px', cursor: 'pointer', letterSpacing: '1px' }}
+      {/* title: like the contents page of a tankōbon */}
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '14px', marginBottom: '6px' }}>
+        <div style={{ fontFamily: 'BlambotClassic, sans-serif', fontSize: '40px', letterSpacing: '6px', lineHeight: 1 }}>CONTENTS</div>
+        <div style={{ fontFamily: 'serif', fontSize: '18px', opacity: 0.55, paddingBottom: '4px' }}>目次</div>
+        <div style={{ flex: 1 }} />
+        <div style={{ fontFamily: "'AnimeAce', sans-serif", fontSize: '11px', letterSpacing: '1px', paddingBottom: '6px', opacity: 0.7 }}>
+          {rooms.length} {rooms.length === 1 ? 'CHAPTER' : 'CHAPTERS'}
+        </div>
+      </div>
+      <div style={{ height: '4px', background: ink, marginBottom: '3px' }} />
+      <div style={{ height: '1.5px', background: ink, marginBottom: '20px' }} />
+
+      {/* freshly created room: a ticket stub with the invite code */}
+      <AnimatePresence>
+        {createdCode && (
+          <motion.div
+            initial={{ opacity: 0, y: -10, rotate: -1 }}
+            animate={{ opacity: 1, y: 0, rotate: -1 }}
+            exit={{ opacity: 0, y: -10 }}
+            style={{
+              display: 'flex', alignItems: 'stretch', marginBottom: '22px',
+              border: `3px solid ${ink}`, borderRadius: '12px', overflow: 'hidden',
+              boxShadow: `4px 4px 0 ${ink}`, backgroundColor: 'var(--paper)',
+            }}
           >
-            COPY
-          </button>
-          <button onClick={() => setCreatedCode('')} style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '18px', opacity: 0.5 }}>✕</button>
-        </motion.div>
-      )}
+            <div className="tone" style={{ width: '38px', borderRight: `3px dashed ${ink}`, flexShrink: 0 }} />
+            <div style={{ flex: 1, padding: '12px 16px' }}>
+              <div style={{ fontSize: '10px', fontFamily: "'AnimeAce', sans-serif", letterSpacing: '1px', opacity: 0.7, marginBottom: '2px' }}>
+                NEW CHAPTER OPEN — SHARE THE CODE
+              </div>
+              <div style={{ fontSize: '32px', letterSpacing: '8px', fontFamily: 'BlambotClassic, sans-serif' }}>{createdCode}</div>
+            </div>
+            <button
+              onClick={() => { navigator.clipboard.writeText(createdCode) }}
+              style={{ ...goBtn, borderRadius: 0, border: 'none', borderLeft: `3px solid ${ink}` }}
+            >
+              <CsmIcon name="copy" size={17} /> COPY
+            </button>
+            <button
+              onClick={() => setCreatedCode('')}
+              aria-label="Close"
+              style={{ background: 'transparent', border: 'none', borderLeft: `3px solid ${ink}`, borderRadius: 0, color: ink, cursor: 'pointer', padding: '0 14px', fontSize: '18px' }}
+            >
+              ✕
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
+      {/* two big panels: start a chapter / step into one by code */}
+      <div style={{ display: 'flex', gap: '14px', marginBottom: '16px', flexWrap: 'wrap' }}>
         <motion.button
-          whileHover={{ skewX: -3 }} whileTap={{ scale: 0.97 }}
+          whileTap={{ scale: 0.97 }}
           onClick={() => { setShowCreateRoom(!showCreateRoom); setShowJoinByCode(false) }}
-          style={{ flex: 1, padding: '14px', background: theme === 'light' ? '#111' : '#fff', color: theme === 'light' ? '#fff' : '#111', border: `3px solid ${T.headerBorder}`, fontFamily: 'Impact, sans-serif', fontSize: '15px', letterSpacing: '2px', cursor: 'pointer', clipPath: 'polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)' }}
+          style={panel(showCreateRoom)}
         >
-          + CREATE
+          <CsmIcon name="plus" size={30} strokeWidth={2.6} />
+          <span>
+            <span style={{ display: 'block', fontFamily: 'BlambotClassic, sans-serif', fontSize: '20px', letterSpacing: '2px' }}>NEW CHAPTER</span>
+            <span style={{ display: 'block', fontFamily: "'AnimeAce', sans-serif", fontSize: '10px', opacity: 0.7 }}>start a room, get an invite code</span>
+          </span>
         </motion.button>
         <motion.button
-          whileHover={{ skewX: -3 }} whileTap={{ scale: 0.97 }}
+          whileTap={{ scale: 0.97 }}
           onClick={() => { setShowJoinByCode(!showJoinByCode); setShowCreateRoom(false) }}
-          style={{ flex: 1, padding: '14px', background: 'transparent', color: T.titleColor, border: `3px solid ${T.headerBorder}`, fontFamily: 'Impact, sans-serif', fontSize: '15px', letterSpacing: '2px', cursor: 'pointer', clipPath: 'polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)' }}
+          style={panel(showJoinByCode)}
         >
-          # LOG IN WITH CODE
+          <CsmIcon name="key" size={30} strokeWidth={2.6} />
+          <span>
+            <span style={{ display: 'block', fontFamily: 'BlambotClassic, sans-serif', fontSize: '20px', letterSpacing: '2px' }}>ENTER BY CODE</span>
+            <span style={{ display: 'block', fontFamily: "'AnimeAce', sans-serif", fontSize: '10px', opacity: 0.7 }}>a friend sent you a code</span>
+          </span>
         </motion.button>
       </div>
 
       <AnimatePresence>
         {showCreateRoom && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ marginBottom: '20px', overflow: 'hidden' }}>
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div style={{ display: 'flex', gap: '10px', paddingTop: '2px' }}>
               <input
-                style={{ flex: 1, padding: '10px 14px', background: T.inputBg, border: `3px solid ${T.inputBorder}`, color: T.inputColor, fontSize: '14px', outline: 'none', fontFamily: 'Impact, sans-serif', letterSpacing: '1px', textTransform: 'uppercase' }}
-                placeholder="ROOM NAME (OPTIONAL)..."
+                style={field}
+                placeholder="CHAPTER TITLE (OPTIONAL)"
                 maxLength={16}
                 value={newRoomName}
                 onChange={e => setNewRoomName(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && onCreateRoom()}
               />
-              <motion.button whileTap={{ scale: 0.95 }} onClick={onCreateRoom} style={{ padding: '10px 20px', background: '#cc2200', color: '#fff', border: 'none', fontFamily: 'Impact, sans-serif', fontSize: '14px', letterSpacing: '2px', cursor: 'pointer' }}>
-                CREATE ⛓
+              <motion.button whileTap={{ scale: 0.95 }} onClick={onCreateRoom} style={goBtn}>
+                <CsmIcon name="chainsaw" size={18} /> CREATE
               </motion.button>
             </div>
           </motion.div>
@@ -127,22 +190,22 @@ export default function RoomsTab({
       <AnimatePresence>
         {showJoinByCode && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ marginBottom: '20px', overflow: 'hidden' }}>
-            <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', gap: '10px', flexDirection: 'column', paddingTop: '2px' }}>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <input
-                  style={{ flex: 1, padding: '10px 14px', background: T.inputBg, border: `3px solid ${joinError ? '#cc2200' : T.inputBorder}`, color: T.inputColor, fontSize: '16px', outline: 'none', fontFamily: 'Impact, sans-serif', letterSpacing: '4px', textTransform: 'uppercase', textAlign: 'center' }}
+                  style={{ ...field, letterSpacing: '6px', textAlign: 'center', fontSize: '18px', borderStyle: joinError ? 'dashed' : 'solid' }}
                   placeholder="KAIRYU42"
                   maxLength={8}
                   value={joinCode}
                   onChange={e => { setJoinCode(e.target.value.toUpperCase()); setJoinError('') }}
                   onKeyDown={e => e.key === 'Enter' && onJoinByCode()}
                 />
-                <motion.button whileTap={{ scale: 0.95 }} onClick={onJoinByCode} style={{ padding: '10px 20px', background: theme === 'light' ? '#111' : '#fff', color: theme === 'light' ? '#fff' : '#111', border: 'none', fontFamily: 'Impact, sans-serif', fontSize: '14px', letterSpacing: '2px', cursor: 'pointer' }}>
-                  ENTER
+                <motion.button whileTap={{ scale: 0.95 }} onClick={onJoinByCode} style={goBtn}>
+                  <CsmIcon name="door" size={18} /> ENTER
                 </motion.button>
               </div>
               {joinError && (
-                <span style={{ color: '#cc2200', fontSize: '12px', fontFamily: "'AnimeAce', sans-serif", letterSpacing: '1px' }}>
+                <span style={{ fontSize: '12px', fontFamily: "'AnimeAce', sans-serif", letterSpacing: '1px' }}>
                   ✕ {joinError}
                 </span>
               )}
@@ -151,15 +214,73 @@ export default function RoomsTab({
         )}
       </AnimatePresence>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-        {rooms.map(room => (
-          <motion.button key={room.id} whileHover={{ scale: 1.02, skewX: -2 }} whileTap={{ scale: 0.97 }} onClick={() => { onJoinRoom(room.id); onSwitchToChat() }} style={{ padding: '16px', background: currentRoom === room.id ? (theme === 'light' ? '#111' : '#fff') : 'transparent', color: currentRoom === room.id ? (theme === 'light' ? '#fff' : '#111') : T.titleColor, border: `3px solid ${T.headerBorder}`, cursor: 'pointer', fontFamily: 'Impact, sans-serif', fontSize: '15px', letterSpacing: '1px', textAlign: 'left', boxShadow: T.shadow, transition: 'all 0.2s', clipPath: 'polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)' }}>
-            <div>{room.name}</div>
-            <div style={{ fontSize: '11px', letterSpacing: '3px', opacity: 0.5, marginTop: '4px', fontFamily: 'Impact, sans-serif' }}>{room.code}</div>
-            <div style={{ fontSize: '9px', opacity: 0.4, fontFamily: "'AnimeAce', sans-serif", marginTop: '2px' }}>{room.count} сообщ.</div>
-            {currentRoom === room.id && <div style={{ fontSize: '10px', color: '#cc2200', marginTop: '4px' }}>● YOU ARE HERE</div>}
-          </motion.button>
-        ))}
+      {/* the contents list */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '8px' }}>
+        {rooms.map((room, i) => {
+          const here = currentRoom === room.id
+          return (
+            <motion.button
+              key={room.id}
+              whileTap={{ scale: 0.985 }}
+              onClick={() => { onJoinRoom(room.id); onSwitchToChat() }}
+              className={here ? 'tone-light toc-row' : 'toc-row'}
+              style={{
+                position: 'relative',
+                display: 'flex', alignItems: 'center', gap: '16px',
+                padding: '12px 56px 12px 14px',
+                backgroundColor: 'var(--paper)',
+                border: `3px solid ${ink}`, borderRadius: '12px',
+                color: ink, cursor: 'pointer', textAlign: 'left',
+              }}
+            >
+              <span style={{
+                fontFamily: 'BlambotClassic, sans-serif', fontSize: '34px', lineHeight: 1,
+                letterSpacing: '1px', minWidth: '62px',
+                backgroundColor: 'var(--paper)', padding: '0 4px', borderRadius: '6px',
+              }}>
+                <span style={{ fontSize: '12px', letterSpacing: '2px', display: 'block', opacity: 0.6 }}>CH.</span>
+                {String(i + 1).padStart(2, '0')}
+              </span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                  <span style={{
+                    fontFamily: 'BlambotClassic, sans-serif', fontSize: '20px', letterSpacing: '1.5px',
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                    backgroundColor: 'var(--paper)', padding: '0 4px', borderRadius: '4px',
+                  }}>
+                    {room.name}
+                  </span>
+                  {/* dotted leader to the page count */}
+                  <span style={{ flex: 1, borderBottom: `3px dotted ${ink}`, minWidth: '20px', transform: 'translateY(-4px)' }} />
+                  <span style={{ fontFamily: "'AnimeAce', sans-serif", fontSize: '12px', whiteSpace: 'nowrap', backgroundColor: 'var(--paper)', padding: '0 4px', borderRadius: '4px' }}>
+                    {room.count} p.
+                  </span>
+                </span>
+                <span style={{ display: 'flex', gap: '8px', marginTop: '6px', alignItems: 'center' }}>
+                  <span style={{
+                    fontFamily: 'BlambotClassic, sans-serif', fontSize: '11px', letterSpacing: '3px',
+                    border: `2px solid ${ink}`, borderRadius: '4px', padding: '0 6px',
+                    backgroundColor: 'var(--paper)', transform: 'rotate(-2deg)',
+                  }}>
+                    CODE {room.code}
+                  </span>
+                  {here && (
+                    <span style={{ fontFamily: "'AnimeAce', sans-serif", fontSize: '10px', backgroundColor: 'var(--paper)', padding: '0 4px', borderRadius: '4px' }}>
+                      ◀ you are reading this
+                    </span>
+                  )}
+                </span>
+              </span>
+
+              {/* bookmark ribbon on the chapter you're in */}
+              {here && (
+                <svg viewBox="0 0 24 40" aria-hidden style={{ position: 'absolute', right: '16px', top: '-3px', width: '24px', height: '40px' }}>
+                  <path d="M2 0h20v38l-10-8-10 8z" fill="var(--ink)" />
+                </svg>
+              )}
+            </motion.button>
+          )
+        })}
       </div>
     </div>
   )

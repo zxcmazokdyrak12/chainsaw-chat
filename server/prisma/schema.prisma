@@ -89,3 +89,16 @@ model ReadMark {
   @@id([roomId, username])
   @@map("read_marks")
 }
+
+// the "character page" a user fills in about themselves (volume-extras style)
+model UserProfile {
+  username   String   @id
+  contract   String?
+  likes      String?
+  dislikes   String?
+  dream      String?
+  favChapter String?  @map("fav_chapter")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("user_profiles")
+}

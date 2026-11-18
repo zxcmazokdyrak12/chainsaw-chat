@@ -1,5 +1,8 @@
+import type { CSSProperties } from 'react'
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import StickerBomb from './StickerBomb'
+import { API_URL } from '../config'
 
 // describe the structure of an avatar object
 export interface AvatarItem {
@@ -70,15 +73,18 @@ export default function UsernameScreen({
   const switchMode = (m: 'guest' | 'account') => { setMode(m); onClearError() }
 
   return (
-    <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} style={{ height:'100vh', background:'#0d0d0d', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:'24px', fontFamily:'BlambotClassic, sans-serif', overflowY:'auto', padding:'20px' }}>
+    <div style={{ position:'relative', height:'100vh', overflow:'hidden', background:'#0d0d0d', '--accent': '#f2efe6', '--on-accent': '#111', '--paper': '#0e0e0e', '--ink': '#f2efe6' } as CSSProperties}>
+    {/* login screen gets the full stickerbomb; stickers can be poked */}
+    <StickerBomb density="full" dark mode="everywhere" seed="login" interactive />
+    <motion.div className="login-overlay" initial={{ opacity:0 }} animate={{ opacity:1 }} style={{ position:'relative', zIndex:1, height:'100vh', background:'radial-gradient(ellipse at center, rgba(13,13,13,0.9) 0%, rgba(13,13,13,0.6) 40%, transparent 75%)', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:'24px', fontFamily:'BlambotClassic, sans-serif', overflowY:'auto', padding:'20px', pointerEvents:'none' }}>
 
-      <h1 style={{ fontSize:'36px', color:'#fff', letterSpacing:'4px', textShadow:'4px 4px 0 #cc2200', margin:0 }}>
-        CHAINSAW <span style={{ color:'#cc2200' }}>CHAT</span>
+      <h1 style={{ fontSize:'36px', color:'#fff', letterSpacing:'4px', textShadow:'4px 4px 0 var(--accent)', margin:0 }}>
+        CHAINSAW <span style={{ color:'var(--accent)' }}>CHAT</span>
       </h1>
 
       <div style={{ display:'flex', flexDirection:'column', gap:'12px', width:'300px' }}>
         <motion.a
-          href="https://chainsaw-chat.onrender.com/auth/github"
+          href={`${API_URL}/auth/github`}
           whileHover={{ skewX:-5, scale:1.03 }}
           whileTap={{ scale:0.97 }}
           style={{
@@ -96,7 +102,7 @@ export default function UsernameScreen({
         </motion.a>
 
         <motion.a
-          href="https://chainsaw-chat.onrender.com/auth/google"
+          href={`${API_URL}/auth/google`}
           whileHover={{ skewX:-5, scale:1.03 }}
           whileTap={{ scale:0.97 }}
           style={{
@@ -124,8 +130,8 @@ export default function UsernameScreen({
       </div>
 
       <div style={{ position:'relative' }}>
-        <img src={avatar.src} style={{ width:'100px', height:'100px', objectFit:'cover', borderRadius:'50%', border:'3px solid #cc2200', boxShadow:'0 0 20px rgba(204,34,0,0.5)' }} />
-        <div style={{ position:'absolute', bottom:'-4px', right:'-4px', background:'#cc2200', borderRadius:'50%', width:'24px', height:'24px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'12px' }}>✓</div>
+        <img src={avatar.src} style={{ width:'100px', height:'100px', objectFit:'cover', borderRadius:'50%', border:'3px solid var(--accent)', boxShadow:'0 0 20px rgba(17,17,17,0.5)' }} />
+        <div style={{ position:'absolute', bottom:'-4px', right:'-4px', background:'var(--accent)', borderRadius:'50%', width:'24px', height:'24px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'12px' }}>✓</div>
       </div>
 
       <p style={{ color:'#555', fontSize:'11px', letterSpacing:'3px', margin:0 }}>CHOOSE YOUR CHARACTER</p>
@@ -145,13 +151,13 @@ export default function UsernameScreen({
               style={{
                 width:'52px', height:'52px',
                 objectFit:'cover', borderRadius:'50%',
-                border: avatar.id === av.id ? '3px solid #cc2200' : '2px solid #333',
+                border: avatar.id === av.id ? '3px solid var(--accent)' : '2px solid #333',
                 filter: avatar.id === av.id ? 'none' : 'grayscale(60%) brightness(0.7)',
                 transition:'all 0.2s',
               }}
             />
             {avatar.id === av.id && (
-              <div style={{ position:'absolute', inset:0, borderRadius:'50%', border:'2px solid #cc2200', boxShadow:'0 0 8px rgba(204,34,0,0.6)' }} />
+              <div style={{ position:'absolute', inset:0, borderRadius:'50%', border:'2px solid var(--accent)', boxShadow:'0 0 8px rgba(17,17,17,0.6)' }} />
             )}
           </motion.div>
         ))}
@@ -201,7 +207,7 @@ export default function UsernameScreen({
               initial={{ opacity:0, x:-20 }} animate={{ opacity:1, x:0 }} exit={{ opacity:0, x:20 }}
               whileTap={{ scale:0.95 }} whileHover={{ skewX:-5 }}
               onClick={onSubmit}
-              style={{ padding:'12px', background: nameOk ? '#cc2200' : '#333', color:'#fff', border:'none', fontFamily:'BlambotClassic, sans-serif', fontSize:'16px', letterSpacing:'3px', cursor: nameOk ? 'pointer' : 'default', clipPath:SLANT, transition:'background 0.2s' }}
+              style={{ padding:'12px', background: nameOk ? 'var(--accent)' : '#333', color:'var(--on-accent)', border:'none', fontFamily:'BlambotClassic, sans-serif', fontSize:'16px', letterSpacing:'3px', cursor: nameOk ? 'pointer' : 'default', clipPath:SLANT, transition:'background 0.2s' }}
             >
               ENTER ⛓
             </motion.button>
@@ -230,9 +236,9 @@ export default function UsernameScreen({
                     onClick={() => onAccountSubmit(m, password)}
                     style={{
                       flex:1, padding:'12px 6px',
-                      background: !canSubmitAccount ? '#333' : m === 'login' ? '#cc2200' : '#fff',
-                      color: !canSubmitAccount ? '#777' : m === 'login' ? '#fff' : '#111',
-                      border:'none', fontFamily:'BlambotClassic, sans-serif', fontSize:'14px', letterSpacing:'2px',
+                      background: !canSubmitAccount ? '#333' : m === 'login' ? 'var(--accent)' : 'transparent',
+                      color: !canSubmitAccount ? '#777' : m === 'login' ? 'var(--on-accent)' : '#f2efe6',
+                      border: m === 'register' && canSubmitAccount ? '3px solid #f2efe6' : 'none', fontFamily:'BlambotClassic, sans-serif', fontSize:'14px', letterSpacing:'2px',
                       cursor: canSubmitAccount ? 'pointer' : 'default', clipPath:SLANT, transition:'background 0.2s',
                     }}
                   >
@@ -252,7 +258,7 @@ export default function UsernameScreen({
             <motion.div
               initial={{ opacity:0, scale:0.8, rotate:-3 }} animate={{ opacity:1, scale:1, rotate:-1 }} exit={{ opacity:0 }}
               style={{
-                padding:'8px 12px', background:'#cc2200', color:'#fff',
+                padding:'8px 12px', background:'var(--accent)', color:'var(--on-accent)',
                 border:'3px solid #fff', boxShadow:'4px 4px 0 #fff',
                 fontFamily:"'AnimeAce', sans-serif", fontSize:'10px', letterSpacing:'1px', textAlign:'center',
               }}
@@ -264,5 +270,6 @@ export default function UsernameScreen({
         </AnimatePresence>
       </div>
     </motion.div>
+    </div>
   )
 }

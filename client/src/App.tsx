@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import IntroScreen from './components/IntroScreen'
 import UsernameScreen, { AVATARS } from './components/UsernameScreen'
 import Header from './components/Header'
-import Sidebar from './components/Sidebar'
+import { ChapterRail, ChapterDrawer } from './components/ChapterDrawer'
 import MessageBubble from './components/MessageBubble'
 import ContextMenu from './components/ContextMenu'
 import TypingIndicator from './components/TypingIndicator'
@@ -20,6 +20,10 @@ import BottomNav from './components/BottomNav'
 import { useWindowSize } from './hooks/useWindowSize'
 import { useVideoCall } from './hooks/useVideoCall'
 import VideoCall from './components/VideoCall'
+import StickerBomb from './components/StickerBomb'
+import Tutorial from './components/Tutorial'
+import SfxLayer, { makeBurst, type SfxBurst } from './components/SfxLayer'
+import CharacterModal from './components/CharacterModal'
 import { API_URL } from './config'
 
 const socket: Socket = io(API_URL, {
@@ -50,20 +54,22 @@ export interface ThemeTokens {
   sidebarBorder: string
 }
 
+// manga page: black ink on newsprint. Greys come from screentone (see index.css), not from flat fills.
 const LIGHT: ThemeTokens = {
-  appBg: '#f0ebe0', headerBg: '#e8e3d8', headerBorder: '#111',
-  inputZoneBg: '#e8e3d8', inputBorder: '#111', inputBg: '#fff', inputColor: '#111',
-  nameColor: '#cc2200', sfxColor: '#cc2200', titleColor: '#111', titleAccent: '#cc2200',
-  btnBg: '#111', btnColor: '#fff', shadow: '5px 5px 0 rgba(0,0,0,0.85)',
-  halftone: 'rgba(0,0,0,0.07)', sidebarBg: '#e0dbd0', sidebarBorder: '#111',
+  appBg: '#f5f2ea', headerBg: '#f5f2ea', headerBorder: '#111',
+  inputZoneBg: '#f5f2ea', inputBorder: '#111', inputBg: '#fbf9f4', inputColor: '#111',
+  nameColor: '#111', sfxColor: '#111', titleColor: '#111', titleAccent: '#111',
+  btnBg: '#111', btnColor: '#f5f2ea', shadow: '4px 4px 0 #111',
+  halftone: 'rgba(0,0,0,0.07)', sidebarBg: '#f5f2ea', sidebarBorder: '#111',
 }
 
+// "negative" page: white ink on black, like Fujimoto's inverted spreads
 const DARK: ThemeTokens = {
-  appBg: '#111', headerBg: '#0a0a0a', headerBorder: '#fff',
-  inputZoneBg: '#0a0a0a', inputBorder: '#fff', inputBg: '#1a1a1a', inputColor: '#fff',
-  nameColor: '#fff', sfxColor: '#fff', titleColor: '#fff', titleAccent: '#fff',
-  btnBg: '#fff', btnColor: '#111', shadow: '5px 5px 0 rgba(255,255,255,0.15)',
-  halftone: 'rgba(255,255,255,0.03)', sidebarBg: '#0a0a0a', sidebarBorder: '#fff',
+  appBg: '#0e0e0e', headerBg: '#0e0e0e', headerBorder: '#f2efe6',
+  inputZoneBg: '#0e0e0e', inputBorder: '#f2efe6', inputBg: '#161616', inputColor: '#f2efe6',
+  nameColor: '#f2efe6', sfxColor: '#f2efe6', titleColor: '#f2efe6', titleAccent: '#f2efe6',
+  btnBg: '#f2efe6', btnColor: '#111', shadow: '4px 4px 0 #f2efe6',
+  halftone: 'rgba(255,255,255,0.04)', sidebarBg: '#0e0e0e', sidebarBorder: '#f2efe6',
 }
 
 export interface MessageItem {
@@ -140,9 +146,59 @@ export default function App() {
   const [seenMarks, setSeenMarks] = useState<Record<string, number>>({})
   const lastMarked = useRef<number>(0)
 
-  const call = useVideoCall(socket, currentRoom)
+  const call = useVideoCall(socket, currentRoom, username)
+
+  // onboarding tour — shown once after the first time you get into the chat
+  const [tourOpen, setTourOpen] = useState<boolean>(false)
+  // tab switch = quick screentone cut: tone covers the page (90ms), page swaps, tone dissolves (120ms)
+  const [toneCut, setToneCut] = useState<boolean>(false)
+  const cutTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const switchTab = (tab: string): void => {
+    if (tab === activeTab) return
+    if (cutTimer.current) clearTimeout(cutTimer.current)
+    setToneCut(true)
+    cutTimer.current = setTimeout(() => { setActiveTab(tab); setToneCut(false) }, 90)
+  }
+  // chapters panel: rail on desktop (remembers open/closed), drawer on mobile
+  const [railOpen, setRailOpen] = useState<boolean>(() => {
+    try { return localStorage.getItem('chainsaw_rail') !== 'closed' } catch { return true }
+  })
+  const toggleRail = (): void => setRailOpen(o => {
+    try { localStorage.setItem('chainsaw_rail', o ? 'closed' : 'open') } catch { /* ignore */ }
+    return !o
+  })
+  const [drawerOpen, setDrawerOpen] = useState<boolean>(false)
+  // whose character page is open (tap on an avatar in the chat)
+  const [viewUser, setViewUser] = useState<{ name: string; avatar?: string } | null>(null)
+
+  const startTour = (): void => { setActiveTab('chat'); setTimeout(() => setTourOpen(true), 350) }
+  const closeTour = (): void => {
+    setTourOpen(false)
+    try { localStorage.setItem('chainsaw_tutorial_done', '1') } catch { /* private mode */ }
+  }
+  useEffect(() => {
+    if (phase !== 'chat') return
+    let done = false
+    try { done = localStorage.getItem('chainsaw_tutorial_done') === '1' } catch { /* ignore */ }
+    if (done) return
+    const t = setTimeout(() => setTourOpen(true), 1200) // let the room load first
+    return () => clearTimeout(t)
+  }, [phase])
 
   const { settings, update: updateSetting, resolveTheme } = useSettings()
+
+  // manga SFX bursts over the feed; refs keep socket handlers from reading stale values
+  const [sfx, setSfx] = useState<SfxBurst[]>([])
+  const sfxOn = useRef<boolean>(true)
+  sfxOn.current = settings.sfxEnabled ?? true
+  const meRef = useRef<string>('')
+  meRef.current = username
+  const popSfx = (kind: 'shout' | 'send' | 'join', own: boolean): void => {
+    if (!sfxOn.current) return
+    const b = makeBurst(kind, own)
+    setSfx(p => [...p.slice(-3), b])
+    setTimeout(() => setSfx(p => p.filter(x => x.id !== b.id)), kind === 'shout' ? 1100 : 750)
+  }
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark' | 'system'>(() => resolveTheme() as 'light' | 'dark' | 'system')
 
   useEffect(() => {
@@ -158,6 +214,8 @@ export default function App() {
   }, [settings.theme])
 
   const theme = resolvedTheme
+  // css variables (--ink, --paper, --accent…) follow the theme
+  useEffect(() => { document.documentElement.dataset.theme = theme === 'dark' ? 'dark' : 'light' }, [theme])
   const T: ThemeTokens = theme === 'light' ? LIGHT : DARK
 
   const playSound = (src: string, volume: number = 0.4): void => {
@@ -279,6 +337,11 @@ export default function App() {
     socket.on('receive_message', (msg: MessageItem) => {
       setMessages(p => [...p, msg])
       triggerPochita(msg.content)
+      const text = msg.content || ''
+      const own = msg.username === meRef.current
+      const shout = text === text.toUpperCase() && text.replace(/[^a-zA-Zа-яА-Я]/g, '').length > 2
+      if (shout) popSfx('shout', own)
+      else if (own) popSfx('send', true)
     })
     socket.on('room_created', ({ id }: { id: string, code: string, name: string }) => {
       joinRoom(id)
@@ -297,6 +360,7 @@ export default function App() {
     })
     socket.on('typing_update', (users: string[]) => setTypingUsers(users))
     socket.on('user_joined', ({ username: who }: { username: string }) => {
+      popSfx('join', false)
       setMessages(p => [...p, {
         id: Date.now(), system: true,
         content: `${who} joined the room`,
@@ -329,6 +393,26 @@ export default function App() {
     }
   }, [username, avatar])
 
+  // socket.io reconnects by itself (Render naps, phone goes to background), but the new socket
+  // is not in any room — rejoin, otherwise reactions / calls / messages silently go nowhere
+  const sessionRef = useRef({ phase, username, currentRoom, avatarSrc: avatar.src })
+  sessionRef.current = { phase, username, currentRoom, avatarSrc: avatar.src }
+  useEffect(() => {
+    let firstConnect = true
+    const onConnect = () => {
+      if (firstConnect) { firstConnect = false; return }
+      const s = sessionRef.current
+      if (s.phase !== 'chat' || !s.username) return
+      socket.emit('get_rooms', { username: s.username })
+      socket.emit('join_room', { roomId: s.currentRoom, username: s.username, avatar: s.avatarSrc })
+    }
+    const onReactError = (msg: string) => console.warn('[reaction]', msg)
+    if (socket.connected) firstConnect = false
+    socket.on('connect', onConnect)
+    socket.on('react_error', onReactError)
+    return () => { socket.off('connect', onConnect); socket.off('react_error', onReactError) }
+  }, [])
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, typingUsers])
@@ -340,7 +424,7 @@ export default function App() {
       const last = [...messages].reverse().find(m => !m.system && typeof m.id === 'number')
       if (!last || (last.id as number) <= lastMarked.current) return
       lastMarked.current = last.id as number
-      socket.emit('mark_seen', { roomId: currentRoom, messageId: last.id })
+      socket.emit('mark_seen', { roomId: currentRoom, messageId: last.id, username })
     }
     markSeen()
     document.addEventListener('visibilitychange', markSeen)
@@ -541,7 +625,7 @@ export default function App() {
     .reduce<number>((max, [, id]) => Math.max(max, Number(id)), 0)
 
   const reactTo = (messageId: string | number, emoji: string): void => {
-    socket.emit('react_message', { messageId, roomId: currentRoom, emoji })
+    socket.emit('react_message', { messageId, roomId: currentRoom, emoji, username })
   }
 
   return (
@@ -557,8 +641,9 @@ export default function App() {
         fontSize: 'var(--font-size-base, 14px)',
         position: 'relative', 
         overflow: 'hidden',
-        backgroundImage: `radial-gradient(circle, ${T.halftone} 1px, transparent 1px)`,
-        backgroundSize: '10px 10px',
+        // the page: panels separated by white gutters, like a manga spread
+        padding: isMobile ? '6px' : '10px',
+        gap: isMobile ? '6px' : '10px',
         transition: 'background 0.4s',
       }}
     >
@@ -566,7 +651,7 @@ export default function App() {
       <Header
         T={T} theme={theme} username={username}
         rooms={rooms} currentRoom={currentRoom}
-        activeTab={activeTab} onTabChange={setActiveTab}
+        activeTab={activeTab} onTabChange={switchTab}
         onThemeToggle={() => updateSetting('theme', theme === 'light' ? 'dark' : 'light')}
         callCount={call.participants.length}
         inCall={call.inCall}
@@ -581,26 +666,56 @@ export default function App() {
         flexDirection: 'column',
         position: 'relative'
       }}>
+        {/* quick cut between tabs */}
+        <motion.div
+          className="tone"
+          initial={false}
+          animate={{ opacity: toneCut ? 1 : 0 }}
+          transition={{ duration: toneCut ? 0.09 : 0.12, ease: 'linear' }}
+          style={{
+            position: 'absolute', inset: 0, zIndex: 60, pointerEvents: 'none',
+            backgroundColor: T.appBg,
+          }}
+        />
         
         {/* ВКЛАДКА ЧАТА */}
         {activeTab === 'chat' && (
-          <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-            {/* fix #2: Hide Sidebar on mobile to prevent layout issues */}
+          <div style={{ display: 'flex', flex: 1, overflow: 'hidden', gap: isMobile ? '6px' : '10px' }}>
+            {/* chapters rail (desktop); on mobile it's a drawer inside the feed panel */}
             {!isMobile && (
-              <Sidebar
-                rooms={rooms} currentRoom={currentRoom}
-                theme={theme} T={T} onJoinRoom={joinRoom}
+              <ChapterRail
+                rooms={rooms} currentRoom={currentRoom} onPick={joinRoom}
+                open={railOpen} onToggle={toggleRail}
+                panelStyle={{ border: `4px solid ${T.headerBorder}`, borderRadius: '4px', overflow: 'hidden', background: T.appBg }}
               />
             )}
             
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', gap: isMobile ? '6px' : '10px' }}>
+            {/* feed panel */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', border: `4px solid ${T.headerBorder}`, borderRadius: '4px', overflow: 'hidden', background: T.appBg }}>
+              <SfxLayer bursts={sfx} />
+              {isMobile && (
+                <ChapterDrawer
+                  rooms={rooms} currentRoom={currentRoom} onPick={joinRoom}
+                  open={drawerOpen} setOpen={setDrawerOpen}
+                />
+              )}
+              {/* stickerbomb layer — behind messages, one layout per room */}
+              <StickerBomb
+                density={settings.stickerBomb ?? 'light'}
+                dark={theme === 'dark'}
+                mode={settings.stickerBomb === 'full' ? 'everywhere' : 'edges'}
+                seed={currentRoom}
+              />
               {/* message area */}
               <div
+                data-tour="messages"
                 onScroll={() => setContextMenu(null)}
                 style={{ 
+                  position: 'relative', zIndex: 1,
                   flex: 1, 
                   overflowY: 'auto', 
-                  padding: isMobile ? '12px 16px' : '16px 24px', 
+                  padding: isMobile ? '54px 16px 12px' : '16px 24px', 
                   display: 'flex', 
                   flexDirection: 'column', 
                   gap: '10px' 
@@ -611,7 +726,7 @@ export default function App() {
                     initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
                     style={{
                       padding: '8px 14px',
-                      background: '#cc2200', color: '#fff',
+                      background: 'var(--accent)', color: 'var(--on-accent)',
                       border: `3px solid ${theme === 'dark' ? '#fff' : '#111'}`,
                       boxShadow: theme === 'dark' ? '4px 4px 0 #fff' : '4px 4px 0 #111',
                       fontFamily: "'AnimeAce', sans-serif", fontSize: '11px',
@@ -642,13 +757,13 @@ export default function App() {
                   <div style={{
                     padding: '8px 14px',
                     background: theme === 'dark' ? '#1a1a1a' : '#f0ebe0',
-                    border: `2px solid #cc2200`,
-                    borderLeft: '4px solid #cc2200',
+                    border: `2px solid var(--accent)`,
+                    borderLeft: '4px solid var(--accent)',
                     fontFamily: "'AnimeAce', sans-serif",
                     fontSize: '11px', color: T.titleColor,
                     display: 'flex', gap: '8px', alignItems: 'center',
                   }}>
-                    <span style={{ color: '#cc2200' }}>📌</span>
+                    <span style={{ color: 'var(--accent)' }}>📌</span>
                     <span style={{ opacity: 0.6 }}>PINNED:</span>
                     <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {pinnedMsg.content}
@@ -663,8 +778,17 @@ export default function App() {
 
                   const msg = item.data
                   if (msg.system) return (
-                    <motion.div key={msg.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ textAlign: 'center', fontSize: '11px', color: theme === 'light' ? '#999' : '#555', fontFamily: "'AnimeAce', sans-serif", letterSpacing: '1px', padding: '4px 0' }}>
-                      {msg.content}
+                    // narration caption — the rectangular box in a panel corner
+                    <motion.div key={msg.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} style={{ display: 'flex', justifyContent: 'center', padding: '4px 0' }}>
+                      <span style={{
+                        display: 'inline-block', transform: 'rotate(-1deg)',
+                        border: '3px solid var(--ink)', backgroundColor: 'var(--paper)',
+                        boxShadow: '3px 3px 0 var(--ink)', color: 'var(--ink)',
+                        padding: '4px 12px', fontSize: '11px',
+                        fontFamily: "'AnimeAce', sans-serif", letterSpacing: '1px',
+                      }}>
+                        ▶ {msg.content}
+                      </span>
                     </motion.div>
                   )
                   return (
@@ -677,6 +801,7 @@ export default function App() {
                       seen={typeof msg.id === 'number' && msg.id <= seenByOthers}
                       onReact={(emoji) => reactTo(msg.id, emoji)}
                       onContextMenu={(data) => setContextMenu({ x: data.x, y: data.y, msg: data.msg })}
+                      onAvatarClick={(name, av) => setViewUser({ name, avatar: av })}
                     />
                   )
                 })}
@@ -698,7 +823,9 @@ export default function App() {
               </div>
 
               {/* fix #3: Input field (now always at the bottom of the chat section and above BottomNav) */}
-              <div style={{ paddingBottom: isMobile ? '60px' : '0' }}>
+            </div>
+              {/* input panel */}
+              <div style={{ marginBottom: isMobile ? '62px' : '0', position: 'relative', zIndex: 2, border: `4px solid ${T.headerBorder}`, borderRadius: '4px', overflow: 'hidden', background: T.appBg }}>
                 <InputBar
                   input={input}
                   onInputChange={handleInputChange}
@@ -717,11 +844,11 @@ export default function App() {
 
         {/*_rooms tab */}
         {activeTab === 'rooms' && (
-          <div style={{ flex: 1, overflowY: 'auto', paddingBottom: isMobile ? '70px' : '0' }}>
+          <div style={{ flex: 1, overflowY: 'auto', marginBottom: isMobile ? '62px' : '0', border: `4px solid ${T.headerBorder}`, borderRadius: '4px', background: T.appBg }}>
             <RoomsTab
               rooms={rooms} currentRoom={currentRoom}
               theme={theme} T={T}
-              onJoinRoom={joinRoom} onSwitchToChat={() => setActiveTab('chat')}
+              onJoinRoom={joinRoom} onSwitchToChat={() => switchTab('chat')}
               showCreateRoom={showCreateRoom} setShowCreateRoom={setShowCreateRoom}
               showJoinByCode={showJoinByCode} setShowJoinByCode={setShowJoinByCode}
               newRoomName={newRoomName} setNewRoomName={setNewRoomName}
@@ -735,18 +862,19 @@ export default function App() {
 
         {/* fix #4: SETTINGS TAB (Added internal scroll, so it scrolls on mobile) */}
         {activeTab === 'settings' && (
-          <div style={{ flex: 1, overflowY: 'auto', paddingBottom: isMobile ? '70px' : '0' }}>
+          <div style={{ flex: 1, overflowY: 'auto', marginBottom: isMobile ? '62px' : '0', border: `4px solid ${T.headerBorder}`, borderRadius: '4px', background: T.appBg }}>
             <SettingsTab
               T={T}
               settings={settings}
               onUpdate={updateSetting}
+              onReplayTutorial={startTour}
             />
           </div>
         )}
 
         {/* profile */}
         {activeTab === 'profile' && (
-          <div style={{ flex: 1, overflowY: 'auto', paddingBottom: isMobile ? '70px' : '0' }}>
+          <div style={{ flex: 1, overflowY: 'auto', marginBottom: isMobile ? '62px' : '0', border: `4px solid ${T.headerBorder}`, borderRadius: '4px', background: T.appBg }}>
             <ProfileTab
               avatar={avatar} username={username}
               rooms={rooms} currentRoom={currentRoom}
@@ -765,11 +893,13 @@ export default function App() {
             activeTab={activeTab}
             theme={theme}
             T={T}
-            onTabChange={setActiveTab}
+            onTabChange={switchTab}
           />
         </div>
       )}
 
+      <Tutorial open={tourOpen} onClose={closeTour} />
+      <CharacterModal username={viewUser?.name ?? null} fallbackAvatar={viewUser?.avatar ?? null} onClose={() => setViewUser(null)} />
       <VideoCall call={call} theme={theme} username={username} avatar={avatar.src} isMobile={isMobile} />
 
       <PochitaEgg visible={pochitaVisible} hearts={hearts} />
