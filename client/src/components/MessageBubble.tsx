@@ -227,7 +227,7 @@ export default function MessageBubble({ msg, index, isOwn, theme, T, username, s
               {poll ? (
                 <ContractCard
                   poll={poll}
-                  me={username}
+                  me={username ?? ''}
                   isAuthor={isOwn}
                   onVote={(opt) => typeof msg.id === 'number' && onVote?.(msg.id, opt)}
                   onClose={() => typeof msg.id === 'number' && onPollClose?.(msg.id)}

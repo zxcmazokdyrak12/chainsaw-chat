@@ -1,6 +1,6 @@
 import { prisma } from '../lib/prisma.js'
 import { deleteMedia } from '../lib/storage.js'
-import { parsePollCommand, castVote, isPoll } from '../lib/polls.js'
+import { parsePollCommand, castVote, isPoll, type Poll } from '../lib/polls.js'
 import { serializeMessage } from '../lib/rooms.js'
 import { MAX_TEXT, isId, safeAudio, safeAvatar } from '../lib/validate.js'
 import { REACTIONS, type Reactions } from '../types.js'
@@ -161,8 +161,9 @@ export function registerMessagesHandlers({ io, socket, data, ensureMember }: Soc
       const who = await ensureMember(p.roomId)
       if (!who) return
       const msg = await prisma.message.findUnique({ where: { id: BigInt(p.messageId) }, select: { roomId: true, poll: true } })
-      if (!msg || msg.roomId !== p.roomId || !isPoll(msg.poll)) return
-      const next = castVote(msg.poll, p.optionId, who)
+      const cur: unknown = msg?.poll
+      if (!msg || msg.roomId !== p.roomId || !isPoll(cur)) return
+      const next = castVote(cur, p.optionId, who)
       if (!next) return
       await prisma.message.update({ where: { id: BigInt(p.messageId) }, data: { poll: next as object } })
       io.to(p.roomId as string).emit('poll_updated', { messageId: p.messageId, poll: next })
@@ -175,8 +176,9 @@ export function registerMessagesHandlers({ io, socket, data, ensureMember }: Soc
       const m = await ownMessage(p.messageId, p.roomId)
       if (!m?.mine) return
       const msg = await prisma.message.findUnique({ where: { id: BigInt(p.messageId as number) }, select: { poll: true } })
-      if (!msg || !isPoll(msg.poll) || msg.poll.closed) return
-      const next = { ...msg.poll, closed: true }
+      const cur: unknown = msg?.poll
+      if (!isPoll(cur) || cur.closed) return
+      const next: Poll = { ...cur, closed: true }
       await prisma.message.update({ where: { id: BigInt(p.messageId as number) }, data: { poll: next as object } })
       io.to(p.roomId as string).emit('poll_updated', { messageId: p.messageId, poll: next })
     } catch (err) { console.error('[Poll Close Error]:', err) }
