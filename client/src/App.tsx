@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, type ChangeEvent } from 'react'
 import { motion } from 'framer-motion'
-import IntroScreen from './components/IntroScreen'
+import IntroScreen, { SlashOverlay } from './components/IntroScreen'
 import UsernameScreen, { AVATARS } from './components/UsernameScreen'
 import Header from './components/Header'
 import { ChapterRail, ChapterDrawer } from './components/ChapterDrawer'
@@ -282,11 +282,10 @@ export default function App() {
     }, 100)
   }
 
-  const handleStart = (): void => {
-    playSound(CHAINSAW_SFX, 0.5)
-    setPhase('slashing')
-    setTimeout(() => setPhase('username'), 1200)
-  }
+  // chapter 0: the intro roars, then the cut plays over the login page
+  const [slashing, setSlashing] = useState<boolean>(false)
+  const finishIntro = (): void => { setPhase('username'); setSlashing(true) }
+
 
   const sendMessage = (): void => {
     if (!input.trim()) return
@@ -327,11 +326,13 @@ export default function App() {
   }
 
   if (phase === 'intro' || phase === 'slashing') {
-    return <IntroScreen phase={phase} onStart={handleStart} />
+    return <IntroScreen soundOn={settings.soundEnabled} onRoar={() => playSound(CHAINSAW_SFX, 0.5)} onDone={finishIntro} />
   }
 
   if (phase === 'username') {
     return (
+      <>
+      {slashing && <SlashOverlay onEnd={() => setSlashing(false)} />}
       <UsernameScreen
         avatar={avatar}
         onAvatarChange={setAvatar}
@@ -343,6 +344,7 @@ export default function App() {
         authLoading={authLoading}
         onClearError={() => setAuthError('')}
       />
+      </>
     )
   }
 
