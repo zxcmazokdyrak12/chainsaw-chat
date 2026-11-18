@@ -12,6 +12,7 @@ export interface MessageItem {
   reactions?: Record<string, string[]>
   media?: string | null
   replyTo?: { id: number; username: string | null; content: string; type: string } | null
+  poll?: import('./components/ContractCard').PollData | null
 }
 
 export interface RoomItem {

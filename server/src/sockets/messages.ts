@@ -1,5 +1,6 @@
 import { prisma } from '../lib/prisma.js'
 import { deleteMedia } from '../lib/storage.js'
+import { parsePollCommand, castVote, isPoll, type Poll } from '../lib/polls.js'
 import { serializeMessage } from '../lib/rooms.js'
 import { MAX_TEXT, isId, safeAudio, safeAvatar } from '../lib/validate.js'
 import { REACTIONS, type Reactions } from '../types.js'
@@ -26,7 +27,10 @@ export function registerMessagesHandlers({ io, socket, data, ensureMember }: Soc
       if (!who) return
       const roomId = p.roomId as string
 
-      const type = p.type === 'audio' ? 'audio' : p.type === 'image' ? 'image' : 'text'
+      let type = p.type === 'audio' ? 'audio' : p.type === 'image' ? 'image' : 'text'
+      // "/contract …" or "/poll … | … | …" becomes a contract card people can seal
+      const poll = type === 'text' && typeof p.content === 'string' ? parsePollCommand(p.content) : null
+      if (poll) type = 'contract'
 
       // pictures / new voice notes: an uploaded attachment of this room, by this user, of the right kind
       let mediaId: string | null = null
@@ -42,7 +46,7 @@ export function registerMessagesHandlers({ io, socket, data, ensureMember }: Soc
       if (type === 'audio' && !mediaId && !audioData) { socket.emit('rate_limited', 'Voice message rejected'); return }
 
       const caption = cleanText(p.content) ?? ''
-      const content = type === 'audio' ? '🎤 voice message' : caption
+      const content = type === 'audio' ? '🎤 voice message' : poll ? poll.title : caption
       if (type === 'text' && !content) return
 
       // reply: only to a message of the same room; keep a small snapshot for the quote
@@ -75,6 +79,7 @@ export function registerMessagesHandlers({ io, socket, data, ensureMember }: Soc
           mediaId,
           replyToId,
           ...(replyPreview ? { replyPreview } : {}),
+          ...(poll ? { poll: poll as object } : {}),
         },
       })
       io.to(roomId).emit('receive_message', serializeMessage(saved))
@@ -149,6 +154,36 @@ export function registerMessagesHandlers({ io, socket, data, ensureMember }: Soc
     }
   })
 
+  // ── Contracts / polls: put your seal on an option ─────────────
+  socket.on('poll_vote', async (p: { messageId?: unknown; roomId?: unknown; optionId?: unknown } = {}) => {
+    if (!isId(p.messageId) || typeof p.optionId !== 'string') return
+    try {
+      const who = await ensureMember(p.roomId)
+      if (!who) return
+      const msg = await prisma.message.findUnique({ where: { id: BigInt(p.messageId) }, select: { roomId: true, poll: true } })
+      const cur: unknown = msg?.poll
+      if (!msg || msg.roomId !== p.roomId || !isPoll(cur)) return
+      const next = castVote(cur, p.optionId, who)
+      if (!next) return
+      await prisma.message.update({ where: { id: BigInt(p.messageId) }, data: { poll: next as object } })
+      io.to(p.roomId as string).emit('poll_updated', { messageId: p.messageId, poll: next })
+    } catch (err) { console.error('[Poll Error]:', err) }
+  })
+
+  // only the author closes it; nobody can seal after that
+  socket.on('poll_close', async (p: { messageId?: unknown; roomId?: unknown } = {}) => {
+    try {
+      const m = await ownMessage(p.messageId, p.roomId)
+      if (!m?.mine) return
+      const msg = await prisma.message.findUnique({ where: { id: BigInt(p.messageId as number) }, select: { poll: true } })
+      const cur: unknown = msg?.poll
+      if (!isPoll(cur) || cur.closed) return
+      const next: Poll = { ...cur, closed: true }
+      await prisma.message.update({ where: { id: BigInt(p.messageId as number) }, data: { poll: next as object } })
+      io.to(p.roomId as string).emit('poll_updated', { messageId: p.messageId, poll: next })
+    } catch (err) { console.error('[Poll Close Error]:', err) }
+  })
+
   // ── Search inside a room ───────────────────────────────────────
   socket.on('search_messages', async (p: { roomId?: unknown; q?: unknown } = {}) => {
     const q = typeof p.q === 'string' ? p.q.trim().slice(0, 64) : ''
@@ -157,7 +192,7 @@ export function registerMessagesHandlers({ io, socket, data, ensureMember }: Soc
       const who = await ensureMember(p.roomId)
       if (!who) return
       const rows = await prisma.message.findMany({
-        where: { roomId: p.roomId as string, system: false, type: { in: ['text', 'image'] }, content: { contains: q, mode: 'insensitive' } },
+        where: { roomId: p.roomId as string, system: false, type: { in: ['text', 'image', 'contract'] }, content: { contains: q, mode: 'insensitive' } },
         orderBy: { createdAt: 'desc' },
         take: 30,
         select: { id: true, username: true, content: true, time: true, createdAt: true, type: true },

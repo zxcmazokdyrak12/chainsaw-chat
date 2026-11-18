@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import CsmIcon from './CsmIcon'
+import { wrapSelection, maskSpoilers } from '../lib/spoiler'
 import { useWindowSize } from '../hooks/useWindowSize'
 
 // Interface for the VoiceWave component props
@@ -89,13 +90,15 @@ interface InputBarProps {
   uploading?: boolean
   reply?: { username: string | null; content: string; type?: string } | null
   onCancelReply?: () => void
+  onQuickReply?: () => void              // ↑ in an empty input
+  onSetInput?: (value: string) => void   // replace the whole line (spoiler shortcut)
 }
 
 export default function InputBar({
   input, onInputChange, onSend,
   isRecording, onStartRecording, onStopRecording,
   T, theme, currentRoom, rooms,
-  sendOnEnter, onAttach, uploading = false, reply, onCancelReply,
+  sendOnEnter, onAttach, uploading = false, reply, onCancelReply, onQuickReply, onSetInput,
 }: InputBarProps) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [dragOver, setDragOver] = useState(false)
@@ -117,6 +120,17 @@ export default function InputBar({
   // Explicitly type the keyboard event handler
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Escape' && reply) { onCancelReply?.(); return }
+    // Ctrl+Shift+S: hide the selection behind a ||spoiler||
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === 'KeyS' && onSetInput) {
+      e.preventDefault()
+      const el = e.currentTarget
+      const { value, caret } = wrapSelection(input, el.selectionStart, el.selectionEnd)
+      onSetInput(value)
+      requestAnimationFrame(() => { el.selectionStart = el.selectionEnd = caret })
+      return
+    }
+    // ↑ in an empty line: answer the last message
+    if (e.key === 'ArrowUp' && !input && !reply && onQuickReply) { e.preventDefault(); onQuickReply(); return }
     if (sendOnEnter) {
       if (e.key === 'Enter' && !e.ctrlKey && !e.shiftKey) {
         e.preventDefault()
@@ -184,7 +198,7 @@ export default function InputBar({
               <CsmIcon name="reply" size={15} />
               <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 <b style={{ fontFamily: 'BlambotClassic, sans-serif', letterSpacing: '1px' }}>{reply.username}</b>{' '}
-                {reply.type === 'image' ? '🖼 picture' : reply.type === 'audio' ? '🎤 voice' : reply.content}
+                {reply.type === 'image' ? '🖼 picture' : reply.type === 'audio' ? '🎤 voice' : maskSpoilers(reply.content)}
               </span>
               <button onClick={onCancelReply} aria-label="Cancel reply" style={{ background: 'none', border: 'none', color: 'var(--ink)', cursor: 'pointer', padding: 0, display: 'flex' }}>
                 <CsmIcon name="close" size={15} />

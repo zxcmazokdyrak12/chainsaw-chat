@@ -22,4 +22,5 @@ export const findCommand = (text: string | null | undefined): ChatCommand | null
   return COMMANDS.find(c => c.cmd === t) ?? null
 }
 
-export const HELP_TEXT = 'Commands: ' + COMMANDS.map(c => `${c.cmd} — ${c.desc}`).join(' · ')
+export const HELP_TEXT = 'Commands: ' + COMMANDS.map(c => `${c.cmd} — ${c.desc}`).join(' · ') +
+  ' · /contract <terms> — others sign it in blood · /poll <question> | <a> | <b> — a vote with seals · ||text|| — spoiler (Ctrl+Shift+S)'

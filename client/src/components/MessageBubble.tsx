@@ -6,6 +6,9 @@ import { isShout as looksLikeShout } from '../lib/sound'
 import { reactionInfo } from '../config'
 import { mediaUrl } from '../lib/media'
 import { findCommand } from '../lib/commands'
+import { maskSpoilers } from '../lib/spoiler'
+import RichText from './RichText'
+import ContractCard, { type PollData } from './ContractCard'
 
 // kept for older imports
 export { AudioPlayer }
@@ -24,6 +27,7 @@ export interface MessageData {
   reactions?: Record<string, string[]>
   media?: string | null
   replyTo?: { id: number; username: string | null; content: string; type: string } | null
+  poll?: PollData | null
 }
 
 
@@ -45,9 +49,12 @@ interface MessageBubbleProps {
   onQuoteClick?: (id: number) => void
   onOpenImage?: (src: string) => void
   highlight?: boolean
+  onVote?: (messageId: number, optionId: string) => void
+  onPollClose?: (messageId: number) => void
+  onReply?: (msg: MessageData) => void
 }
 
-export default function MessageBubble({ msg, index, isOwn, theme, T, username, seen, onReact, onContextMenu, onAvatarClick, onQuoteClick, onOpenImage, highlight }: MessageBubbleProps) {
+export default function MessageBubble({ msg, index, isOwn, theme, T, username, seen, onReact, onContextMenu, onAvatarClick, onQuoteClick, onOpenImage, highlight, onVote, onPollClose, onReply }: MessageBubbleProps) {
   const reactions = Object.entries(msg.reactions ?? {}).filter(([, users]) => users.length > 0)
 
   // long-press → context menu on touch screens
@@ -60,9 +67,10 @@ export default function MessageBubble({ msg, index, isOwn, theme, T, username, s
   const ink = 'var(--ink)'
   const contentStr = msg.content || ''
   const isImage = msg.type === 'image' && !!msg.media
+  const poll = msg.type === 'contract' && msg.poll ? msg.poll : null
   const command = msg.type === 'text' || !msg.type ? findCommand(contentStr) : null
-  const isShout = !isImage && !command && looksLikeShout(contentStr)
-  const isShort = msg.type !== 'audio' && !isImage && !msg.replyTo && contentStr.length <= 34 && !contentStr.includes('\n')
+  const isShout = !isImage && !poll && !command && looksLikeShout(contentStr)
+  const isShort = msg.type !== 'audio' && !isImage && !poll && !msg.replyTo && contentStr.length <= 34 && !contentStr.includes('\n')
   const audioSrc = msg.type === 'audio' ? (msg.media ? mediaUrl(msg.media) : msg.audioData) : null
 
   return (
@@ -145,7 +153,18 @@ export default function MessageBubble({ msg, index, isOwn, theme, T, username, s
 
             <div
               data-tour="bubble"
-              className={isOwn && !isShout && !isImage ? 'tone-light' : undefined}
+              tabIndex={0}
+              aria-label={`${msg.username ?? ''}${msg.time ? `, ${msg.time}` : ''}: ${msg.type === 'image' ? 'picture' : msg.type === 'audio' ? 'voice message' : maskSpoilers(contentStr)}`}
+              onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
+                if (e.target !== e.currentTarget) return // keys inside (spoilers, buttons) handle themselves
+                if (e.key.toLowerCase() === 'r' && !e.ctrlKey && !e.metaKey && !e.altKey && onReply) { e.preventDefault(); onReply(msg); return }
+                if (e.key === 'Enter' || e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) {
+                  e.preventDefault()
+                  const r = e.currentTarget.getBoundingClientRect()
+                  onContextMenu({ x: r.left + 12, y: r.bottom - 4, msg })
+                }
+              }}
+              className={isOwn && !isShout && !isImage && !poll ? 'tone-light' : undefined}
               onDoubleClick={() => onReact?.('like')}
               onContextMenu={(e: React.MouseEvent<HTMLDivElement>) => {
                 e.preventDefault()
@@ -171,10 +190,10 @@ export default function MessageBubble({ msg, index, isOwn, theme, T, username, s
                 position: 'relative',
                 maxWidth: isShout ? '320px' : isImage ? '340px' : '300px',
                 minWidth: isShout ? '150px' : undefined,
-                padding: isShout ? '26px 34px' : isImage ? '10px' : isShort ? '14px 26px' : '13px 20px',
+                padding: isShout ? '26px 34px' : isImage || poll ? '8px' : isShort ? '14px 26px' : '13px 20px',
                 textAlign: isShort || isShout ? 'center' : 'left',
                 // manga balloons: ovals for short lines, rounded boxes for long ones
-                borderRadius: isShout ? 0 : isImage ? '6px' : isShort ? '50% / 50%' : '26px',
+                borderRadius: isShout ? 0 : isImage || poll ? '6px' : isShort ? '50% / 50%' : '26px',
                 backgroundColor: isShout ? 'transparent' : 'var(--paper)',
                 border: isShout ? 'none' : '3px solid var(--ink)',
                 color: 'var(--ink)',
@@ -202,10 +221,18 @@ export default function MessageBubble({ msg, index, isOwn, theme, T, username, s
                 >
                   <b style={{ fontFamily: 'BlambotClassic, sans-serif', letterSpacing: '1px' }}>{msg.replyTo.username}</b>{' '}
                   {msg.replyTo.type === 'image' ? '🖼 picture ' : msg.replyTo.type === 'audio' ? '🎤 voice ' : ''}
-                  {msg.replyTo.content}
+                  {maskSpoilers(msg.replyTo.content)}
                 </button>
               )}
-              {command ? (
+              {poll ? (
+                <ContractCard
+                  poll={poll}
+                  me={username ?? ''}
+                  isAuthor={isOwn}
+                  onVote={(opt) => typeof msg.id === 'number' && onVote?.(msg.id, opt)}
+                  onClose={() => typeof msg.id === 'number' && onPollClose?.(msg.id)}
+                />
+              ) : command ? (
                 // a chat command: lettering instead of words
                 <span style={{
                   display: 'inline-block', fontFamily: "'DeathRattle', 'BlambotClassic', sans-serif",
@@ -226,7 +253,7 @@ export default function MessageBubble({ msg, index, isOwn, theme, T, username, s
                       border: '3px solid var(--ink)', boxShadow: '3px 3px 0 var(--ink)', transform: 'rotate(-0.8deg)',
                     }}
                   />
-                  {contentStr && <div style={{ marginTop: '8px' }}>{msg.content}</div>}
+                  {contentStr && <div style={{ marginTop: '8px' }}><RichText text={msg.content} /></div>}
                 </>
               ) : audioSrc ? (
                 <AudioPlayer src={audioSrc} theme={theme} />
@@ -236,10 +263,10 @@ export default function MessageBubble({ msg, index, isOwn, theme, T, username, s
                   backgroundColor: 'var(--paper)', padding: '1px 6px', borderRadius: '6px',
                   boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone',
                 }}>
-                  {msg.content}
+                  <RichText text={msg.content} />
                 </span>
               ) : (
-                msg.content
+                <RichText text={msg.content} />
               )}
             </div>
           </div>
