@@ -154,6 +154,7 @@ On the first visit, three manga panels slam in. Then a detailed recoil starter a
 - **Commands** play for the whole room: `/pochita` `/power` `/brrr` `/bang` `/pudding` (`/help` lists them).
 - **Contracts & votes**: `/contract Raid the Gun Devil tonight` lets people sign it in blood. `/poll Where do we eat? | Ramen | Pizza` gives one seal per person, with a screentone bar showing the share. Only the author can close it.
 - **Spoilers**: `||the twist||` (or `Ctrl+Shift+S` on a selection) hides it behind rough black hatching until clicked. It stays hidden in quotes, search, notifications and exported pages.
+- **Berserk mode**: when lines fly in bursts (less than 2 s apart), the edges of the feed get procedurally drawn ink splatters and chain scratches. A tachometer revs from ×4 REV through ×8 BERSERK to ×12 DEVIL MODE, with a synthesized engine rev and a small shake at each tier; the needle shivers in the red zone. It can be turned off in Settings and stays calm under reduced motion.
 - **Background alerts**: `(3)` in the tab title, a blood-red counter on the favicon, and optional system notifications.
 
 ### ⌨️ Without a mouse
