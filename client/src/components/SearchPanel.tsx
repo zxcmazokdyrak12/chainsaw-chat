@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { socket } from '../lib/socket'
 import CsmIcon from './CsmIcon'
 import { maskSpoilers } from '../lib/spoiler'
+import { useT } from '../lib/i18n'
 
 export interface SearchHit { id: number; username: string | null; content: string | null; time: string | null; at: string; type: string }
 
@@ -13,6 +14,7 @@ export default function SearchPanel({ roomId, roomName, onJump, onClose }: {
   onJump: (hit: SearchHit) => void
   onClose: () => void
 }) {
+  const t = useT()
   const [q, setQ] = useState('')
   const [hits, setHits] = useState<SearchHit[] | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -65,7 +67,7 @@ export default function SearchPanel({ roomId, roomName, onJump, onClose }: {
           value={q}
           onChange={e => setQ(e.target.value)}
           maxLength={64}
-          placeholder={`Search in ${roomName || 'this room'}…`}
+          placeholder={t('Search in {room}…', { room: roomName || 'this room' })}
           aria-label="Search text"
           style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent', color: 'var(--ink)', fontFamily: 'inherit', fontSize: '13px' }}
         />
@@ -74,8 +76,8 @@ export default function SearchPanel({ roomId, roomName, onJump, onClose }: {
         </button>
       </div>
       <div style={{ overflowY: 'auto', fontSize: '11px' }}>
-        {hits === null && <p style={{ margin: 0, padding: '12px', opacity: 0.55 }}>Type 2+ letters.</p>}
-        {hits?.length === 0 && <p style={{ margin: 0, padding: '12px', opacity: 0.55 }}>Nothing. Maybe the devil ate it.</p>}
+        {hits === null && <p style={{ margin: 0, padding: '12px', opacity: 0.55 }}>{t('Type 2+ letters.')}</p>}
+        {hits?.length === 0 && <p style={{ margin: 0, padding: '12px', opacity: 0.55 }}>{t('Nothing. Maybe the devil ate it.')}</p>}
         {hits?.map(h => (
           <button
             key={h.id}

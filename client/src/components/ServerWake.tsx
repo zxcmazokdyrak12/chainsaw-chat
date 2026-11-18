@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { WakeState } from '../hooks/useServerWake'
+import { useT } from '../lib/i18n'
 
 const EXPECTED = 50 // seconds a Render cold start usually takes
 
 // a small gauge in the corner: the server's engine warming up
 export default function ServerWake({ state, seconds }: { state: WakeState; seconds: number }) {
+  const t = useT()
   // "ready" stays for a moment so you see the engine caught, then the pill goes away
   const [done, setDone] = useState(false)
   useEffect(() => {
@@ -16,8 +18,8 @@ export default function ServerWake({ state, seconds }: { state: WakeState; secon
   const show = !done && (state === 'waking' || state === 'down' || (state === 'ready' && seconds >= 3))
   const pct = state === 'ready' ? 100 : Math.min(95, (seconds / EXPECTED) * 100)
   const text = state === 'waking'
-    ? `SERVER ENGINE IS COLD — WARMING UP ${seconds}s`
-    : state === 'down' ? "THE SERVER WON'T START — TRY AGAIN LATER" : 'SERVER READY'
+    ? t('SERVER ENGINE IS COLD — WARMING UP {s}s', { s: seconds })
+    : state === 'down' ? t("THE SERVER WON'T START — TRY AGAIN LATER") : t('SERVER READY')
   return (
     <AnimatePresence>
       {show && (
@@ -42,7 +44,7 @@ export default function ServerWake({ state, seconds }: { state: WakeState; secon
             }} />
           </div>
           {state === 'waking' && seconds > 8 && (
-            <div style={{ marginTop: '4px', opacity: 0.65, fontSize: '9px' }}>free hosting naps when nobody's around — usually under a minute</div>
+            <div style={{ marginTop: '4px', opacity: 0.65, fontSize: '9px' }}>{t("free hosting naps when nobody's around — usually under a minute")}</div>
           )}
         </motion.div>
       )}

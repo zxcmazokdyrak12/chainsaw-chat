@@ -30,6 +30,7 @@ import { findCommand, HELP_TEXT, type ChatCommand } from './lib/commands'
 import { useUnreadBadge } from './hooks/useUnreadBadge'
 import { maskSpoilers } from './lib/spoiler'
 import { mentions, setMe } from './lib/mentions'
+import { useT } from './lib/i18n'
 import ShortcutsHelp from './components/ShortcutsHelp'
 import ExportDialog from './components/ExportDialog'
 import BerserkLayer from './components/BerserkLayer'
@@ -114,6 +115,7 @@ export default function App() {
   const { settings, update: updateSetting, resolveTheme } = useSettings()
   const { theme, T } = useTheme(settings.theme, resolveTheme)
   const { sfx, popSfx, popText } = useSfx(settings.sfxEnabled ?? true)
+  const tt = useT() // translations ("t" is taken by timers below)
   const wake = useServerWake()
   const { notify } = useUnreadBadge({ desktop: settings.desktopNotify ?? false })
   // message bursts → berserk mode: a rev counter + the engine revving up
@@ -336,14 +338,14 @@ export default function App() {
     socket.on('user_left', ({ roomId, username: who, kicked }: { roomId: string; username: string; kicked?: boolean }) => {
       if (roomId !== currentRoomRef.current) return
       socket.emit('room_members', { roomId })
-      setMessages(p => [...p, { id: Date.now(), system: true, content: `${who} ${kicked ? 'was kicked out' : 'left the room'}`, time: new Date().toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' }) }])
+      setMessages(p => [...p, { id: Date.now(), system: true, content: tt(kicked ? '{who} was kicked out' : '{who} left the room', { who }), time: new Date().toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' }) }])
     })
     // you left / were kicked / the room was deleted → back to the lobby
     socket.on('room_gone', ({ roomId, reason, name }: { roomId: string; reason: 'left' | 'kicked' | 'deleted'; name?: string }) => {
       if (roomId === currentRoomRef.current) joinRoomRef.current('general')
       setRoomPanel(false)
-      if (reason === 'kicked') setNotice(`You were kicked out of ${name ?? 'the room'}`)
-      if (reason === 'deleted') setNotice(`${name ?? 'The room'} was deleted`)
+      if (reason === 'kicked') setNotice(tt('You were kicked out of {room}', { room: name ?? 'the room' }))
+      if (reason === 'deleted') setNotice(tt('{room} was deleted', { room: name ?? 'The room' }))
     })
     socket.on('message_edited', ({ messageId, newContent }: { messageId: number; newContent: string }) =>
       setMessages(p => p.map(m => (m.id === messageId ? { ...m, content: newContent, isEdited: true } : m))))
@@ -385,7 +387,7 @@ export default function App() {
       popSfx('join', false)
       setMessages(p => [...p, {
         id: now, system: true,
-        content: `${who} joined the room`,
+        content: tt('{who} joined the room', { who }),
         time: new Date().toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' })
       }])
     })
@@ -448,7 +450,7 @@ export default function App() {
   }, [typingUsers])
 
   const loadOlder = (): void => {
-    if (loadingOlder.current || !hasMore) { if (!hasMore && pendingJump.current) { pendingJump.current = null; setNotice('That line is gone') } return }
+    if (loadingOlder.current || !hasMore) { if (!hasMore && pendingJump.current) { pendingJump.current = null; setNotice(tt('That line is gone')) } return }
     const first = messages.find(m => typeof m.id === 'number')
     if (!first) return
     if (pendingJump.current && ++pendingJump.current.pages > 40) { pendingJump.current = null; return }
@@ -475,7 +477,7 @@ export default function App() {
   keyActions.current.info = () => { socket.emit('room_members', { roomId: currentRoom }); setRoomPanel(true) }
   keyActions.current.room = (i: number) => {
     const room = rooms[i]
-    if (!room) { setNotice(`There is no chapter ${i + 1}`); return }
+    if (!room) { setNotice(tt('There is no chapter {n}', { n: i + 1 })); return }
     setActiveTab('chat')
     if (room.id !== currentRoom) joinRoom(room.id)
   }
@@ -569,8 +571,8 @@ export default function App() {
   const jumpTo = (id: number): void => {
     const el = document.getElementById(`msg-${id}`)
     if (!el) {
-      if (!hasMore) { setNotice('That line is gone'); return }
-      setNotice('Turning back the pages…')
+      if (!hasMore) { setNotice(tt('That line is gone')); return }
+      setNotice(tt('Turning back the pages…'))
       pendingJump.current = { id, pages: 0 }
       loadOlder()
       return
@@ -598,7 +600,7 @@ export default function App() {
       setInput('')
       setReplyTo(null)
     } catch (err) {
-      setNotice((err as Error).message || 'Upload failed')
+      setNotice((err as Error).message || tt('Upload failed'))
     } finally {
       setUploading(false)
     }

@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { useT } from '../lib/i18n'
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
 const ALT = isMac ? '⌥' : 'Alt'
@@ -22,6 +23,7 @@ export const SHORTCUTS: [string, string][] = [
 
 // "?" — every shortcut on one page
 export default function ShortcutsHelp({ onClose }: { onClose: () => void }) {
+  const t = useT()
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' || e.key === '?') { e.preventDefault(); onClose() } }
     window.addEventListener('keydown', onKey)
@@ -44,13 +46,13 @@ export default function ShortcutsHelp({ onClose }: { onClose: () => void }) {
         }}
       >
         <h2 id="kbd-title" style={{ margin: '0 0 12px', fontFamily: 'BlambotClassic, sans-serif', letterSpacing: '3px', fontSize: '20px', borderBottom: '3px solid var(--ink)', paddingBottom: '6px' }}>
-          KEYS 鍵
+          {t('KEYS 鍵')}
         </h2>
         <dl style={{ margin: 0, display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 14px', fontSize: '11px', alignItems: 'baseline' }}>
           {SHORTCUTS.map(([k, v]) => (
             <div key={k} style={{ display: 'contents' }}>
-              <dt><kbd style={{ fontFamily: 'BlambotClassic, sans-serif', letterSpacing: '1px', border: '2px solid var(--ink)', borderBottomWidth: '4px', borderRadius: '4px', padding: '1px 6px', whiteSpace: 'nowrap' }}>{k}</kbd></dt>
-              <dd style={{ margin: 0 }}>{v}</dd>
+              <dt><kbd style={{ fontFamily: 'BlambotClassic, sans-serif', letterSpacing: '1px', border: '2px solid var(--ink)', borderBottomWidth: '4px', borderRadius: '4px', padding: '1px 6px', whiteSpace: 'nowrap' }}>{t(k)}</kbd></dt>
+              <dd style={{ margin: 0 }}>{t(v)}</dd>
             </div>
           ))}
         </dl>

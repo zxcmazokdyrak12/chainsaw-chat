@@ -4,6 +4,7 @@ import CsmIcon from './CsmIcon'
 import { wrapSelection, maskSpoilers } from '../lib/spoiler'
 import { mentionQuery } from '../lib/mentions'
 import { useWindowSize } from '../hooks/useWindowSize'
+import { useT } from '../lib/i18n'
 
 // Interface for the VoiceWave component props
 interface VoiceWaveProps {
@@ -105,6 +106,7 @@ export default function InputBar({
   T, theme, currentRoom, rooms,
   sendOnEnter, onAttach, uploading = false, reply, onCancelReply, onQuickReply, onSetInput, onEditLast, editing, onCancelEdit, people = [],
 }: InputBarProps) {
+  const t = useT()
   const fileRef = useRef<HTMLInputElement>(null)
   // @ autocomplete: what's typed after "@", and which suggestion is highlighted
   const [caret, setCaret] = useState(0)
@@ -181,8 +183,8 @@ export default function InputBar({
   }
 
   const hint = sendOnEnter
-    ? 'Enter — send · Shift+Enter — newline'
-    : 'Ctrl+Enter — send · Enter — newline'
+    ? t('Enter — send · Shift+Enter — newline')
+    : t('Ctrl+Enter — send · Enter — newline')
 
   const roomName = rooms.find(r => r.id === currentRoom)?.name || ''
   const letters = input.replace(/[^a-zA-Zа-яА-Я]/g, '')
@@ -208,7 +210,7 @@ export default function InputBar({
           position: 'absolute', inset: 0, zIndex: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none',
           fontFamily: "'DeathRattle', 'BlambotClassic', sans-serif", fontSize: '26px', color: 'var(--paper)',
           WebkitTextStroke: '2px var(--ink)', textShadow: '3px 3px 0 var(--ink)',
-        }}>DROP THE PANEL!</div>
+        }}>{t('DROP THE PANEL!')}</div>
       )}
 
       {/* @ autocomplete: the cast, as chips in the strip above the balloon */}
@@ -247,7 +249,7 @@ export default function InputBar({
             }}>
               <span aria-hidden>✎</span>
               <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                <b style={{ fontFamily: 'BlambotClassic, sans-serif', letterSpacing: '1px' }}>EDITING</b> {maskSpoilers(editing.content)}
+                <b style={{ fontFamily: 'BlambotClassic, sans-serif', letterSpacing: '1px' }}>{t('EDITING')}</b> {maskSpoilers(editing.content)}
               </span>
               <button onClick={onCancelEdit} aria-label="Cancel editing" style={{ background: 'none', border: 'none', color: 'var(--ink)', cursor: 'pointer', padding: 0, display: 'flex' }}>
                 <CsmIcon name="close" size={15} />
@@ -390,7 +392,7 @@ export default function InputBar({
                   aria-autocomplete="list"
                   aria-expanded={suggestions.length > 0}
                   onPaste={onAttach ? (e) => { const f = firstImage(e.clipboardData?.items); if (f) { e.preventDefault(); onAttach(f) } } : undefined}
-                  placeholder={isMobile ? 'Your line…' : `Your line in ${roomName || 'the room'}…`}
+                  placeholder={isMobile ? t('Your line…') : t('Your line in {room}…', { room: roomName || 'the room' })}
                 />
                 {onAttach && (
                   <>
@@ -402,7 +404,7 @@ export default function InputBar({
                       whileTap={{ scale: 0.85 }}
                       onClick={() => fileRef.current?.click()}
                       disabled={uploading}
-                      title="Attach a picture (or paste / drop it)"
+                      title={t('Attach a picture (or paste / drop it)')}
                       aria-label="Attach a picture"
                       style={{
                         position: 'absolute', right: '8px', bottom: '7px', width: '30px', height: '30px',

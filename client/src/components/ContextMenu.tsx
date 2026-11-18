@@ -2,6 +2,7 @@ import { useEffect, useRef, type KeyboardEvent, type CSSProperties } from 'react
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { REACTIONS } from '../config'
+import { useT } from '../lib/i18n'
 
 // Define the shape of the message object expected by the context menu
 interface MessageData {
@@ -42,6 +43,7 @@ export default function ContextMenu({
   onEdit,
   onClose 
 }: ContextMenuProps) {
+  const t = useT()
   const ref = useRef<HTMLDivElement>(null)
   const ink = theme === 'dark' ? '#fff' : '#111'
 
@@ -130,25 +132,25 @@ export default function ContextMenu({
 
           {onReply && typeof contextMenu.msg.id === 'number' && (
             <button role="menuitem" onClick={() => onReply(contextMenu.msg)} style={{ ...item, fontWeight: 900 }}>
-              REPLY ↩
+              {t('REPLY ↩')}
             </button>
           )}
 
           {onEdit && contextMenu.msg.username === username && typeof contextMenu.msg.id === 'number' && (!contextMenu.msg.type || contextMenu.msg.type === 'text') && (
             <button role="menuitem" onClick={() => onEdit(contextMenu.msg)} style={{ ...item, fontWeight: 900 }}>
-              EDIT ✎
+              {t('EDIT ✎')}
             </button>
           )}
 
           {/* Only show DELETE if the message owner matches the current logged-in user */}
           {contextMenu.msg.username === username && (
             <button role="menuitem" onClick={() => onDelete(contextMenu.msg.id)} style={{ ...item, color: '#ff4a4a', fontWeight: 900 }}>
-              DELETE 🗑️
+              {t('DELETE 🗑️')}
             </button>
           )}
 
           <button role="menuitem" onClick={() => onCopy(contextMenu.msg.content || '')} style={item}>
-            COPY 📋
+            {t('COPY 📋')}
           </button>
         </motion.div>
       )}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useT } from '../lib/i18n'
 
 // Onboarding tour: dims the screen, cuts a spotlight around the element to tap,
 // and a character sticker explains it in a manga speech card.
@@ -88,6 +89,7 @@ interface TutorialProps {
 }
 
 export default function Tutorial({ open, onClose, steps = TOUR_STEPS }: TutorialProps) {
+  const t = useT()
   const [index, setIndex] = useState(0)
   const [rect, setRect] = useState<Rect | null>(null)
   const [vw, setVw] = useState(() => window.innerWidth)
@@ -235,10 +237,10 @@ export default function Tutorial({ open, onClose, steps = TOUR_STEPS }: Tutorial
             fontFamily: 'BlambotClassic, sans-serif', fontSize: isMobile ? 20 : 22,
             letterSpacing: 2, color: 'var(--accent)', marginBottom: 6, lineHeight: 1.1,
           }}>
-            {step.title}
+            {t(step.title)}
           </div>
           <div style={{ fontFamily: "'AnimeAce', sans-serif", fontSize: isMobile ? 11 : 12, lineHeight: 1.55 }}>
-            {step.text}
+            {t(step.text)}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14 }}>
@@ -256,12 +258,12 @@ export default function Tutorial({ open, onClose, steps = TOUR_STEPS }: Tutorial
 
           <div style={{ display: 'flex', gap: 8, marginTop: 12, marginRight: isMobile ? -76 : -88 }}>
             {!last && (
-              <button onClick={onClose} style={btn('ghost')}>SKIP</button>
+              <button onClick={onClose} style={btn('ghost')}>{t('SKIP')}</button>
             )}
             <div style={{ flex: 1 }} />
-            {index > 0 && <button onClick={() => go(-1)} style={btn('ghost')}>BACK</button>}
+            {index > 0 && <button onClick={() => go(-1)} style={btn('ghost')}>{t('BACK')}</button>}
             <motion.button whileTap={{ scale: 0.94 }} onClick={() => go(1)} style={btn('main')}>
-              {last ? "LET'S GO 🪚" : 'NEXT →'}
+              {last ? "LET'S GO 🪚" : `${t('NEXT')} →`}
             </motion.button>
           </div>
         </motion.div>

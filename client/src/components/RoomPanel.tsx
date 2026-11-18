@@ -1,6 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { motion } from 'framer-motion'
 import CsmIcon from './CsmIcon'
+import { useT } from '../lib/i18n'
 
 export interface Member { username: string; online: boolean }
 
@@ -18,6 +19,7 @@ export default function RoomPanel({ roomId, name, code, createdBy, me, members, 
   onDelete: () => void
   onClose: () => void
 }) {
+  const t = useT()
   const lobby = roomId === 'general'
   const owner = !lobby && createdBy === me
   const [title, setTitle] = useState(name.replace(/^#\s*/, ''))
@@ -57,27 +59,27 @@ export default function RoomPanel({ roomId, name, code, createdBy, me, members, 
         {owner && (
           <form onSubmit={e => { e.preventDefault(); if (title.trim()) onRename(title.trim()) }} style={{ display: 'flex', gap: '8px' }}>
             <label style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px' }}>
-              <span style={{ opacity: 0.7 }}>Chapter title</span>
+              <span style={{ opacity: 0.7 }}>{t('Chapter title')}</span>
               <input value={title} maxLength={16} onChange={e => setTitle(e.target.value.toUpperCase())}
                 style={{ border: '2px solid var(--ink)', background: 'transparent', color: 'var(--ink)', padding: '6px 8px', fontFamily: 'inherit', fontSize: '12px' }} />
             </label>
-            <button type="submit" style={{ ...btn(), alignSelf: 'flex-end' }}>RENAME</button>
+            <button type="submit" style={{ ...btn(), alignSelf: 'flex-end' }}>{t('RENAME')}</button>
           </form>
         )}
 
         {code && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ opacity: 0.7 }}>Invite code</span>
+            <span style={{ opacity: 0.7 }}>{t('Invite code')}</span>
             <code style={{ fontFamily: 'BlambotClassic, sans-serif', letterSpacing: '3px', fontSize: '15px', border: '2px dashed var(--ink)', padding: '2px 8px' }}>{code}</code>
             <button onClick={() => { navigator.clipboard?.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 1500) }} style={btn()}>
-              {copied ? 'COPIED' : 'COPY'}
+              {copied ? t('COPIED') : t('COPY')}
             </button>
           </div>
         )}
 
         <div>
           <div style={{ marginBottom: '6px', fontFamily: 'BlambotClassic, sans-serif', letterSpacing: '1px', fontSize: '13px' }}>
-            CAST · {members.length} <span style={{ opacity: 0.6, fontFamily: "'AnimeAce', sans-serif", fontSize: '10px' }}>({online} online)</span>
+            {t('CAST')} · {members.length} <span style={{ opacity: 0.6, fontFamily: "'AnimeAce', sans-serif", fontSize: '10px' }}>{t('({n} online)', { n: online })}</span>
           </div>
           <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
             {members.map(m => (
@@ -85,13 +87,13 @@ export default function RoomPanel({ roomId, name, code, createdBy, me, members, 
                 <span aria-label={m.online ? 'online' : 'offline'} style={{ width: 9, height: 9, borderRadius: '50%', border: '2px solid var(--ink)', background: m.online ? 'var(--ink)' : 'transparent' }} />
                 <span style={{ flex: 1 }}>
                   {m.username}
-                  {m.username === createdBy && <span style={{ marginLeft: 6, opacity: 0.6 }}>· founder</span>}
-                  {m.username === me && <span style={{ marginLeft: 6, opacity: 0.6 }}>· you</span>}
+                  {m.username === createdBy && <span style={{ marginLeft: 6, opacity: 0.6 }}>· {t('founder')}</span>}
+                  {m.username === me && <span style={{ marginLeft: 6, opacity: 0.6 }}>· {t('you')}</span>}
                 </span>
                 {owner && m.username !== me && (
                   confirm === `kick:${m.username}`
-                    ? <button onClick={() => { onKick(m.username); setConfirm('') }} style={btn(true)}>SURE?</button>
-                    : <button onClick={() => setConfirm(`kick:${m.username}`)} style={btn()} aria-label={`Kick ${m.username}`}>KICK</button>
+                    ? <button onClick={() => { onKick(m.username); setConfirm('') }} style={btn(true)}>{t('SURE?')}</button>
+                    : <button onClick={() => setConfirm(`kick:${m.username}`)} style={btn()} aria-label={`Kick ${m.username}`}>{t('KICK')}</button>
                 )}
               </li>
             ))}
@@ -101,14 +103,14 @@ export default function RoomPanel({ roomId, name, code, createdBy, me, members, 
         {!lobby && (
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', borderTop: '2px solid var(--ink)', paddingTop: '10px' }}>
             {confirm === 'leave'
-              ? <button onClick={onLeave} style={btn(true)}>LEAVE FOR GOOD?</button>
-              : <button onClick={() => setConfirm('leave')} style={btn()}>LEAVE</button>}
+              ? <button onClick={onLeave} style={btn(true)}>{t('LEAVE FOR GOOD?')}</button>
+              : <button onClick={() => setConfirm('leave')} style={btn()}>{t('LEAVE')}</button>}
             {owner && (confirm === 'delete'
-              ? <button onClick={onDelete} style={btn(true)}>BURN IT ALL?</button>
-              : <button onClick={() => setConfirm('delete')} style={btn()}>DELETE CHAPTER</button>)}
+              ? <button onClick={onDelete} style={btn(true)}>{t('BURN IT ALL?')}</button>
+              : <button onClick={() => setConfirm('delete')} style={btn()}>{t('DELETE CHAPTER')}</button>)}
           </div>
         )}
-        {lobby && <p style={{ margin: 0, opacity: 0.6 }}>The lobby is open to everyone; you can't leave or delete it.</p>}
+        {lobby && <p style={{ margin: 0, opacity: 0.6 }}>{t("The lobby is open to everyone; you can't leave or delete it.")}</p>}
       </motion.div>
     </motion.div>
   )

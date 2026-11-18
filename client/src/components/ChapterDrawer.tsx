@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useT } from '../lib/i18n'
 import CsmIcon from './CsmIcon'
 
 // Chapters (rooms) panel that slides in and out.
@@ -58,13 +59,14 @@ function ChapterList({ rooms, currentRoom, onPick }: ListProps) {
 }
 
 function Head({ onToggle, open }: { onToggle: () => void; open: boolean }) {
+  const t = useT()
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: '8px',
       padding: '8px 8px 8px 12px', borderBottom: `3px solid ${ink}`, color: ink,
     }}>
       <CsmIcon name="chapters" size={18} strokeWidth={2.3} />
-      <span style={{ flex: 1, fontFamily: 'BlambotClassic, sans-serif', fontSize: '15px', letterSpacing: '2px' }}>CHAPTERS</span>
+      <span style={{ flex: 1, fontFamily: 'BlambotClassic, sans-serif', fontSize: '15px', letterSpacing: '2px' }}>{t('CHAPTERS_TITLE')}</span>
       <button
         onClick={onToggle}
         aria-label={open ? 'Hide chapters' : 'Show chapters'}
@@ -90,6 +92,7 @@ interface RailProps extends ListProps {
 }
 
 export function ChapterRail({ rooms, currentRoom, onPick, open, onToggle, panelStyle }: RailProps) {
+  const t = useT()
   return (
     <motion.div
       data-tour="rooms"
@@ -147,7 +150,7 @@ export function ChapterRail({ rooms, currentRoom, onPick, open, onToggle, panelS
             fontFamily: 'BlambotClassic, sans-serif', fontSize: '13px', letterSpacing: '4px', opacity: 0.7,
             paddingBottom: '4px',
           }}>
-            CHAPTERS
+            {t('CHAPTERS_TITLE')}
           </span>
         </div>
       )}

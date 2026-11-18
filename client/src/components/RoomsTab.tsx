@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import CsmIcon from './CsmIcon'
+import { useT } from '../lib/i18n'
 
 // describe the structure of a room object
 export interface RoomItem {
@@ -65,6 +66,7 @@ export default function RoomsTab({
   onCreateRoom,
   onJoinByCode
 }: RoomsTabProps) {
+  const t = useT()
   const ink = 'var(--ink)'
   const panel = (open: boolean) => ({
     flex: '1 1 230px', minWidth: 0,
@@ -94,11 +96,11 @@ export default function RoomsTab({
 
       {/* title: like the contents page of a tankōbon */}
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: '14px', marginBottom: '6px' }}>
-        <div style={{ fontFamily: 'BlambotClassic, sans-serif', fontSize: 'clamp(30px, 8vw, 40px)', letterSpacing: '6px', lineHeight: 1 }}>CONTENTS</div>
+        <div style={{ fontFamily: 'BlambotClassic, sans-serif', fontSize: 'clamp(30px, 8vw, 40px)', letterSpacing: '6px', lineHeight: 1 }}>{t('CONTENTS')}</div>
         <div style={{ fontFamily: 'serif', fontSize: '18px', opacity: 0.55, paddingBottom: '4px', whiteSpace: 'nowrap' }}>目次</div>
         <div style={{ flex: 1 }} />
         <div style={{ fontFamily: "'AnimeAce', sans-serif", fontSize: '11px', letterSpacing: '1px', paddingBottom: '6px', opacity: 0.7, whiteSpace: 'nowrap' }}>
-          {rooms.length} {rooms.length === 1 ? 'CHAPTER' : 'CHAPTERS'}
+          {rooms.length} {rooms.length === 1 ? t('CHAPTER') : t('CHAPTERS')}
         </div>
       </div>
       <div style={{ height: '4px', background: ink, marginBottom: '3px' }} />
@@ -150,8 +152,8 @@ export default function RoomsTab({
         >
           <CsmIcon name="plus" size={30} strokeWidth={2.6} />
           <span>
-            <span style={{ display: 'block', fontFamily: 'BlambotClassic, sans-serif', fontSize: '20px', letterSpacing: '2px' }}>NEW CHAPTER</span>
-            <span style={{ display: 'block', fontFamily: "'AnimeAce', sans-serif", fontSize: '10px', opacity: 0.7 }}>start a room, get an invite code</span>
+            <span style={{ display: 'block', fontFamily: 'BlambotClassic, sans-serif', fontSize: '20px', letterSpacing: '2px' }}>{t('NEW CHAPTER')}</span>
+            <span style={{ display: 'block', fontFamily: "'AnimeAce', sans-serif", fontSize: '10px', opacity: 0.7 }}>{t('start a room, get an invite code')}</span>
           </span>
         </motion.button>
         <motion.button
@@ -161,8 +163,8 @@ export default function RoomsTab({
         >
           <CsmIcon name="key" size={30} strokeWidth={2.6} />
           <span>
-            <span style={{ display: 'block', fontFamily: 'BlambotClassic, sans-serif', fontSize: '20px', letterSpacing: '2px' }}>ENTER BY CODE</span>
-            <span style={{ display: 'block', fontFamily: "'AnimeAce', sans-serif", fontSize: '10px', opacity: 0.7 }}>a friend sent you a code</span>
+            <span style={{ display: 'block', fontFamily: 'BlambotClassic, sans-serif', fontSize: '20px', letterSpacing: '2px' }}>{t('ENTER BY CODE')}</span>
+            <span style={{ display: 'block', fontFamily: "'AnimeAce', sans-serif", fontSize: '10px', opacity: 0.7 }}>{t('a friend sent you a code')}</span>
           </span>
         </motion.button>
       </div>
@@ -173,14 +175,14 @@ export default function RoomsTab({
             <div style={{ display: 'flex', gap: '10px', paddingTop: '2px' }}>
               <input
                 style={field}
-                placeholder="CHAPTER TITLE (OPTIONAL)"
+                placeholder={t('CHAPTER TITLE (OPTIONAL)')}
                 maxLength={16}
                 value={newRoomName}
                 onChange={e => setNewRoomName(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && onCreateRoom()}
               />
               <motion.button whileTap={{ scale: 0.95 }} onClick={onCreateRoom} style={goBtn}>
-                <CsmIcon name="chainsaw" size={18} /> CREATE
+                <CsmIcon name="chainsaw" size={18} /> {t('CREATE')}
               </motion.button>
             </div>
           </motion.div>
@@ -204,7 +206,7 @@ export default function RoomsTab({
                   onKeyDown={e => e.key === 'Enter' && onJoinByCode()}
                 />
                 <motion.button whileTap={{ scale: 0.95 }} onClick={onJoinByCode} style={goBtn}>
-                  <CsmIcon name="door" size={18} /> ENTER
+                  <CsmIcon name="door" size={18} /> {t('ENTER')}
                 </motion.button>
               </div>
               {joinError && (
@@ -265,11 +267,11 @@ export default function RoomsTab({
                     border: `2px solid ${ink}`, borderRadius: '4px', padding: '0 6px',
                     backgroundColor: 'var(--paper)', transform: 'rotate(-2deg)',
                   }}>
-                    CODE {room.code}
+                    {t('CODE')} {room.code}
                   </span>
                   {here && (
                     <span style={{ fontFamily: "'AnimeAce', sans-serif", fontSize: '10px', backgroundColor: 'var(--paper)', padding: '0 4px', borderRadius: '4px' }}>
-                      ◀ you are reading this
+                      ◀ {t('you are reading this')}
                     </span>
                   )}
                 </span>

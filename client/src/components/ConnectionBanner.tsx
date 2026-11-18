@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { socket } from '../lib/socket'
+import { useT } from '../lib/i18n'
 
 // lost the socket for more than a moment → say so instead of silently dropping messages
 export default function ConnectionBanner() {
+  const t = useT()
   const [lost, setLost] = useState(false)
   useEffect(() => {
     let t: ReturnType<typeof setTimeout> | null = null
@@ -25,7 +27,7 @@ export default function ConnectionBanner() {
             fontFamily: "'AnimeAce', sans-serif", fontSize: '11px', letterSpacing: '1px',
           }}
         >
-          ⚠ CONNECTION LOST — RECONNECTING… (messages will wait)
+          {t('⚠ CONNECTION LOST — RECONNECTING… (messages will wait)')}
         </motion.div>
       )}
     </AnimatePresence>
