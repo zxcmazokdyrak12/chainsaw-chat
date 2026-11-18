@@ -200,6 +200,14 @@ test('contracts: members seal them, only the author closes them', { skip }, asyn
   assert.equal((await upd).poll.closed, true)
 })
 
+test('"joined the room" is not repeated for a second tab or a quick re-join', { skip }, async () => {
+  const tab2 = await connect(powerTok)
+  const heard = waitFor(denji, 'user_joined', 700)
+  await enter(tab2, 'general')
+  assert.equal(await heard, undefined)
+  tab2.close()
+})
+
 test('room codes can not be brute-forced', { skip }, async () => {
   const errors = []
   for (let i = 0; i < 10; i++) {

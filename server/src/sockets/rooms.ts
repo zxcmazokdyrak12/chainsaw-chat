@@ -5,6 +5,11 @@ import { isRoomId } from '../lib/validate.js'
 import { callParticipants, leaveCall } from './state.js'
 import type { SocketCtx } from './context.js'
 
+// "X joined the room" only when it's news: not while X already has another tab in the room,
+// and not again within 10 minutes (Render naps → reconnects → re-joins)
+const announced = new Map<string, number>()
+const ANNOUNCE_EVERY = 10 * 60_000
+
 // listing, creating and joining rooms. The username always comes from the verified socket, never the payload.
 export function registerRoomsHandlers({ io, socket, data, canAccess }: SocketCtx) {
   // wrong codes are capped per socket: room codes must not be brute-forceable
@@ -69,7 +74,13 @@ export function registerRoomsHandlers({ io, socket, data, canAccess }: SocketCtx
       data.currentRoom = roomId
 
       socket.emit('room_history', await getRoomHistory(roomId))
-      socket.to(roomId).emit('user_joined', { username: data.username, roomId })
+      const key = `${roomId}:${data.username}`
+      const elsewhere = (await io.in(roomId).fetchSockets()).some(s => s.id !== socket.id && s.data?.username === data.username)
+      if (!elsewhere && Date.now() - (announced.get(key) ?? 0) > ANNOUNCE_EVERY) {
+        if (announced.size > 5000) announced.clear()
+        announced.set(key, Date.now())
+        socket.to(roomId).emit('user_joined', { username: data.username, roomId })
+      }
 
       const marks = await prisma.readMark.findMany({ where: { roomId } })
       socket.emit('seen_state', {

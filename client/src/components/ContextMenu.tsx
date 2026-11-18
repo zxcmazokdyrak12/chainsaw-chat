@@ -1,4 +1,5 @@
 import { useEffect, useRef, type KeyboardEvent, type CSSProperties } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { REACTIONS } from '../config'
 
@@ -46,8 +47,9 @@ export default function ContextMenu({
   useEffect(() => {
     if (!contextMenu) return
     const back = document.activeElement as HTMLElement | null
-    requestAnimationFrame(() => ref.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus())
-    return () => { back?.focus?.() }
+    // preventScroll: focusing must never scroll the feed (the feed closes the menu when it scrolls)
+    requestAnimationFrame(() => ref.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus({ preventScroll: true }))
+    return () => { back?.focus?.({ preventScroll: true }) }
   }, [contextMenu])
 
   const onKeyDown = (e: KeyboardEvent) => {
@@ -58,8 +60,8 @@ export default function ContextMenu({
     if (step) { e.preventDefault(); items[(i + step + items.length) % items.length]?.focus() }
   }
 
-  // keep the whole menu on screen
-  const left = contextMenu ? Math.max(8, Math.min(contextMenu.x, window.innerWidth - 300)) : 0
+  // keep the whole menu on screen (it is 282px wide, ~190px tall)
+  const left = contextMenu ? Math.max(8, Math.min(contextMenu.x, window.innerWidth - 282 - 12)) : 0
   const top = contextMenu ? Math.max(8, Math.min(contextMenu.y, window.innerHeight - 200)) : 0
 
   const item: CSSProperties = {
@@ -67,7 +69,8 @@ export default function ContextMenu({
     background: 'transparent', border: 'none', color: ink, fontFamily: 'inherit', fontSize: 'inherit',
   }
 
-  return (
+  // rendered on <body>: inside the feed it was clipped by overflow:hidden and offset by transformed parents
+  return createPortal(
     <AnimatePresence>
       {contextMenu && (
         <motion.div
@@ -91,6 +94,7 @@ export default function ContextMenu({
             fontFamily: "'AnimeAce', sans-serif",
             fontSize: '12px',
             width: '282px',
+            boxSizing: 'border-box',
             cursor: 'default'
           }}
           onClick={onClose}
@@ -140,6 +144,7 @@ export default function ContextMenu({
           </button>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   )
 }
