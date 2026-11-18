@@ -157,6 +157,23 @@ On the first visit, three manga panels slam in. Then a detailed recoil starter a
 - **Berserk mode**: when lines fly in bursts (less than 2 s apart), a tachometer revs up in the corner of the feed: ×4 REV → ×8 BERSERK → ×12 DEVIL MODE, with a synthesized engine rev at each tier and a needle that shivers in the red zone. Can be turned off in Settings.
 - **Background alerts**: `(3)` in the tab title, a blood-red counter on the favicon, and optional system notifications.
 
+### 💬 A real messenger
+- **History pages**: the newest 60 lines first; older pages load as you scroll up. Search results and quotes page back until they find the line.
+- **Edit** your lines: EDIT in the menu, `E` on a focused balloon, or `Ctrl+↑`.
+- **@mentions**: names show as ink chips, yours inverted, with a red **@YOU** tag and a ping. Typing `@` suggests the room's cast.
+- **Room panel** (click the chapter label or `Alt+I`): the cast with online dots, the invite code, and leave. The founder can also rename, kick and delete.
+
+### 📲 Installable, with push
+- Add it to the home screen (PWA): manifest, original app icon, offline shell.
+- **Push when closed**: notifications even with every tab closed.
+  - Web Push is written from scratch: RFC 8291 encryption, tested byte for byte against the RFC's own example, plus RFC 8292 VAPID signing.
+  - Private rooms notify every member; the lobby only notifies the people you @mention.
+  - Spoilers stay masked on the lock screen.
+- **Cold starts**: the free server naps. The page wakes it during the intro, and the login page shows a warm-up gauge. If the connection drops, a banner says so.
+
+### 🌐 English · Русский · 日本語
+The interface follows the browser's language and can be switched in Settings. Manga SFX lettering stays as drawn.
+
 ### ⌨️ Without a mouse
 Press `?` for the full list. The main keys:
 - `Alt+1…9` jumps to a chapter (room); `Alt+C/R/S/P` switches tabs.
@@ -193,7 +210,13 @@ TEST_DATABASE_URL=postgres://… npm run test:integration
                             # HTTP + Socket.IO + Postgres: impersonation, private rooms, uploads, brute force…
 ```
 
-Both run on every push in [GitHub Actions](.github/workflows/ci.yml). The integration suite gets a throwaway Postgres there.
+```bash
+cd e2e && npm install && npx playwright install chromium
+DATABASE_URL=postgres://…throwaway… npx playwright test
+                            # two real browsers against the real server + production client build
+```
+
+All three run on every pull request in [GitHub Actions](.github/workflows/ci.yml), each against a throwaway Postgres.
 **Never point `TEST_DATABASE_URL` at the production database** — the tests create users and rooms.
 
 ---
@@ -225,6 +248,7 @@ npm run dev              # http://localhost:5173
 Optional env:
 - `CF_TURN_KEY_ID` / `CF_TURN_API_TOKEN`: TURN for calls across networks.
 - `R2_*`: store uploads in Cloudflare R2 instead of Postgres.
+- `VAPID_*`: push notifications; generate them with `npm run vapid:keys`.
 
 See `server/.env.example`.
 
@@ -234,7 +258,8 @@ See `server/.env.example`.
 
 ```text
 chainsaw-chat/
-├── .github/workflows/ci.yml   ← type check, unit + integration tests, client build
+├── .github/workflows/ci.yml   ← types, lint, unit + integration + E2E tests, client build
+├── e2e/                       ← Playwright: two browsers, real server, real database
 ├── SECURITY.md                ← threat model and the measures against it
 ├── server/
 │   ├── prisma/schema.prisma   ← users, rooms, messages, attachments, read marks, profiles
