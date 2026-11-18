@@ -94,19 +94,8 @@ export default function App() {
   const { theme, T } = useTheme(settings.theme, resolveTheme)
   const { sfx, popSfx, popText } = useSfx(settings.sfxEnabled ?? true)
   const { notify } = useUnreadBadge({ desktop: settings.desktopNotify ?? false })
-  // message bursts → berserk mode; a short shake each time it reaches a new tier
-  const berserk = useBerserk({
-    enabled: settings.berserk ?? true,
-    sound: settings.soundEnabled,
-    onTierUp: (tier) => {
-      if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
-      const px = 2 + tier * 2
-      rootRef.current?.animate(
-        [{ transform: 'translate(0,0)' }, { transform: `translate(${px}px,${-px}px)` }, { transform: `translate(${-px}px,${px / 2}px)` }, { transform: 'translate(0,0)' }],
-        { duration: 60, iterations: 3 },
-      )
-    },
-  })
+  // message bursts → berserk mode: a rev counter + the engine revving up
+  const berserk = useBerserk({ enabled: settings.berserk ?? true, sound: settings.soundEnabled })
   const berserkHit = useRef(berserk.hit)
   berserkHit.current = berserk.hit
   const notifyRef = useRef(notify)
@@ -602,7 +591,7 @@ export default function App() {
             {/* feed panel */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', border: `4px solid ${T.headerBorder}`, borderRadius: '4px', overflow: 'hidden', background: T.appBg }}>
               <SfxLayer bursts={sfx} />
-              <BerserkLayer combo={berserk.combo} active={berserk.active} tier={berserk.tier} splats={berserk.splats} cooling={berserk.cooling} />
+              <BerserkLayer combo={berserk.combo} active={berserk.active} tier={berserk.tier} cooling={berserk.cooling} />
               {searchOpen && (
                 <SearchPanel
                   roomId={currentRoom}

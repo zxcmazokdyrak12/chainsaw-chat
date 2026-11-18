@@ -7,7 +7,8 @@ on:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # a newer push to a PR makes the old run pointless; on main every merge gets its full run
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   server:
