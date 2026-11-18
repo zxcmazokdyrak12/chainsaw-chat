@@ -127,3 +127,16 @@ model UserProfile {
 
   @@map("user_profiles")
 }
+
+// browsers that asked for push notifications (Web Push); dropped when the push service says 404/410
+model PushSubscription {
+  id        Int      @id @default(autoincrement())
+  endpoint  String   @unique
+  username  String
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([username])
+  @@map("push_subscriptions")
+}

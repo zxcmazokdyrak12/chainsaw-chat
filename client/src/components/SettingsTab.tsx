@@ -1,5 +1,7 @@
 import React from 'react'
 import { motion } from 'framer-motion'
+import { enablePush, disablePush, pushSupported } from '../lib/push'
+import { getAccountToken } from '../lib/auth'
 import CsmIcon, { type CsmIconName } from './CsmIcon'
 
 // Reusing the same strict interface for settings structure
@@ -14,6 +16,7 @@ export interface Settings {
   sfxEnabled: boolean
   desktopNotify: boolean
   berserk: boolean
+  push: boolean
 }
 
 interface SettingsTabProps {
@@ -179,6 +182,7 @@ const FONT_PX: Record<Settings['fontSize'], string> = { small: '12px', medium: '
 // ── the tab ──────────────────────────────────────────────────────
 
 export default function SettingsTab({ settings, onUpdate, onReplayTutorial }: SettingsTabProps) {
+  const [pushNote, setPushNote] = React.useState('')
   const bomb = settings.stickerBomb ?? 'light'
 
   return (
@@ -254,6 +258,16 @@ export default function SettingsTab({ settings, onUpdate, onReplayTutorial }: Se
             <Row icon="keyboard" label="SHOW I'M TYPING"
               desc={settings.showTyping ? 'others see your thought balloon' : 'you type in secret'}>
               <Stamp label="Show typing" checked={settings.showTyping} onChange={v => onUpdate('showTyping', v)} />
+            </Row>
+            <Row icon="bell" label="PUSH WHEN CLOSED"
+              desc={!getAccountToken() ? 'needs an account (guests vanish with the tab)' : !pushSupported() ? 'not in this browser — on iPhone add the app to the Home Screen' : pushNote || 'a ping on your phone even with the app closed'}>
+              <Stamp label="Push when closed" checked={settings.push ?? false} onChange={async v => {
+                if (!v) { await disablePush(); onUpdate('push', false); setPushNote(''); return }
+                if (!getAccountToken()) { setPushNote('sign in with an account first'); return }
+                const err = await enablePush().catch(() => 'Could not subscribe')
+                setPushNote(err ?? 'on — try it: close the tab and ask a friend to write')
+                if (!err) onUpdate('push', true)
+              }} />
             </Row>
             <Row icon="bell" label="BACKGROUND ALERTS"
               desc={settings.desktopNotify ? 'a notification when the tab is hidden' : 'only the (3) counter on the tab'}>

@@ -150,6 +150,23 @@ export default function App() {
   const rootRef = useRef<HTMLDivElement>(null)
   useEffect(() => { if (!notice) return; const t = setTimeout(() => setNotice(''), 3200); return () => clearTimeout(t) }, [notice])
 
+  // a tapped push notification opens its room (an open tab gets a message, a new one gets ?room=)
+  const pushRoom = useRef<string | null>(new URLSearchParams(window.location.search).get('room'))
+  useEffect(() => {
+    const onMsg = (e: MessageEvent) => {
+      if (e.data?.type === 'open-room' && typeof e.data.roomId === 'string') { setActiveTab('chat'); joinRoomRef.current(e.data.roomId) }
+    }
+    navigator.serviceWorker?.addEventListener('message', onMsg)
+    return () => navigator.serviceWorker?.removeEventListener('message', onMsg)
+  }, [])
+  useEffect(() => {
+    if (phase !== 'chat' || !pushRoom.current || !rooms.some(r => r.id === pushRoom.current)) return
+    const id = pushRoom.current
+    pushRoom.current = null
+    window.history.replaceState({}, '', '/')
+    if (id !== currentRoom) joinRoomRef.current(id)
+  }, [phase, rooms]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // keyboard: the whole chat works without a mouse (see ShortcutsHelp for the list)
   const [keysOpen, setKeysOpen] = useState<boolean>(false)
   const [exportOpen, setExportOpen] = useState<boolean>(false)

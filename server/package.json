@@ -13,7 +13,8 @@
     "test:integration": "node --test --test-concurrency=1 \"test/integration/*.test.mjs\"",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "vapid:keys": "node scripts/vapid-keys.mjs"
   },
   "keywords": [],
   "author": "",

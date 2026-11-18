@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma.js'
 import { deleteMedia } from '../lib/storage.js'
 import { parsePollCommand, castVote, isPoll, type Poll } from '../lib/polls.js'
+import { pushNewMessage } from '../lib/push.js'
 import { serializeMessage } from '../lib/rooms.js'
 import { MAX_TEXT, isId, safeAudio, safeAvatar } from '../lib/validate.js'
 import { REACTIONS, type Reactions } from '../types.js'
@@ -83,6 +84,14 @@ export function registerMessagesHandlers({ io, socket, data, ensureMember }: Soc
         },
       })
       io.to(roomId).emit('receive_message', serializeMessage(saved))
+
+      // people who aren't here get a push (fire and forget)
+      const mentioned = [...(content ?? '').matchAll(/(^|[^\w@])@([\p{L}\p{N}_-]{2,32})/gu)].map(x => x[2]!.toUpperCase())
+      prisma.room.findUnique({ where: { id: roomId }, select: { name: true } }).then((room: { name: string } | null) =>
+        pushNewMessage({
+          roomId, roomName: room?.name ?? '# GENERAL', from: who, mentioned,
+          text: type === 'image' ? `🖼 ${content || 'picture'}` : type === 'audio' ? '🎤 voice message' : type === 'contract' ? `📜 ${content}` : content,
+        })).catch(() => {})
     } catch (err) {
       console.error('[Send Message Error]:', err)
     }
