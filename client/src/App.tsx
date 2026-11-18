@@ -34,6 +34,9 @@ import ShortcutsHelp from './components/ShortcutsHelp'
 import ExportDialog from './components/ExportDialog'
 import BerserkLayer from './components/BerserkLayer'
 import RoomPanel, { type Member } from './components/RoomPanel'
+import ServerWake from './components/ServerWake'
+import ConnectionBanner from './components/ConnectionBanner'
+import { useServerWake } from './hooks/useServerWake'
 import { useBerserk } from './hooks/useBerserk'
 import { API_URL } from './config'
 import { socket, connectSocket } from './lib/socket'
@@ -111,6 +114,7 @@ export default function App() {
   const { settings, update: updateSetting, resolveTheme } = useSettings()
   const { theme, T } = useTheme(settings.theme, resolveTheme)
   const { sfx, popSfx, popText } = useSfx(settings.sfxEnabled ?? true)
+  const wake = useServerWake()
   const { notify } = useUnreadBadge({ desktop: settings.desktopNotify ?? false })
   // message bursts → berserk mode: a rev counter + the engine revving up
   const berserk = useBerserk({ enabled: settings.berserk ?? true, sound: settings.soundEnabled })
@@ -252,7 +256,7 @@ export default function App() {
       playSound(CHAINSAW_SFX, 0.4)
       enterChat(data.user, avatar)
     } catch {
-      setAuthError('Server is sleeping, try again')
+      setAuthError(wake.state === 'ready' ? 'No answer from the server, try again' : 'The server is still waking up — watch the gauge in the corner')
     } finally {
       setAuthLoading(false)
     }
@@ -518,7 +522,7 @@ export default function App() {
       socket.emit('room_members', { roomId: 'general' })
       return null
     } catch {
-      return 'Server is sleeping, try again'
+      return wake.state === 'ready' ? 'No answer from the server, try again' : 'The server is still waking up — watch the gauge in the corner'
     }
   }
 
@@ -645,6 +649,7 @@ export default function App() {
     return (
       <>
       {slashing && <SlashOverlay onEnd={() => setSlashing(false)} />}
+      <ServerWake state={wake.state} seconds={wake.seconds} />
       <UsernameScreen
         avatar={avatar}
         onAvatarChange={setAvatar}
@@ -751,6 +756,7 @@ export default function App() {
             {/* feed panel */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', border: `4px solid ${T.headerBorder}`, borderRadius: '4px', overflow: 'hidden', background: T.appBg }}>
               <SfxLayer bursts={sfx} />
+              <ConnectionBanner />
               <BerserkLayer combo={berserk.combo} active={berserk.active} tier={berserk.tier} cooling={berserk.cooling} />
               {searchOpen && (
                 <SearchPanel

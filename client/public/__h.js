@@ -20603,13 +20603,177 @@ ${xref}
     }
   });
 
+  // ../chainsaw-chat/client/src/components/ServerWake.tsx
+  function ServerWake({ state, seconds }) {
+    const show = state === "waking" || state === "down" || state === "ready" && seconds >= 3;
+    const pct = state === "ready" ? 100 : Math.min(95, seconds / EXPECTED * 100);
+    const text = state === "waking" ? `SERVER ENGINE IS COLD \u2014 WARMING UP ${seconds}s` : state === "down" ? "THE SERVER WON'T START \u2014 TRY AGAIN LATER" : "SERVER READY";
+    return /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(AnimatePresence, { children: show && /* @__PURE__ */ (0, import_jsx_runtime33.jsxs)(
+      motion.div,
+      {
+        role: "status",
+        "aria-live": "polite",
+        initial: { y: 20, opacity: 0 },
+        animate: { y: 0, opacity: 1 },
+        exit: { opacity: 0 },
+        transition: state === "ready" ? { delay: 0 } : void 0,
+        style: {
+          position: "fixed",
+          left: 12,
+          bottom: 12,
+          zIndex: 9200,
+          width: "min(320px, calc(100vw - 24px))",
+          background: "#f2efe6",
+          color: "#111",
+          border: "3px solid #111",
+          boxShadow: "4px 4px 0 #111",
+          padding: "8px 10px",
+          fontFamily: "'AnimeAce', sans-serif",
+          fontSize: "10px",
+          letterSpacing: "1px"
+        },
+        children: [
+          /* @__PURE__ */ (0, import_jsx_runtime33.jsxs)("div", { style: { display: "flex", justifyContent: "space-between", gap: "8px" }, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime33.jsx)("span", { children: text }),
+            state === "waking" && /* @__PURE__ */ (0, import_jsx_runtime33.jsx)("span", { "aria-hidden": true, children: "\u2699" })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime33.jsx)("div", { "aria-hidden": true, style: { marginTop: "6px", height: "8px", border: "2px solid #111", position: "relative", overflow: "hidden" }, children: /* @__PURE__ */ (0, import_jsx_runtime33.jsx)("div", { style: {
+            position: "absolute",
+            inset: 0,
+            width: `${pct}%`,
+            transition: "width 1s linear",
+            background: state === "down" ? "#b3140c" : "repeating-linear-gradient(-45deg, #111 0 4px, transparent 4px 8px)"
+          } }) }),
+          state === "waking" && seconds > 8 && /* @__PURE__ */ (0, import_jsx_runtime33.jsx)("div", { style: { marginTop: "4px", opacity: 0.65, fontSize: "9px" }, children: "free hosting naps when nobody's around \u2014 usually under a minute" })
+        ]
+      }
+    ) });
+  }
+  var import_jsx_runtime33, EXPECTED;
+  var init_ServerWake = __esm({
+    "../chainsaw-chat/client/src/components/ServerWake.tsx"() {
+      "use strict";
+      init_define_import_meta_env();
+      init_fm();
+      import_jsx_runtime33 = __toESM(require_jsx_runtime(), 1);
+      EXPECTED = 50;
+    }
+  });
+
+  // ../chainsaw-chat/client/src/components/ConnectionBanner.tsx
+  function ConnectionBanner() {
+    const [lost, setLost] = (0, import_react26.useState)(false);
+    (0, import_react26.useEffect)(() => {
+      let t2 = null;
+      const down = () => {
+        if (t2) clearTimeout(t2);
+        t2 = setTimeout(() => setLost(true), 1500);
+      };
+      const up = () => {
+        if (t2) clearTimeout(t2);
+        setLost(false);
+      };
+      socket.on("disconnect", down);
+      socket.on("connect", up);
+      return () => {
+        socket.off("disconnect", down);
+        socket.off("connect", up);
+        if (t2) clearTimeout(t2);
+      };
+    }, []);
+    return /* @__PURE__ */ (0, import_jsx_runtime34.jsx)(AnimatePresence, { children: lost && /* @__PURE__ */ (0, import_jsx_runtime34.jsx)(
+      motion.div,
+      {
+        role: "alert",
+        initial: { y: -30, opacity: 0 },
+        animate: { y: 0, opacity: 1 },
+        exit: { y: -30, opacity: 0 },
+        style: {
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 30,
+          textAlign: "center",
+          background: "var(--ink)",
+          color: "var(--paper)",
+          padding: "5px 10px",
+          fontFamily: "'AnimeAce', sans-serif",
+          fontSize: "11px",
+          letterSpacing: "1px"
+        },
+        children: "\u26A0 CONNECTION LOST \u2014 RECONNECTING\u2026 (messages will wait)"
+      }
+    ) });
+  }
+  var import_react26, import_jsx_runtime34;
+  var init_ConnectionBanner = __esm({
+    "../chainsaw-chat/client/src/components/ConnectionBanner.tsx"() {
+      "use strict";
+      init_define_import_meta_env();
+      import_react26 = __toESM(require_react(), 1);
+      init_fm();
+      init_socket();
+      import_jsx_runtime34 = __toESM(require_jsx_runtime(), 1);
+    }
+  });
+
+  // ../chainsaw-chat/client/src/hooks/useServerWake.ts
+  function useServerWake() {
+    const [state, setState] = (0, import_react27.useState)("checking");
+    const [seconds, setSeconds] = (0, import_react27.useState)(0);
+    (0, import_react27.useEffect)(() => {
+      let alive = true;
+      const t0 = Date.now();
+      const tick = setInterval(() => alive && setSeconds(Math.round((Date.now() - t0) / 1e3)), 1e3);
+      const cold = setTimeout(() => alive && setState((s) => s === "checking" ? "waking" : s), 2e3);
+      const ping = async () => {
+        if (!alive) return;
+        try {
+          const ctrl = new AbortController();
+          const t2 = setTimeout(() => ctrl.abort(), 8e3);
+          const r = await fetch(`${API_URL}/ping`, { signal: ctrl.signal, cache: "no-store" });
+          clearTimeout(t2);
+          if (r.ok) {
+            if (alive) setState("ready");
+            clearInterval(tick);
+            return;
+          }
+        } catch {
+        }
+        if (Date.now() - t0 > 12e4) {
+          if (alive) setState("down");
+          clearInterval(tick);
+          return;
+        }
+        setTimeout(ping, 3e3);
+      };
+      ping();
+      return () => {
+        alive = false;
+        clearInterval(tick);
+        clearTimeout(cold);
+      };
+    }, []);
+    return { state, seconds };
+  }
+  var import_react27;
+  var init_useServerWake = __esm({
+    "../chainsaw-chat/client/src/hooks/useServerWake.ts"() {
+      "use strict";
+      init_define_import_meta_env();
+      import_react27 = __toESM(require_react(), 1);
+      init_config();
+    }
+  });
+
   // ../chainsaw-chat/client/src/theme.ts
   function useTheme(settingTheme, resolveTheme) {
-    const [resolvedTheme, setResolvedTheme] = (0, import_react26.useState)(() => resolveTheme());
-    (0, import_react26.useEffect)(() => {
+    const [resolvedTheme, setResolvedTheme] = (0, import_react28.useState)(() => resolveTheme());
+    (0, import_react28.useEffect)(() => {
       setResolvedTheme(resolveTheme());
     }, [settingTheme, resolveTheme]);
-    (0, import_react26.useEffect)(() => {
+    (0, import_react28.useEffect)(() => {
       if (settingTheme !== "system") return;
       const mq = window.matchMedia("(prefers-color-scheme: dark)");
       const handler = (e) => setResolvedTheme(e.matches ? "dark" : "light");
@@ -20617,18 +20781,18 @@ ${xref}
       return () => mq.removeEventListener("change", handler);
     }, [settingTheme]);
     const theme = resolvedTheme;
-    (0, import_react26.useEffect)(() => {
+    (0, import_react28.useEffect)(() => {
       document.documentElement.dataset.theme = theme === "dark" ? "dark" : "light";
     }, [theme]);
     const T = theme === "light" ? LIGHT : DARK;
     return { theme, T };
   }
-  var import_react26, LIGHT, DARK;
+  var import_react28, LIGHT, DARK;
   var init_theme = __esm({
     "../chainsaw-chat/client/src/theme.ts"() {
       "use strict";
       init_define_import_meta_env();
-      import_react26 = __toESM(require_react(), 1);
+      import_react28 = __toESM(require_react(), 1);
       LIGHT = {
         appBg: "#f5f2ea",
         headerBg: "#f5f2ea",
@@ -20672,9 +20836,9 @@ ${xref}
 
   // ../chainsaw-chat/client/src/hooks/useVoiceRecorder.ts
   function useVoiceRecorder(currentRoom, username, avatarSrc) {
-    const [isRecording, setIsRecording] = (0, import_react27.useState)(false);
-    const mediaRecorder = (0, import_react27.useRef)(null);
-    const audioChunks = (0, import_react27.useRef)([]);
+    const [isRecording, setIsRecording] = (0, import_react29.useState)(false);
+    const mediaRecorder = (0, import_react29.useRef)(null);
+    const audioChunks = (0, import_react29.useRef)([]);
     const avatar = { src: avatarSrc };
     const startRecording = async () => {
       try {
@@ -20748,12 +20912,12 @@ ${xref}
     };
     return { isRecording, startRecording, stopRecording };
   }
-  var import_react27;
+  var import_react29;
   var init_useVoiceRecorder = __esm({
     "../chainsaw-chat/client/src/hooks/useVoiceRecorder.ts"() {
       "use strict";
       init_define_import_meta_env();
-      import_react27 = __toESM(require_react(), 1);
+      import_react29 = __toESM(require_react(), 1);
       init_socket();
       init_media();
     }
@@ -20761,8 +20925,8 @@ ${xref}
 
   // ../chainsaw-chat/client/src/hooks/useSfx.ts
   function useSfx(enabled) {
-    const [sfx, setSfx] = (0, import_react28.useState)([]);
-    const on = (0, import_react28.useRef)(enabled);
+    const [sfx, setSfx] = (0, import_react30.useState)([]);
+    const on = (0, import_react30.useRef)(enabled);
     on.current = enabled;
     const popSfx = (kind, own) => {
       if (!on.current) return;
@@ -20777,21 +20941,21 @@ ${xref}
     };
     return { sfx, popSfx, popText };
   }
-  var import_react28;
+  var import_react30;
   var init_useSfx = __esm({
     "../chainsaw-chat/client/src/hooks/useSfx.ts"() {
       "use strict";
       init_define_import_meta_env();
-      import_react28 = __toESM(require_react(), 1);
+      import_react30 = __toESM(require_react(), 1);
       init_SfxLayer();
     }
   });
 
   // ../chainsaw-chat/client/src/hooks/usePochita.ts
   function usePochita(enabled) {
-    const [pochitaVisible, setPochitaVisible] = (0, import_react29.useState)(false);
-    const [hearts, setHearts] = (0, import_react29.useState)([]);
-    const on = (0, import_react29.useRef)(enabled);
+    const [pochitaVisible, setPochitaVisible] = (0, import_react31.useState)(false);
+    const [hearts, setHearts] = (0, import_react31.useState)([]);
+    const on = (0, import_react31.useRef)(enabled);
     on.current = enabled;
     const triggerPochita = (text, force = false) => {
       if (!on.current) return;
@@ -20814,21 +20978,21 @@ ${xref}
     };
     return { pochitaVisible, hearts, triggerPochita };
   }
-  var import_react29, CUTE_WORDS;
+  var import_react31, CUTE_WORDS;
   var init_usePochita = __esm({
     "../chainsaw-chat/client/src/hooks/usePochita.ts"() {
       "use strict";
       init_define_import_meta_env();
-      import_react29 = __toESM(require_react(), 1);
+      import_react31 = __toESM(require_react(), 1);
       CUTE_WORDS = ["honey", "baby", "darling", "sweetie", "angel", "sunshine", "bunny", "kitty", "cute", "love", "sweet", "aww", "\u2764\uFE0F", "\u{1F97A}", "\u{1F495}", "\u{1F60D}", "\u{1F43E}"];
     }
   });
 
   // ../chainsaw-chat/client/src/hooks/useTabs.ts
   function useTabs(initial = "chat") {
-    const [activeTab, setActiveTab] = (0, import_react30.useState)(initial);
-    const [toneCut, setToneCut] = (0, import_react30.useState)(false);
-    const cutTimer = (0, import_react30.useRef)(null);
+    const [activeTab, setActiveTab] = (0, import_react32.useState)(initial);
+    const [toneCut, setToneCut] = (0, import_react32.useState)(false);
+    const cutTimer = (0, import_react32.useRef)(null);
     const switchTab = (tab) => {
       if (tab === activeTab) return;
       if (cutTimer.current) clearTimeout(cutTimer.current);
@@ -20840,18 +21004,18 @@ ${xref}
     };
     return { activeTab, setActiveTab, toneCut, switchTab };
   }
-  var import_react30;
+  var import_react32;
   var init_useTabs = __esm({
     "../chainsaw-chat/client/src/hooks/useTabs.ts"() {
       "use strict";
       init_define_import_meta_env();
-      import_react30 = __toESM(require_react(), 1);
+      import_react32 = __toESM(require_react(), 1);
     }
   });
 
   // ../chainsaw-chat/client/src/hooks/useChapterNav.ts
   function useChapterNav() {
-    const [railOpen, setRailOpen] = (0, import_react31.useState)(() => {
+    const [railOpen, setRailOpen] = (0, import_react33.useState)(() => {
       try {
         return localStorage.getItem("chainsaw_rail") !== "closed";
       } catch {
@@ -20865,21 +21029,21 @@ ${xref}
       }
       return !o;
     });
-    const [drawerOpen, setDrawerOpen] = (0, import_react31.useState)(false);
+    const [drawerOpen, setDrawerOpen] = (0, import_react33.useState)(false);
     return { railOpen, toggleRail, drawerOpen, setDrawerOpen };
   }
-  var import_react31;
+  var import_react33;
   var init_useChapterNav = __esm({
     "../chainsaw-chat/client/src/hooks/useChapterNav.ts"() {
       "use strict";
       init_define_import_meta_env();
-      import_react31 = __toESM(require_react(), 1);
+      import_react33 = __toESM(require_react(), 1);
     }
   });
 
   // ../chainsaw-chat/client/src/hooks/useTour.ts
   function useTour(inChat, goToChat) {
-    const [tourOpen, setTourOpen] = (0, import_react32.useState)(false);
+    const [tourOpen, setTourOpen] = (0, import_react34.useState)(false);
     const startTour = () => {
       goToChat();
       setTimeout(() => setTourOpen(true), 350);
@@ -20891,7 +21055,7 @@ ${xref}
       } catch {
       }
     };
-    (0, import_react32.useEffect)(() => {
+    (0, import_react34.useEffect)(() => {
       if (!inChat) return;
       let done = false;
       try {
@@ -20904,20 +21068,20 @@ ${xref}
     }, [inChat]);
     return { tourOpen, startTour, closeTour };
   }
-  var import_react32;
+  var import_react34;
   var init_useTour = __esm({
     "../chainsaw-chat/client/src/hooks/useTour.ts"() {
       "use strict";
       init_define_import_meta_env();
-      import_react32 = __toESM(require_react(), 1);
+      import_react34 = __toESM(require_react(), 1);
     }
   });
 
   // ../chainsaw-chat/client/src/hooks/useRejoinOnReconnect.ts
   function useRejoinOnReconnect(session) {
-    const sessionRef = (0, import_react33.useRef)(session);
+    const sessionRef = (0, import_react35.useRef)(session);
     sessionRef.current = session;
-    (0, import_react33.useEffect)(() => {
+    (0, import_react35.useEffect)(() => {
       let firstConnect = true;
       const onConnect = () => {
         if (firstConnect) {
@@ -20939,71 +21103,72 @@ ${xref}
       };
     }, []);
   }
-  var import_react33;
+  var import_react35;
   var init_useRejoinOnReconnect = __esm({
     "../chainsaw-chat/client/src/hooks/useRejoinOnReconnect.ts"() {
       "use strict";
       init_define_import_meta_env();
-      import_react33 = __toESM(require_react(), 1);
+      import_react35 = __toESM(require_react(), 1);
       init_socket();
     }
   });
 
   // ../chainsaw-chat/client/src/App.tsx
   function App() {
-    const [phase, setPhase] = (0, import_react34.useState)("intro");
-    const [username, setUsername] = (0, import_react34.useState)("");
-    const [usernameInput, setUsernameInput] = (0, import_react34.useState)("");
-    const [messages, setMessages] = (0, import_react34.useState)([]);
-    const [input, setInput] = (0, import_react34.useState)("");
+    const [phase, setPhase] = (0, import_react36.useState)("intro");
+    const [username, setUsername] = (0, import_react36.useState)("");
+    const [usernameInput, setUsernameInput] = (0, import_react36.useState)("");
+    const [messages, setMessages] = (0, import_react36.useState)([]);
+    const [input, setInput] = (0, import_react36.useState)("");
     const { activeTab, setActiveTab, toneCut, switchTab } = useTabs("chat");
-    const [currentRoom, setCurrentRoom] = (0, import_react34.useState)("general");
-    const [rooms2, setRooms] = (0, import_react34.useState)([]);
-    const [typingUsers, setTypingUsers] = (0, import_react34.useState)([]);
-    const bottomRef = (0, import_react34.useRef)(null);
-    const typingTimer = (0, import_react34.useRef)(null);
-    const [showCreateRoom, setShowCreateRoom] = (0, import_react34.useState)(false);
-    const [showJoinByCode, setShowJoinByCode] = (0, import_react34.useState)(false);
-    const [newRoomName, setNewRoomName] = (0, import_react34.useState)("");
-    const [joinCode, setJoinCode] = (0, import_react34.useState)("");
-    const [joinError, setJoinError] = (0, import_react34.useState)("");
-    const [createdCode, setCreatedCode] = (0, import_react34.useState)("");
+    const [currentRoom, setCurrentRoom] = (0, import_react36.useState)("general");
+    const [rooms2, setRooms] = (0, import_react36.useState)([]);
+    const [typingUsers, setTypingUsers] = (0, import_react36.useState)([]);
+    const bottomRef = (0, import_react36.useRef)(null);
+    const typingTimer = (0, import_react36.useRef)(null);
+    const [showCreateRoom, setShowCreateRoom] = (0, import_react36.useState)(false);
+    const [showJoinByCode, setShowJoinByCode] = (0, import_react36.useState)(false);
+    const [newRoomName, setNewRoomName] = (0, import_react36.useState)("");
+    const [joinCode, setJoinCode] = (0, import_react36.useState)("");
+    const [joinError, setJoinError] = (0, import_react36.useState)("");
+    const [createdCode, setCreatedCode] = (0, import_react36.useState)("");
     const { isMobile } = useWindowSize();
-    const [avatar, setAvatar] = (0, import_react34.useState)(AVATARS[0]);
-    const [contextMenu, setContextMenu] = (0, import_react34.useState)(null);
-    const joinSeen = (0, import_react34.useRef)(/* @__PURE__ */ new Map());
-    const feedRef = (0, import_react34.useRef)(null);
-    const [hasMore, setHasMore] = (0, import_react34.useState)(false);
-    const loadingOlder = (0, import_react34.useRef)(false);
-    const historyAt = (0, import_react34.useRef)(0);
-    const keepScroll = (0, import_react34.useRef)(null);
-    const pendingJump = (0, import_react34.useRef)(null);
-    const [editing, setEditing] = (0, import_react34.useState)(null);
-    const [members, setMembers] = (0, import_react34.useState)([]);
-    const [roomMeta, setRoomMeta] = (0, import_react34.useState)({ createdBy: null, code: null });
-    const [roomPanel, setRoomPanel] = (0, import_react34.useState)(false);
-    const currentRoomRef = (0, import_react34.useRef)("general");
+    const [avatar, setAvatar] = (0, import_react36.useState)(AVATARS[0]);
+    const [contextMenu, setContextMenu] = (0, import_react36.useState)(null);
+    const joinSeen = (0, import_react36.useRef)(/* @__PURE__ */ new Map());
+    const feedRef = (0, import_react36.useRef)(null);
+    const [hasMore, setHasMore] = (0, import_react36.useState)(false);
+    const loadingOlder = (0, import_react36.useRef)(false);
+    const historyAt = (0, import_react36.useRef)(0);
+    const keepScroll = (0, import_react36.useRef)(null);
+    const pendingJump = (0, import_react36.useRef)(null);
+    const [editing, setEditing] = (0, import_react36.useState)(null);
+    const [members, setMembers] = (0, import_react36.useState)([]);
+    const [roomMeta, setRoomMeta] = (0, import_react36.useState)({ createdBy: null, code: null });
+    const [roomPanel, setRoomPanel] = (0, import_react36.useState)(false);
+    const currentRoomRef = (0, import_react36.useRef)("general");
     currentRoomRef.current = currentRoom;
-    const [pinnedMsg, setPinnedMsg] = (0, import_react34.useState)(null);
-    const [authError, setAuthError] = (0, import_react34.useState)("");
-    const [authLoading, setAuthLoading] = (0, import_react34.useState)(false);
-    const [seenMarks, setSeenMarks] = (0, import_react34.useState)({});
-    const lastMarked = (0, import_react34.useRef)(0);
+    const [pinnedMsg, setPinnedMsg] = (0, import_react36.useState)(null);
+    const [authError, setAuthError] = (0, import_react36.useState)("");
+    const [authLoading, setAuthLoading] = (0, import_react36.useState)(false);
+    const [seenMarks, setSeenMarks] = (0, import_react36.useState)({});
+    const lastMarked = (0, import_react36.useRef)(0);
     const call = useVideoCall(socket, currentRoom, username);
     const { isRecording, startRecording, stopRecording } = useVoiceRecorder(currentRoom, username, avatar.src);
     const { railOpen, toggleRail, drawerOpen, setDrawerOpen } = useChapterNav();
     const { tourOpen, startTour, closeTour } = useTour(phase === "chat", () => setActiveTab("chat"));
-    const [viewUser, setViewUser] = (0, import_react34.useState)(null);
+    const [viewUser, setViewUser] = (0, import_react36.useState)(null);
     const { settings, update: updateSetting, resolveTheme } = useSettings();
     const { theme, T } = useTheme(settings.theme, resolveTheme);
     const { sfx, popSfx, popText } = useSfx(settings.sfxEnabled ?? true);
+    const wake = useServerWake();
     const { notify } = useUnreadBadge({ desktop: settings.desktopNotify ?? false });
     const berserk = useBerserk({ enabled: settings.berserk ?? true, sound: settings.soundEnabled });
-    const berserkHit = (0, import_react34.useRef)(berserk.hit);
+    const berserkHit = (0, import_react36.useRef)(berserk.hit);
     berserkHit.current = berserk.hit;
-    const notifyRef = (0, import_react34.useRef)(notify);
+    const notifyRef = (0, import_react36.useRef)(notify);
     notifyRef.current = notify;
-    const mentionPing = (0, import_react34.useRef)(() => {
+    const mentionPing = (0, import_react36.useRef)(() => {
     });
     mentionPing.current = () => {
       if (!settings.soundEnabled) return;
@@ -21027,25 +21192,25 @@ ${xref}
       } catch {
       }
     };
-    const [replyTo, setReplyTo] = (0, import_react34.useState)(null);
-    const [uploading, setUploading] = (0, import_react34.useState)(false);
-    const [searchOpen, setSearchOpen] = (0, import_react34.useState)(false);
-    const [highlightId, setHighlightId] = (0, import_react34.useState)(null);
-    const [lightbox, setLightbox] = (0, import_react34.useState)(null);
-    const [notice, setNotice] = (0, import_react34.useState)("");
-    const [flash, setFlash] = (0, import_react34.useState)(0);
-    const rootRef = (0, import_react34.useRef)(null);
-    (0, import_react34.useEffect)(() => {
+    const [replyTo, setReplyTo] = (0, import_react36.useState)(null);
+    const [uploading, setUploading] = (0, import_react36.useState)(false);
+    const [searchOpen, setSearchOpen] = (0, import_react36.useState)(false);
+    const [highlightId, setHighlightId] = (0, import_react36.useState)(null);
+    const [lightbox, setLightbox] = (0, import_react36.useState)(null);
+    const [notice, setNotice] = (0, import_react36.useState)("");
+    const [flash, setFlash] = (0, import_react36.useState)(0);
+    const rootRef = (0, import_react36.useRef)(null);
+    (0, import_react36.useEffect)(() => {
       if (!notice) return;
       const t2 = setTimeout(() => setNotice(""), 3200);
       return () => clearTimeout(t2);
     }, [notice]);
-    const [keysOpen, setKeysOpen] = (0, import_react34.useState)(false);
-    const [exportOpen, setExportOpen] = (0, import_react34.useState)(false);
-    const keyActions = (0, import_react34.useRef)({ room: () => {
+    const [keysOpen, setKeysOpen] = (0, import_react36.useState)(false);
+    const [exportOpen, setExportOpen] = (0, import_react36.useState)(false);
+    const keyActions = (0, import_react36.useRef)({ room: () => {
     }, info: () => {
     } });
-    (0, import_react34.useEffect)(() => {
+    (0, import_react36.useEffect)(() => {
       const onKey = (e) => {
         if (phase !== "chat") return;
         const t2 = e.target;
@@ -21095,13 +21260,13 @@ ${xref}
       return () => window.removeEventListener("keydown", onKey);
     }, [phase]);
     const { pochitaVisible, hearts, triggerPochita } = usePochita(settings.pochitaEnabled ?? true);
-    const meRef = (0, import_react34.useRef)("");
+    const meRef = (0, import_react36.useRef)("");
     meRef.current = username;
     setMe(username);
     const playSound2 = (src, volume = 0.4) => {
       if (settings.soundEnabled) playSound(src, volume);
     };
-    (0, import_react34.useEffect)(() => {
+    (0, import_react36.useEffect)(() => {
       const fromHash = new URLSearchParams(window.location.hash.slice(1)).get("token");
       const fromQuery = new URLSearchParams(window.location.search).get("token");
       const incoming = fromHash || fromQuery;
@@ -21120,7 +21285,7 @@ ${xref}
         });
       }
     }, []);
-    (0, import_react34.useEffect)(() => {
+    (0, import_react36.useEffect)(() => {
       const onErr = (err) => {
         if (err.message !== "unauthorized") return;
         clearTokens();
@@ -21164,7 +21329,7 @@ ${xref}
         playSound2(CHAINSAW_SFX, 0.4);
         enterChat(data.user, avatar);
       } catch {
-        setAuthError("Server is sleeping, try again");
+        setAuthError(wake.state === "ready" ? "No answer from the server, try again" : "The server is still waking up \u2014 watch the gauge in the corner");
       } finally {
         setAuthLoading(false);
       }
@@ -21182,7 +21347,7 @@ ${xref}
       }).catch(() => {
       });
     };
-    (0, import_react34.useEffect)(() => {
+    (0, import_react36.useEffect)(() => {
       socket.on("message_pinned", ({ messageId, pinStatus }) => {
         if (pinStatus) {
           const msg = messages.find((m) => m.id === messageId);
@@ -21195,7 +21360,7 @@ ${xref}
         socket.off("message_pinned");
       };
     }, [messages]);
-    (0, import_react34.useEffect)(() => {
+    (0, import_react36.useEffect)(() => {
       socket.on("rooms_list", (list) => setRooms(list));
       socket.on("poll_updated", ({ messageId, poll }) => setMessages((p) => p.map((m) => m.id === messageId ? { ...m, poll } : m)));
       socket.on("room_history", (history2) => {
@@ -21313,8 +21478,8 @@ ${xref}
       };
     }, [username, avatar]);
     useRejoinOnReconnect({ phase, username, currentRoom, avatarSrc: avatar.src });
-    const lastIdRef = (0, import_react34.useRef)(null);
-    (0, import_react34.useLayoutEffect)(() => {
+    const lastIdRef = (0, import_react36.useRef)(null);
+    (0, import_react36.useLayoutEffect)(() => {
       const feed = feedRef.current;
       if (keepScroll.current !== null && feed) {
         feed.scrollTop += feed.scrollHeight - keepScroll.current;
@@ -21326,13 +21491,13 @@ ${xref}
         requestAnimationFrame(() => jumpToRef.current(pj.id));
       } else if (pj) loadOlderRef.current();
     }, [messages]);
-    (0, import_react34.useEffect)(() => {
+    (0, import_react36.useEffect)(() => {
       const last = messages[messages.length - 1]?.id ?? null;
       if (last === lastIdRef.current) return;
       lastIdRef.current = last;
       bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
-    (0, import_react34.useEffect)(() => {
+    (0, import_react36.useEffect)(() => {
       if (typingUsers.length) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [typingUsers]);
     const loadOlder = () => {
@@ -21352,9 +21517,9 @@ ${xref}
       loadingOlder.current = true;
       socket.emit("load_older", { roomId: currentRoom, before: first.id });
     };
-    const loadOlderRef = (0, import_react34.useRef)(loadOlder);
+    const loadOlderRef = (0, import_react36.useRef)(loadOlder);
     loadOlderRef.current = loadOlder;
-    (0, import_react34.useEffect)(() => {
+    (0, import_react36.useEffect)(() => {
       const markSeen = () => {
         if (phase !== "chat" || activeTab !== "chat" || document.visibilityState !== "visible") return;
         const last = [...messages].reverse().find((m) => !m.system && typeof m.id === "number");
@@ -21409,7 +21574,7 @@ ${xref}
       socket.emit("join_room", { roomId, username, avatar: avatar.src });
       socket.emit("room_members", { roomId });
     };
-    const joinRoomRef = (0, import_react34.useRef)(joinRoom);
+    const joinRoomRef = (0, import_react36.useRef)(joinRoom);
     joinRoomRef.current = joinRoom;
     const handleSetUsername = async () => {
       const name = usernameInput.trim().toUpperCase();
@@ -21431,10 +21596,10 @@ ${xref}
         socket.emit("room_members", { roomId: "general" });
         return null;
       } catch {
-        return "Server is sleeping, try again";
+        return wake.state === "ready" ? "No answer from the server, try again" : "The server is still waking up \u2014 watch the gauge in the corner";
       }
     };
-    const [slashing, setSlashing] = (0, import_react34.useState)(false);
+    const [slashing, setSlashing] = (0, import_react36.useState)(false);
     const finishIntro = () => {
       setPhase("username");
       setSlashing(true);
@@ -21452,7 +21617,7 @@ ${xref}
         );
       }
     };
-    const runCommandRef = (0, import_react34.useRef)(runCommand);
+    const runCommandRef = (0, import_react36.useRef)(runCommand);
     runCommandRef.current = runCommand;
     const jumpTo = (id) => {
       const el = document.getElementById(`msg-${id}`);
@@ -21471,7 +21636,7 @@ ${xref}
       requestAnimationFrame(() => setHighlightId(id));
       setTimeout(() => setHighlightId((h) => h === id ? null : h), 1500);
     };
-    const jumpToRef = (0, import_react34.useRef)(jumpTo);
+    const jumpToRef = (0, import_react36.useRef)(jumpTo);
     jumpToRef.current = jumpTo;
     const handleAttach = async (file) => {
       if (uploading) return;
@@ -21546,12 +21711,13 @@ ${xref}
       window.location.href = "/";
     };
     if (phase === "intro" || phase === "slashing") {
-      return /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(IntroScreen, { soundOn: settings.soundEnabled, onRoar: () => playSound2(CHAINSAW_SFX, 0.5), onDone: finishIntro });
+      return /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(IntroScreen, { soundOn: settings.soundEnabled, onRoar: () => playSound2(CHAINSAW_SFX, 0.5), onDone: finishIntro });
     }
     if (phase === "username") {
-      return /* @__PURE__ */ (0, import_jsx_runtime33.jsxs)(import_jsx_runtime33.Fragment, { children: [
-        slashing && /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(SlashOverlay, { onEnd: () => setSlashing(false) }),
-        /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(
+      return /* @__PURE__ */ (0, import_jsx_runtime35.jsxs)(import_jsx_runtime35.Fragment, { children: [
+        slashing && /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(SlashOverlay, { onEnd: () => setSlashing(false) }),
+        /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(ServerWake, { state: wake.state, seconds: wake.seconds }),
+        /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(
           UsernameScreen,
           {
             avatar,
@@ -21581,7 +21747,7 @@ ${xref}
       }));
       socket.emit("react_message", { messageId, roomId: currentRoom, emoji, username });
     };
-    return /* @__PURE__ */ (0, import_jsx_runtime33.jsxs)(
+    return /* @__PURE__ */ (0, import_jsx_runtime35.jsxs)(
       motion.div,
       {
         ref: rootRef,
@@ -21602,7 +21768,7 @@ ${xref}
           transition: "background 0.4s"
         },
         children: [
-          /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(
+          /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(
             Header,
             {
               T,
@@ -21633,14 +21799,14 @@ ${xref}
               }
             }
           ),
-          /* @__PURE__ */ (0, import_jsx_runtime33.jsxs)("div", { style: {
+          /* @__PURE__ */ (0, import_jsx_runtime35.jsxs)("div", { style: {
             flex: 1,
             overflow: "hidden",
             display: "flex",
             flexDirection: "column",
             position: "relative"
           }, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(
+            /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(
               motion.div,
               {
                 className: "tone",
@@ -21656,8 +21822,8 @@ ${xref}
                 }
               }
             ),
-            activeTab === "chat" && /* @__PURE__ */ (0, import_jsx_runtime33.jsxs)("div", { style: { display: "flex", flex: 1, overflow: "hidden", gap: isMobile ? "6px" : "10px" }, children: [
-              !isMobile && /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(
+            activeTab === "chat" && /* @__PURE__ */ (0, import_jsx_runtime35.jsxs)("div", { style: { display: "flex", flex: 1, overflow: "hidden", gap: isMobile ? "6px" : "10px" }, children: [
+              !isMobile && /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(
                 ChapterRail,
                 {
                   rooms: rooms2,
@@ -21668,11 +21834,12 @@ ${xref}
                   panelStyle: { border: `4px solid ${T.headerBorder}`, borderRadius: "4px", overflow: "hidden", background: T.appBg }
                 }
               ),
-              /* @__PURE__ */ (0, import_jsx_runtime33.jsxs)("div", { style: { flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", gap: isMobile ? "6px" : "10px" }, children: [
-                /* @__PURE__ */ (0, import_jsx_runtime33.jsxs)("div", { style: { flex: 1, display: "flex", flexDirection: "column", position: "relative", border: `4px solid ${T.headerBorder}`, borderRadius: "4px", overflow: "hidden", background: T.appBg }, children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(SfxLayer, { bursts: sfx }),
-                  /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(BerserkLayer, { combo: berserk.combo, active: berserk.active, tier: berserk.tier, cooling: berserk.cooling }),
-                  searchOpen && /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime35.jsxs)("div", { style: { flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", gap: isMobile ? "6px" : "10px" }, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime35.jsxs)("div", { style: { flex: 1, display: "flex", flexDirection: "column", position: "relative", border: `4px solid ${T.headerBorder}`, borderRadius: "4px", overflow: "hidden", background: T.appBg }, children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(SfxLayer, { bursts: sfx }),
+                  /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(ConnectionBanner, {}),
+                  /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(BerserkLayer, { combo: berserk.combo, active: berserk.active, tier: berserk.tier, cooling: berserk.cooling }),
+                  searchOpen && /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(
                     SearchPanel,
                     {
                       roomId: currentRoom,
@@ -21684,7 +21851,7 @@ ${xref}
                       onClose: () => setSearchOpen(false)
                     }
                   ),
-                  isMobile && /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(
+                  isMobile && /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(
                     ChapterDrawer,
                     {
                       rooms: rooms2,
@@ -21694,7 +21861,7 @@ ${xref}
                       setOpen: setDrawerOpen
                     }
                   ),
-                  /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(
+                  /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(
                     StickerBomb,
                     {
                       density: settings.stickerBomb ?? "light",
@@ -21703,7 +21870,7 @@ ${xref}
                       seed: currentRoom
                     }
                   ),
-                  /* @__PURE__ */ (0, import_jsx_runtime33.jsxs)(
+                  /* @__PURE__ */ (0, import_jsx_runtime35.jsxs)(
                     "div",
                     {
                       "data-tour": "messages",
@@ -21727,7 +21894,7 @@ ${xref}
                         gap: "10px"
                       },
                       children: [
-                        call.participants.length > 0 && !call.inCall && /* @__PURE__ */ (0, import_jsx_runtime33.jsxs)(
+                        call.participants.length > 0 && !call.inCall && /* @__PURE__ */ (0, import_jsx_runtime35.jsxs)(
                           motion.div,
                           {
                             initial: { opacity: 0, y: -10 },
@@ -21746,12 +21913,12 @@ ${xref}
                               transform: "rotate(-0.5deg)"
                             },
                             children: [
-                              /* @__PURE__ */ (0, import_jsx_runtime33.jsx)("span", { style: { fontFamily: "'CCDoohickey', BlambotClassic, sans-serif", fontStyle: "italic", fontWeight: 900, fontSize: "14px" }, children: "BZZZT!" }),
-                              /* @__PURE__ */ (0, import_jsx_runtime33.jsxs)("span", { style: { flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: [
+                              /* @__PURE__ */ (0, import_jsx_runtime35.jsx)("span", { style: { fontFamily: "'CCDoohickey', BlambotClassic, sans-serif", fontStyle: "italic", fontWeight: 900, fontSize: "14px" }, children: "BZZZT!" }),
+                              /* @__PURE__ */ (0, import_jsx_runtime35.jsxs)("span", { style: { flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: [
                                 "\u{1F4F9} CALL: ",
                                 call.participants.join(", ")
                               ] }),
-                              /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(
+                              /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(
                                 motion.button,
                                 {
                                   whileTap: { scale: 0.92 },
@@ -21774,7 +21941,7 @@ ${xref}
                             ]
                           }
                         ),
-                        pinnedMsg && /* @__PURE__ */ (0, import_jsx_runtime33.jsxs)("div", { style: {
+                        pinnedMsg && /* @__PURE__ */ (0, import_jsx_runtime35.jsxs)("div", { style: {
                           padding: "8px 14px",
                           background: theme === "dark" ? "#1a1a1a" : "#f0ebe0",
                           border: `2px solid var(--accent)`,
@@ -21786,18 +21953,18 @@ ${xref}
                           gap: "8px",
                           alignItems: "center"
                         }, children: [
-                          /* @__PURE__ */ (0, import_jsx_runtime33.jsx)("span", { style: { color: "var(--accent)" }, children: "\u{1F4CC}" }),
-                          /* @__PURE__ */ (0, import_jsx_runtime33.jsx)("span", { style: { opacity: 0.6 }, children: "PINNED:" }),
-                          /* @__PURE__ */ (0, import_jsx_runtime33.jsx)("span", { style: { flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: pinnedMsg.content })
+                          /* @__PURE__ */ (0, import_jsx_runtime35.jsx)("span", { style: { color: "var(--accent)" }, children: "\u{1F4CC}" }),
+                          /* @__PURE__ */ (0, import_jsx_runtime35.jsx)("span", { style: { opacity: 0.6 }, children: "PINNED:" }),
+                          /* @__PURE__ */ (0, import_jsx_runtime35.jsx)("span", { style: { flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: pinnedMsg.content })
                         ] }),
                         groupedItems.map((item, index) => {
                           if (item.type === "divider") {
-                            return /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(DateDivider, { label: item.label || "", theme }, `divider-${item.label}-${index}`);
+                            return /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(DateDivider, { label: item.label || "", theme }, `divider-${item.label}-${index}`);
                           }
                           const msg = item.data;
                           if (msg.system) return (
                             // narration caption — the rectangular box in a panel corner
-                            /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(motion.div, { initial: { opacity: 0, x: -10 }, animate: { opacity: 1, x: 0 }, style: { display: "flex", justifyContent: "center", padding: "4px 0" }, children: /* @__PURE__ */ (0, import_jsx_runtime33.jsxs)("span", { style: {
+                            /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(motion.div, { initial: { opacity: 0, x: -10 }, animate: { opacity: 1, x: 0 }, style: { display: "flex", justifyContent: "center", padding: "4px 0" }, children: /* @__PURE__ */ (0, import_jsx_runtime35.jsxs)("span", { style: {
                               display: "inline-block",
                               transform: "rotate(-1deg)",
                               border: "3px solid var(--ink)",
@@ -21813,7 +21980,7 @@ ${xref}
                               msg.content
                             ] }) }, msg.id)
                           );
-                          return /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(
+                          return /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(
                             MessageBubble,
                             {
                               msg,
@@ -21840,7 +22007,7 @@ ${xref}
                             msg.id
                           );
                         }),
-                        /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(
+                        /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(
                           ContextMenu,
                           {
                             contextMenu,
@@ -21870,13 +22037,13 @@ ${xref}
                             onClose: () => setContextMenu(null)
                           }
                         ),
-                        /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(TypingIndicator, { typingUsers, theme }),
-                        /* @__PURE__ */ (0, import_jsx_runtime33.jsx)("div", { ref: bottomRef })
+                        /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(TypingIndicator, { typingUsers, theme }),
+                        /* @__PURE__ */ (0, import_jsx_runtime35.jsx)("div", { ref: bottomRef })
                       ]
                     }
                   )
                 ] }),
-                /* @__PURE__ */ (0, import_jsx_runtime33.jsx)("div", { style: { marginBottom: isMobile ? "62px" : "0", position: "relative", zIndex: 2, border: `4px solid ${T.headerBorder}`, borderRadius: "4px", overflow: "hidden", background: T.appBg }, children: /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(
+                /* @__PURE__ */ (0, import_jsx_runtime35.jsx)("div", { style: { marginBottom: isMobile ? "62px" : "0", position: "relative", zIndex: 2, border: `4px solid ${T.headerBorder}`, borderRadius: "4px", overflow: "hidden", background: T.appBg }, children: /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(
                   InputBar,
                   {
                     input,
@@ -21907,7 +22074,7 @@ ${xref}
                 ) })
               ] })
             ] }),
-            activeTab === "rooms" && /* @__PURE__ */ (0, import_jsx_runtime33.jsx)("div", { style: { flex: 1, overflowY: "auto", marginBottom: isMobile ? "62px" : "0", border: `4px solid ${T.headerBorder}`, borderRadius: "4px", background: T.appBg }, children: /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(
+            activeTab === "rooms" && /* @__PURE__ */ (0, import_jsx_runtime35.jsx)("div", { style: { flex: 1, overflowY: "auto", marginBottom: isMobile ? "62px" : "0", border: `4px solid ${T.headerBorder}`, borderRadius: "4px", background: T.appBg }, children: /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(
               RoomsTab,
               {
                 rooms: rooms2,
@@ -21932,7 +22099,7 @@ ${xref}
                 onJoinByCode: joinByCode
               }
             ) }),
-            activeTab === "settings" && /* @__PURE__ */ (0, import_jsx_runtime33.jsx)("div", { style: { flex: 1, overflowY: "auto", marginBottom: isMobile ? "62px" : "0", border: `4px solid ${T.headerBorder}`, borderRadius: "4px", background: T.appBg }, children: /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(
+            activeTab === "settings" && /* @__PURE__ */ (0, import_jsx_runtime35.jsx)("div", { style: { flex: 1, overflowY: "auto", marginBottom: isMobile ? "62px" : "0", border: `4px solid ${T.headerBorder}`, borderRadius: "4px", background: T.appBg }, children: /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(
               SettingsTab,
               {
                 T,
@@ -21941,7 +22108,7 @@ ${xref}
                 onReplayTutorial: startTour
               }
             ) }),
-            activeTab === "profile" && /* @__PURE__ */ (0, import_jsx_runtime33.jsx)("div", { style: { flex: 1, overflowY: "auto", marginBottom: isMobile ? "62px" : "0", border: `4px solid ${T.headerBorder}`, borderRadius: "4px", background: T.appBg }, children: /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(
+            activeTab === "profile" && /* @__PURE__ */ (0, import_jsx_runtime35.jsx)("div", { style: { flex: 1, overflowY: "auto", marginBottom: isMobile ? "62px" : "0", border: `4px solid ${T.headerBorder}`, borderRadius: "4px", background: T.appBg }, children: /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(
               ProfileTab,
               {
                 avatar,
@@ -21955,7 +22122,7 @@ ${xref}
               }
             ) })
           ] }),
-          isMobile && /* @__PURE__ */ (0, import_jsx_runtime33.jsx)("div", { style: { position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 20 }, children: /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(
+          isMobile && /* @__PURE__ */ (0, import_jsx_runtime35.jsx)("div", { style: { position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 20 }, children: /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(
             BottomNav,
             {
               activeTab,
@@ -21964,13 +22131,13 @@ ${xref}
               onTabChange: switchTab
             }
           ) }),
-          /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(Tutorial, { open: tourOpen, onClose: closeTour }),
-          /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(CharacterModal, { username: viewUser?.name ?? null, fallbackAvatar: viewUser?.avatar ?? null, onClose: () => setViewUser(null) }),
-          /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(VideoCall, { call, theme, username, avatar: avatar.src, isMobile }),
-          /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(PochitaEgg, { visible: pochitaVisible, hearts }),
-          lightbox && /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(Lightbox, { src: lightbox, onClose: () => setLightbox(null) }),
-          keysOpen && /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(ShortcutsHelp, { onClose: () => setKeysOpen(false) }),
-          roomPanel && /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(
+          /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(Tutorial, { open: tourOpen, onClose: closeTour }),
+          /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(CharacterModal, { username: viewUser?.name ?? null, fallbackAvatar: viewUser?.avatar ?? null, onClose: () => setViewUser(null) }),
+          /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(VideoCall, { call, theme, username, avatar: avatar.src, isMobile }),
+          /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(PochitaEgg, { visible: pochitaVisible, hearts }),
+          lightbox && /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(Lightbox, { src: lightbox, onClose: () => setLightbox(null) }),
+          keysOpen && /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(ShortcutsHelp, { onClose: () => setKeysOpen(false) }),
+          roomPanel && /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(
             RoomPanel,
             {
               roomId: currentRoom,
@@ -21986,7 +22153,7 @@ ${xref}
               onClose: () => setRoomPanel(false)
             }
           ),
-          exportOpen && /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(
+          exportOpen && /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(
             ExportDialog,
             {
               messages,
@@ -21996,7 +22163,7 @@ ${xref}
               onClose: () => setExportOpen(false)
             }
           ),
-          flash > 0 && /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(
+          flash > 0 && /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(
             motion.div,
             {
               "aria-hidden": true,
@@ -22007,7 +22174,7 @@ ${xref}
             },
             flash
           ),
-          notice && /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(
+          notice && /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(
             motion.div,
             {
               role: "status",
@@ -22035,12 +22202,12 @@ ${xref}
       }
     );
   }
-  var import_react34, import_jsx_runtime33;
+  var import_react36, import_jsx_runtime35;
   var init_App = __esm({
     "../chainsaw-chat/client/src/App.tsx"() {
       "use strict";
       init_define_import_meta_env();
-      import_react34 = __toESM(require_react(), 1);
+      import_react36 = __toESM(require_react(), 1);
       init_fm();
       init_IntroScreen();
       init_UsernameScreen();
@@ -22076,6 +22243,9 @@ ${xref}
       init_ExportDialog();
       init_BerserkLayer();
       init_RoomPanel();
+      init_ServerWake();
+      init_ConnectionBanner();
+      init_useServerWake();
       init_useBerserk();
       init_config();
       init_socket();
@@ -22089,7 +22259,7 @@ ${xref}
       init_useChapterNav();
       init_useTour();
       init_useRejoinOnReconnect();
-      import_jsx_runtime33 = __toESM(require_jsx_runtime(), 1);
+      import_jsx_runtime35 = __toESM(require_jsx_runtime(), 1);
     }
   });
 
@@ -22103,23 +22273,23 @@ ${xref}
 
   // ../chainsaw-chat/client/src/main.tsx
   var main_exports = {};
-  var import_react35, import_client, import_jsx_runtime34, rootElement;
+  var import_react37, import_client, import_jsx_runtime36, rootElement;
   var init_main = __esm({
     "../chainsaw-chat/client/src/main.tsx"() {
       "use strict";
       init_define_import_meta_env();
       init_fonts();
-      import_react35 = __toESM(require_react(), 1);
+      import_react37 = __toESM(require_react(), 1);
       import_client = __toESM(require_client(), 1);
       init_App();
       init_src();
-      import_jsx_runtime34 = __toESM(require_jsx_runtime(), 1);
+      import_jsx_runtime36 = __toESM(require_jsx_runtime(), 1);
       rootElement = document.getElementById("root");
       if (!rootElement) {
         throw new Error("Failed to find the root element. Chainsaw engine halted! \u26D3\uFE0F");
       }
       (0, import_client.createRoot)(rootElement).render(
-        /* @__PURE__ */ (0, import_jsx_runtime34.jsx)(import_react35.StrictMode, { children: /* @__PURE__ */ (0, import_jsx_runtime34.jsx)(App, {}) })
+        /* @__PURE__ */ (0, import_jsx_runtime36.jsx)(import_react37.StrictMode, { children: /* @__PURE__ */ (0, import_jsx_runtime36.jsx)(App, {}) })
       );
     }
   });
@@ -22134,6 +22304,10 @@ ${xref}
   var t = new URLSearchParams(location.search).get("t") || "light";
   localStorage.setItem("chainsaw_settings", JSON.stringify({ theme: t, stickerBomb: "light" }));
   window.fetch = async (url) => {
+    if (String(url).includes("/ping")) {
+      if (location.search.includes("asleep") && !window.__up) throw new TypeError("Failed to fetch");
+      return { ok: true, status: 200, json: async () => ({}) };
+    }
     if (String(url).includes("/profile/")) {
       const who = decodeURIComponent(String(url).split("/profile/")[1]);
       return { ok: true, json: async () => ({
