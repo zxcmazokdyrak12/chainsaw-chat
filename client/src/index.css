@@ -96,3 +96,9 @@ button.manga-tab {
   background-image: radial-gradient(var(--tone-dot) 0.55px, transparent 0.95px);
   background-size: 5px 5px;
 }
+
+/* a message you jumped to (search / quote): brief ink outline */
+@keyframes csm-flash {
+  0%, 30% { outline: 3px dashed var(--ink); outline-offset: 6px; }
+  100%    { outline: 3px dashed transparent; outline-offset: 12px; }
+}

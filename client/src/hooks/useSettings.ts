@@ -10,6 +10,7 @@ export interface Settings {
   showTyping: boolean
   stickerBomb: 'off' | 'light' | 'full'
   sfxEnabled: boolean
+  desktopNotify: boolean
 }
 
 const DEFAULTS: Settings = {
@@ -21,6 +22,7 @@ const DEFAULTS: Settings = {
   showTyping: true,     // send typing events
   stickerBomb: 'light', // manga stickers slapped on the chat background
   sfxEnabled: true,     // DOOOM / DON / ZAP! lettering pops over the feed
+  desktopNotify: false, // system notifications while the tab is in the background
 }
 
 export function useSettings() {

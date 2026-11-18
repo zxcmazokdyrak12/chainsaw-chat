@@ -37,9 +37,10 @@ model Room {
   createdBy String?  @map("created_by")
   createdAt DateTime @default(now()) @map("created_at")
 
-  members   RoomMember[]
-  messages  Message[]
-  readMarks ReadMark[]
+  members     RoomMember[]
+  messages    Message[]
+  readMarks   ReadMark[]
+  attachments Attachment[]
 
   @@map("rooms")
 }
@@ -70,11 +71,33 @@ model Message {
   isPinned  Boolean  @default(false) @map("is_pinned")
   // { "🔥": ["DENJI", "POWER"], ... }
   reactions Json     @default("{}")
+  // picture / voice stored as an Attachment (old voice messages still use audioData)
+  mediaId   String?  @map("media_id")
+  // reply: the id we answer + a small snapshot, so the quote survives the original being deleted
+  replyToId    BigInt? @map("reply_to_id")
+  replyPreview Json?   @map("reply_preview")
   createdAt DateTime @default(now()) @map("created_at")
 
   room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
 
+  @@index([roomId, createdAt])
   @@map("messages")
+}
+
+// uploaded pictures and voice notes. Bytes live here (storage = "db") or in an R2 bucket (storage = "r2")
+model Attachment {
+  id        String   @id
+  roomId    String   @map("room_id")
+  username  String
+  mime      String
+  size      Int
+  storage   String   @default("db")
+  data      Bytes?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@map("attachments")
 }
 
 // last message each user has seen in a room → powers SENT / SEEN flags

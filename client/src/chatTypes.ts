@@ -10,6 +10,8 @@ export interface MessageItem {
   type?: 'text' | 'audio' | string
   audioData?: string | ArrayBuffer | null
   reactions?: Record<string, string[]>
+  media?: string | null
+  replyTo?: { id: number; username: string | null; content: string; type: string } | null
 }
 
 export interface RoomItem {

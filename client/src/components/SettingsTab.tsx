@@ -12,6 +12,7 @@ export interface Settings {
   showTyping: boolean
   stickerBomb: 'off' | 'light' | 'full'
   sfxEnabled: boolean
+  desktopNotify: boolean
 }
 
 interface SettingsTabProps {
@@ -249,6 +250,16 @@ export default function SettingsTab({ settings, onUpdate, onReplayTutorial }: Se
             <Row icon="keyboard" label="SHOW I'M TYPING"
               desc={settings.showTyping ? 'others see your thought balloon' : 'you type in secret'}>
               <Stamp label="Show typing" checked={settings.showTyping} onChange={v => onUpdate('showTyping', v)} />
+            </Row>
+            <Row icon="bell" label="BACKGROUND ALERTS"
+              desc={settings.desktopNotify ? 'a notification when the tab is hidden' : 'only the (3) counter on the tab'}>
+              <Stamp label="Background alerts" checked={settings.desktopNotify ?? false} onChange={async v => {
+                if (v && 'Notification' in window && Notification.permission !== 'granted') {
+                  const ok = await Notification.requestPermission().catch(() => 'denied')
+                  if (ok !== 'granted') return
+                }
+                onUpdate('desktopNotify', v)
+              }} />
             </Row>
           </Panel>
 

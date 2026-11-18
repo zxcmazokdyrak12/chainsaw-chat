@@ -23,6 +23,11 @@ import StickerBomb from './components/StickerBomb'
 import Tutorial from './components/Tutorial'
 import SfxLayer from './components/SfxLayer'
 import CharacterModal from './components/CharacterModal'
+import SearchPanel, { type SearchHit } from './components/SearchPanel'
+import Lightbox from './components/Lightbox'
+import { uploadMedia, preparePicture } from './lib/media'
+import { findCommand, HELP_TEXT, type ChatCommand } from './lib/commands'
+import { useUnreadBadge } from './hooks/useUnreadBadge'
 import { API_URL } from './config'
 import { socket, connectSocket } from './lib/socket'
 import { getToken, getAccountToken, setAccountToken, setGuestToken, clearTokens } from './lib/auth'
@@ -82,7 +87,30 @@ export default function App() {
 
   const { settings, update: updateSetting, resolveTheme } = useSettings()
   const { theme, T } = useTheme(settings.theme, resolveTheme)
-  const { sfx, popSfx } = useSfx(settings.sfxEnabled ?? true)
+  const { sfx, popSfx, popText } = useSfx(settings.sfxEnabled ?? true)
+  const { notify } = useUnreadBadge({ desktop: settings.desktopNotify ?? false })
+  const notifyRef = useRef(notify)
+  notifyRef.current = notify
+
+  // replies, pictures, search, lightbox, short notices
+  const [replyTo, setReplyTo] = useState<MessageItem | null>(null)
+  const [uploading, setUploading] = useState<boolean>(false)
+  const [searchOpen, setSearchOpen] = useState<boolean>(false)
+  const [highlightId, setHighlightId] = useState<number | null>(null)
+  const [lightbox, setLightbox] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string>('')
+  const [flash, setFlash] = useState<number>(0)
+  const rootRef = useRef<HTMLDivElement>(null)
+  useEffect(() => { if (!notice) return; const t = setTimeout(() => setNotice(''), 3200); return () => clearTimeout(t) }, [notice])
+
+  // Ctrl/Cmd+K opens the search
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && phase === 'chat') { e.preventDefault(); setActiveTab('chat'); setSearchOpen(true) }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [phase])
   const { pochitaVisible, hearts, triggerPochita } = usePochita(settings.pochitaEnabled ?? true)
   const meRef = useRef<string>('')
   meRef.current = username
@@ -204,8 +232,11 @@ export default function App() {
     socket.on('room_history', (history: MessageItem[]) => setMessages(history))
     socket.on('receive_message', (msg: MessageItem) => {
       setMessages(p => [...p, msg])
-      triggerPochita(msg.content)
       const own = msg.username === meRef.current
+      if (!own) notifyRef.current(msg.username ?? 'Chainsaw Chat', msg.type === 'image' ? '🖼 picture' : msg.type === 'audio' ? '🎤 voice message' : msg.content)
+      const cmd = msg.type === 'text' || !msg.type ? findCommand(msg.content) : null
+      if (cmd) { runCommandRef.current(cmd); return }
+      triggerPochita(msg.content)
       if (isShout(msg.content || '')) popSfx('shout', own)
       else if (own) popSfx('send', true)
     })
@@ -284,6 +315,8 @@ export default function App() {
     setMessages([])
     setTypingUsers([])
     setSeenMarks({})
+    setReplyTo(null)
+    setSearchOpen(false)
     lastMarked.current = 0
     socket.emit('join_room', { roomId, username, avatar: avatar.src })
   }
@@ -317,14 +350,71 @@ export default function App() {
   const finishIntro = (): void => { setPhase('username'); setSlashing(true) }
 
 
+  // a /command plays for everyone in the room
+  const runCommand = (cmd: ChatCommand): void => {
+    popText(cmd.sfx, cmd.sfx.length > 12 ? 44 : 72)
+    if (cmd.hearts) triggerPochita('', true)
+    if (cmd.roar) playSound(CHAINSAW_SFX, 0.45)
+    if (cmd.flash) setFlash(Date.now())
+    if (cmd.shake && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      const px = cmd.shake
+      rootRef.current?.animate(
+        [{ transform: 'translate(0,0)' }, { transform: `translate(${px}px,${-px / 2}px)` }, { transform: `translate(${-px}px,${px / 2}px)` }, { transform: 'translate(0,0)' }],
+        { duration: 70, iterations: 5 },
+      )
+    }
+  }
+  const runCommandRef = useRef(runCommand)
+  runCommandRef.current = runCommand
+
+  // scroll to a message (from the search or a quote) and flash it
+  const jumpTo = (id: number): void => {
+    const el = document.getElementById(`msg-${id}`)
+    if (!el) { setNotice('That line is older than the loaded history'); return }
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    setHighlightId(null)
+    requestAnimationFrame(() => setHighlightId(id))
+    setTimeout(() => setHighlightId(h => (h === id ? null : h)), 1500)
+  }
+
+  // a picture: shrink → upload → message (the current line becomes its caption)
+  const handleAttach = async (file: File): Promise<void> => {
+    if (uploading) return
+    setUploading(true)
+    try {
+      const blob = await preparePicture(file)
+      const mediaId = await uploadMedia(blob, currentRoom)
+      socket.emit('send_message', {
+        roomId: currentRoom, type: 'image', mediaId, content: input.trim(),
+        avatar: avatar.src, replyTo: typeof replyTo?.id === 'number' ? replyTo.id : undefined,
+      })
+      setInput('')
+      setReplyTo(null)
+    } catch (err) {
+      setNotice((err as Error).message || 'Upload failed')
+    } finally {
+      setUploading(false)
+    }
+  }
+
   const sendMessage = (): void => {
     if (!input.trim()) return
+    // /help is just for you — it never leaves the browser
+    if (input.trim().toLowerCase() === '/help') {
+      setMessages(p => [...p, { id: `help-${Date.now()}`, system: true, content: HELP_TEXT, time: '' }])
+      setInput('')
+      return
+    }
     if (isShout(input.trim()) && Math.random() < 0.1) {
       playSound(CHAINSAW_SFX, 0.4)
     }
-    socket.emit('send_message', { roomId: currentRoom, username, content: input.trim(), avatar: avatar.src })
+    socket.emit('send_message', {
+      roomId: currentRoom, username, content: input.trim(), avatar: avatar.src,
+      replyTo: typeof replyTo?.id === 'number' ? replyTo.id : undefined,
+    })
     socket.emit('typing_stop', { roomId: currentRoom })
     setInput('')
+    setReplyTo(null)
   }
 
   const handleInputChange = (e: ChangeEvent<HTMLTextAreaElement>): void => {
@@ -391,6 +481,7 @@ export default function App() {
 
   return (
     <motion.div
+      ref={rootRef}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       style={{
@@ -417,6 +508,7 @@ export default function App() {
         callCount={call.participants.length}
         inCall={call.inCall}
         onCall={() => { setActiveTab('chat'); call.join() }}
+        onSearch={() => { setActiveTab('chat'); setSearchOpen(o => !o) }}
       />
 
       {/* main content */}
@@ -455,6 +547,14 @@ export default function App() {
             {/* feed panel */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', border: `4px solid ${T.headerBorder}`, borderRadius: '4px', overflow: 'hidden', background: T.appBg }}>
               <SfxLayer bursts={sfx} />
+              {searchOpen && (
+                <SearchPanel
+                  roomId={currentRoom}
+                  roomName={rooms.find(r => r.id === currentRoom)?.name ?? ''}
+                  onJump={(hit: SearchHit) => { setSearchOpen(false); jumpTo(hit.id) }}
+                  onClose={() => setSearchOpen(false)}
+                />
+              )}
               {isMobile && (
                 <ChapterDrawer
                   rooms={rooms} currentRoom={currentRoom} onPick={joinRoom}
@@ -563,6 +663,9 @@ export default function App() {
                       onReact={(emoji) => reactTo(msg.id, emoji)}
                       onContextMenu={(data) => setContextMenu({ x: data.x, y: data.y, msg: data.msg })}
                       onAvatarClick={(name, av) => setViewUser({ name, avatar: av })}
+                      onQuoteClick={jumpTo}
+                      onOpenImage={setLightbox}
+                      highlight={highlightId === msg.id}
                     />
                   )
                 })}
@@ -576,6 +679,7 @@ export default function App() {
                   }}
                   onCopy={(content) => { navigator.clipboard.writeText(content); setContextMenu(null) }}
                   onReact={(msgId, emoji) => { reactTo(msgId, emoji); setContextMenu(null) }}
+                  onReply={(m) => { setReplyTo(m as MessageItem); setContextMenu(null) }}
                   onClose={() => setContextMenu(null)}
                 />
 
@@ -597,6 +701,10 @@ export default function App() {
                   T={T} theme={theme}
                   currentRoom={currentRoom} rooms={rooms}
                   sendOnEnter={settings.sendOnEnter}
+                  onAttach={handleAttach}
+                  uploading={uploading}
+                  reply={replyTo ? { username: replyTo.username ?? null, content: replyTo.content, type: replyTo.type } : null}
+                  onCancelReply={() => setReplyTo(null)}
                 />
               </div>
             </div>
@@ -664,6 +772,22 @@ export default function App() {
       <VideoCall call={call} theme={theme} username={username} avatar={avatar.src} isMobile={isMobile} />
 
       <PochitaEgg visible={pochitaVisible} hearts={hearts} />
+      {lightbox && <Lightbox src={lightbox} onClose={() => setLightbox(null)} />}
+      {/* /bang */}
+      {flash > 0 && (
+        <motion.div key={flash} aria-hidden initial={{ opacity: 0.95 }} animate={{ opacity: 0 }} transition={{ duration: 0.45 }}
+          style={{ position: 'fixed', inset: 0, background: '#fff', pointerEvents: 'none', zIndex: 9400 }} />
+      )}
+      {notice && (
+        <motion.div role="status" initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+          style={{
+            position: 'fixed', left: '50%', bottom: isMobile ? '84px' : '28px', x: '-50%', zIndex: 9300,
+            background: 'var(--paper)', color: 'var(--ink)', border: '3px solid var(--ink)', boxShadow: '4px 4px 0 var(--ink)',
+            padding: '8px 14px', fontFamily: "'AnimeAce', sans-serif", fontSize: '11px', maxWidth: '90vw',
+          }}>
+          {notice}
+        </motion.div>
+      )}
     </motion.div>
   )
 }

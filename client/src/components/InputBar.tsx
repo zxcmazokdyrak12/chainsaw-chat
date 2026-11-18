@@ -85,14 +85,29 @@ interface InputBarProps {
   currentRoom: string
   rooms: Room[]
   sendOnEnter: boolean
+  onAttach?: (file: File) => void           // a picture: button, paste or drag & drop
+  uploading?: boolean
+  reply?: { username: string | null; content: string; type?: string } | null
+  onCancelReply?: () => void
 }
 
 export default function InputBar({
   input, onInputChange, onSend,
   isRecording, onStartRecording, onStopRecording,
   T, theme, currentRoom, rooms,
-  sendOnEnter,
+  sendOnEnter, onAttach, uploading = false, reply, onCancelReply,
 }: InputBarProps) {
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [dragOver, setDragOver] = useState(false)
+  const firstImage = (list: FileList | DataTransferItemList | null | undefined): File | null => {
+    if (!list) return null
+    for (const item of Array.from(list as ArrayLike<File | DataTransferItem>)) {
+      const f = item instanceof File ? item : item.kind === 'file' ? item.getAsFile() : null
+      if (f && f.type.startsWith('image/')) return f
+    }
+    return null
+  }
+  useEffect(() => { if (reply) textareaRef.current?.focus() }, [reply])
   // Specify that the ref points directly to an HTML textarea element
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const { isMobile } = useWindowSize()
@@ -101,6 +116,7 @@ export default function InputBar({
 
   // Explicitly type the keyboard event handler
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Escape' && reply) { onCancelReply?.(); return }
     if (sendOnEnter) {
       if (e.key === 'Enter' && !e.ctrlKey && !e.shiftKey) {
         e.preventDefault()
@@ -133,12 +149,51 @@ export default function InputBar({
   const ink = 'var(--ink)'
 
   return (
-    <div style={{
+    <div
+      onDragOver={onAttach ? (e) => { if (Array.from(e.dataTransfer.types).includes('Files')) { e.preventDefault(); setDragOver(true) } } : undefined}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={onAttach ? (e) => { e.preventDefault(); setDragOver(false); const f = firstImage(e.dataTransfer.files); if (f) onAttach(f) } : undefined}
+      style={{
+      position: 'relative',
       background: T.inputZoneBg,
       transition: 'background 0.4s',
       padding: isMobile ? '14px 10px 8px' : '16px 14px 8px',
       display: 'flex', flexDirection: 'column', gap: '5px',
+      outline: dragOver ? '3px dashed var(--ink)' : 'none', outlineOffset: '-6px',
     }}>
+      {dragOver && (
+        <div aria-hidden style={{
+          position: 'absolute', inset: 0, zIndex: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none',
+          fontFamily: "'DeathRattle', 'BlambotClassic', sans-serif", fontSize: '26px', color: 'var(--paper)',
+          WebkitTextStroke: '2px var(--ink)', textShadow: '3px 3px 0 var(--ink)',
+        }}>DROP THE PANEL!</div>
+      )}
+
+      {/* replying to: a strip of the quoted line above the balloon */}
+      <AnimatePresence>
+        {reply && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+            style={{ overflow: 'hidden', paddingLeft: isMobile ? '58px' : '64px', paddingRight: '6px' }}
+          >
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 8px',
+              borderLeft: '4px solid var(--ink)', background: 'var(--paper)', color: 'var(--ink)',
+              fontFamily: "'AnimeAce', sans-serif", fontSize: '10px',
+            }}>
+              <CsmIcon name="reply" size={15} />
+              <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <b style={{ fontFamily: 'BlambotClassic, sans-serif', letterSpacing: '1px' }}>{reply.username}</b>{' '}
+                {reply.type === 'image' ? '🖼 picture' : reply.type === 'audio' ? '🎤 voice' : reply.content}
+              </span>
+              <button onClick={onCancelReply} aria-label="Cancel reply" style={{ background: 'none', border: 'none', color: 'var(--ink)', cursor: 'pointer', padding: 0, display: 'flex' }}>
+                <CsmIcon name="close" size={15} />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div style={{ display: 'flex', gap: isMobile ? '14px' : '16px', alignItems: 'flex-end' }}>
 
         {/* mic: round ink button, turns into a blood drop while recording */}
@@ -225,7 +280,7 @@ export default function InputBar({
                   rows={1}
                   style={{
                     display: 'block', width: '100%', boxSizing: 'border-box',
-                    padding: '11px 16px',
+                    padding: onAttach ? '11px 42px 11px 16px' : '11px 16px',
                     background: 'transparent',
                     border: 'none',
                     borderRadius: '0',
@@ -243,8 +298,34 @@ export default function InputBar({
                   value={input}
                   onChange={handleChange}
                   onKeyDown={handleKeyDown}
+                  onPaste={onAttach ? (e) => { const f = firstImage(e.clipboardData?.items); if (f) { e.preventDefault(); onAttach(f) } } : undefined}
                   placeholder={isMobile ? 'Your line…' : `Your line in ${roomName || 'the room'}…`}
                 />
+                {onAttach && (
+                  <>
+                    <input
+                      ref={fileRef} type="file" accept="image/webp,image/jpeg,image/png,image/gif" hidden
+                      onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) onAttach(f) }}
+                    />
+                    <motion.button
+                      whileTap={{ scale: 0.85 }}
+                      onClick={() => fileRef.current?.click()}
+                      disabled={uploading}
+                      title="Attach a picture (or paste / drop it)"
+                      aria-label="Attach a picture"
+                      style={{
+                        position: 'absolute', right: '8px', bottom: '7px', width: '30px', height: '30px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'transparent', border: 'none', borderRadius: '8px', color: 'var(--ink)',
+                        cursor: uploading ? 'wait' : 'pointer', opacity: uploading ? 0.4 : 0.75, padding: 0,
+                      }}
+                    >
+                      {uploading
+                        ? <motion.span animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }} style={{ display: 'flex' }}><CsmIcon name="settings" size={18} /></motion.span>
+                        : <CsmIcon name="panel" size={20} />}
+                    </motion.button>
+                  </>
+                )}
                 {shout && (
                   <motion.span
                     initial={{ scale: 1.6, opacity: 0, rotate: 12 }}

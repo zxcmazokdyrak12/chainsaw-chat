@@ -7,6 +7,7 @@ export type CsmIconName =
   | 'chat' | 'chapters' | 'settings' | 'profile' | 'chainsaw' | 'heart' | 'sfx'
   | 'book' | 'keyboard' | 'sun' | 'moon' | 'video' | 'mic' | 'send' | 'edit'
   | 'trash' | 'pin' | 'copy' | 'drop' | 'door' | 'logout' | 'plus' | 'key'
+  | 'panel' | 'reply' | 'search' | 'close' | 'bell'
 
 // sprocket: alternating outer/inner points = saw teeth around a hub
 const sprocket = (() => {
@@ -144,6 +145,30 @@ const ICONS: Record<CsmIconName, ReactNode> = {
   key: <>
     <circle cx="7.5" cy="12" r="4" />
     <path d="M11.5 12H21M17 12v3M20 12v2" />
+  </>,
+  // a manga panel with a torn corner — attach a picture
+  panel: <>
+    <path d="M4 5h16v11l-4 4H4z" />
+    <path d="M16 20v-4h4" />
+    <path d="M7 15l3.5-4 2.5 3 1.5-1.5L17 15" />
+    <circle cx="9" cy="8.5" r="1.3" />
+  </>,
+  reply: <>
+    <path d="M10 6L4 11.5l6 5.5" />
+    <path d="M4.5 11.5H14a6 6 0 0 1 6 6V19" />
+  </>,
+  // magnifier with saw teeth on the rim
+  search: <>
+    <circle cx="10.5" cy="10.5" r="6" />
+    <path d="M15 15l5.5 5.5" />
+    <path d="M10.5 3v1.5M3 10.5h1.5M5.2 5.2l1 1" />
+  </>,
+  close: <>
+    <path d="M6 6l12 12M18 6L6 18" />
+  </>,
+  bell: <>
+    <path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z" />
+    <path d="M10 20.5a2 2 0 0 0 4 0" />
   </>,
 }
 

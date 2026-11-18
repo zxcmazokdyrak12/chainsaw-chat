@@ -24,6 +24,7 @@ interface ContextMenuProps {
   onDelete: (id: number) => void
   onCopy: (content: string) => void
   onReact: (id: number, emoji: string) => void
+  onReply?: (msg: MessageData) => void
   onClose: () => void
 }
 
@@ -34,6 +35,7 @@ export default function ContextMenu({
   onDelete, 
   onCopy, 
   onReact,
+  onReply,
   onClose 
 }: ContextMenuProps) {
   return (
@@ -85,6 +87,15 @@ export default function ContextMenu({
               />
             ))}
           </div>
+
+          {onReply && typeof contextMenu.msg.id === 'number' && (
+            <div
+              onClick={() => onReply(contextMenu.msg)}
+              style={{ padding: '8px 12px', cursor: 'pointer', color: theme === 'dark' ? '#fff' : '#111', fontWeight: 900 }}
+            >
+              REPLY ↩
+            </div>
+          )}
 
           {/* Only show DELETE if the message owner matches the current logged-in user */}
           {contextMenu.msg.username === username && (

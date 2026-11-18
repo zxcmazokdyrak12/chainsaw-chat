@@ -29,6 +29,9 @@ export const serializeMessage = (r: {
   isEdited: boolean
   isPinned: boolean
   reactions?: unknown
+  mediaId?: string | null
+  replyToId?: bigint | number | null
+  replyPreview?: unknown
 }) => ({
   id:        Number(r.id),
   username:  r.username,
@@ -42,6 +45,10 @@ export const serializeMessage = (r: {
   isEdited:  r.isEdited,
   isPinned:  r.isPinned,
   reactions: (r.reactions && typeof r.reactions === 'object' ? r.reactions : {}) as Reactions,
+  media:     r.mediaId ?? null,
+  replyTo:   r.replyToId != null && r.replyPreview && typeof r.replyPreview === 'object'
+    ? { id: Number(r.replyToId), ...(r.replyPreview as Record<string, unknown>) }
+    : null,
 })
 
 export async function getUserRooms(username: string) {

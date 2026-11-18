@@ -12,6 +12,7 @@ import { registerMetaRoutes } from './routes/meta.js'
 import { registerAuthRoutes } from './routes/auth.js'
 import { registerProfileRoutes } from './routes/profile.js'
 import { registerIceRoutes } from './routes/ice.js'
+import { registerMediaRoutes } from './routes/media.js'
 import { registerSockets } from './sockets/index.js'
 
 // Entry point: wires middleware, routes and socket handlers together.
@@ -43,6 +44,7 @@ registerMetaRoutes(app)
 registerAuthRoutes(app)
 registerProfileRoutes(app)
 registerIceRoutes(app)
+registerMediaRoutes(app)
 
 // no stack traces to the outside world
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma.js'
+import { deleteMedia } from '../lib/storage.js'
 import { serializeMessage } from '../lib/rooms.js'
 import { MAX_TEXT, isId, safeAudio, safeAvatar } from '../lib/validate.js'
 import { REACTIONS, type Reactions } from '../types.js'
@@ -15,7 +16,7 @@ const cleanText = (v: unknown): string | null =>
 export function registerMessagesHandlers({ io, socket, data, ensureMember }: SocketCtx) {
   let msgCount = 0, msgReset = Date.now()
 
-  socket.on('send_message', async (p: { roomId?: unknown; content?: unknown; type?: unknown; audioData?: unknown; avatar?: unknown } = {}) => {
+  socket.on('send_message', async (p: { roomId?: unknown; content?: unknown; type?: unknown; audioData?: unknown; avatar?: unknown; mediaId?: unknown; replyTo?: unknown } = {}) => {
     try {
       const now = Date.now()
       if (now - msgReset > 60_000) { msgCount = 0; msgReset = now }
@@ -25,11 +26,37 @@ export function registerMessagesHandlers({ io, socket, data, ensureMember }: Soc
       if (!who) return
       const roomId = p.roomId as string
 
-      const type = p.type === 'audio' ? 'audio' : 'text'
-      const audioData = type === 'audio' ? safeAudio(p.audioData) : null
-      if (type === 'audio' && !audioData) { socket.emit('rate_limited', 'Voice message rejected'); return }
-      const content = type === 'audio' ? '🎤 voice message' : cleanText(p.content)
-      if (!content) return
+      const type = p.type === 'audio' ? 'audio' : p.type === 'image' ? 'image' : 'text'
+
+      // pictures / new voice notes: an uploaded attachment of this room, by this user, of the right kind
+      let mediaId: string | null = null
+      if (typeof p.mediaId === 'string') {
+        const att = await prisma.attachment.findUnique({ where: { id: p.mediaId }, select: { roomId: true, username: true, mime: true } })
+        const kindOk = att && (type === 'image' ? att.mime.startsWith('image/') : type === 'audio' && att.mime.startsWith('audio/'))
+        if (!att || att.roomId !== roomId || att.username !== who || !kindOk) return
+        mediaId = p.mediaId
+      }
+      if (type === 'image' && !mediaId) return
+      // old clients still send voice inline as base64
+      const audioData = type === 'audio' && !mediaId ? safeAudio(p.audioData) : null
+      if (type === 'audio' && !mediaId && !audioData) { socket.emit('rate_limited', 'Voice message rejected'); return }
+
+      const caption = cleanText(p.content) ?? ''
+      const content = type === 'audio' ? '🎤 voice message' : caption
+      if (type === 'text' && !content) return
+
+      // reply: only to a message of the same room; keep a small snapshot for the quote
+      let replyToId: bigint | null = null
+      let replyPreview: { username: string | null; content: string; type: string } | undefined
+      if (isId(p.replyTo)) {
+        const target = await prisma.message.findUnique({
+          where: { id: BigInt(p.replyTo) }, select: { roomId: true, username: true, content: true, type: true },
+        })
+        if (target && target.roomId === roomId) {
+          replyToId = BigInt(p.replyTo)
+          replyPreview = { username: target.username, content: (target.content ?? '').slice(0, 140), type: target.type }
+        }
+      }
 
       const saved = await prisma.message.create({
         data: {
@@ -45,6 +72,9 @@ export function registerMessagesHandlers({ io, socket, data, ensureMember }: Soc
           system:    false,
           isEdited:  false,
           isPinned:  false,
+          mediaId,
+          replyToId,
+          ...(replyPreview ? { replyPreview } : {}),
         },
       })
       io.to(roomId).emit('receive_message', serializeMessage(saved))
@@ -67,7 +97,8 @@ export function registerMessagesHandlers({ io, socket, data, ensureMember }: Soc
     try {
       const m = await ownMessage(p.messageId, p.roomId)
       if (!m?.mine) return
-      await prisma.message.delete({ where: { id: BigInt(p.messageId as number) } })
+      const gone = await prisma.message.delete({ where: { id: BigInt(p.messageId as number) } })
+      if (gone.mediaId) await deleteMedia(gone.mediaId)
       io.to(p.roomId as string).emit('message_deleted', { messageId: p.messageId })
     } catch (err) { console.error(err) }
   })
@@ -116,6 +147,26 @@ export function registerMessagesHandlers({ io, socket, data, ensureMember }: Soc
       console.error('[React Error]:', err)
       socket.emit('react_error', 'Reaction failed (run prisma db push?)')
     }
+  })
+
+  // ── Search inside a room ───────────────────────────────────────
+  socket.on('search_messages', async (p: { roomId?: unknown; q?: unknown } = {}) => {
+    const q = typeof p.q === 'string' ? p.q.trim().slice(0, 64) : ''
+    if (q.length < 2) { socket.emit('search_results', { q, results: [] }); return }
+    try {
+      const who = await ensureMember(p.roomId)
+      if (!who) return
+      const rows = await prisma.message.findMany({
+        where: { roomId: p.roomId as string, system: false, type: { in: ['text', 'image'] }, content: { contains: q, mode: 'insensitive' } },
+        orderBy: { createdAt: 'desc' },
+        take: 30,
+        select: { id: true, username: true, content: true, time: true, createdAt: true, type: true },
+      })
+      socket.emit('search_results', {
+        q,
+        results: rows.map(r => ({ id: Number(r.id), username: r.username, content: r.content, time: r.time, at: r.createdAt, type: r.type })),
+      })
+    } catch (err) { console.error('[Search Error]:', err) }
   })
 
   // ── Seen flags ─────────────────────────────────────────────────
