@@ -208,6 +208,63 @@ test('"joined the room" is not repeated for a second tab or a quick re-join', { 
   tab2.close()
 })
 
+test('history pages: load_older returns what came before', { skip }, async () => {
+  const created = waitFor(denji, 'room_created')
+  denji.emit('create_room', { roomName: 'pages' })
+  const room = await created
+  await enter(denji, room.id)
+  const ids = []
+  for (const t of ['one', 'two', 'three']) ids.push((await say(denji, room.id, t)).id)
+  const older = waitFor(denji, 'older_messages')
+  denji.emit('load_older', { roomId: room.id, before: ids[2] })
+  const page = await older
+  assert.deepEqual(page.messages.map(m => m.content), ['one', 'two'])
+  assert.equal(page.hasMore, false)
+  // a stranger gets nothing
+  const nothing = waitFor(power, 'older_messages', 600)
+  power.emit('load_older', { roomId: room.id, before: ids[2] })
+  assert.equal(await nothing, undefined)
+  await enter(denji, 'general')
+})
+
+test('room management: only the founder renames, kicks and deletes', { skip }, async () => {
+  const created = waitFor(denji, 'room_created')
+  denji.emit('create_room', { roomName: 'squad' })
+  const room = await created
+  const joined = waitFor(power, 'join_by_code_success')
+  power.emit('join_by_code', { code: room.code })
+  await joined
+  await enter(denji, room.id)
+  await enter(power, room.id)
+
+  const members = waitFor(power, 'room_members')
+  power.emit('room_members', { roomId: room.id })
+  const list = await members
+  assert.equal(list.createdBy, nick('D'))
+  assert.deepEqual(list.members.map(m => m.username).sort(), [nick('D'), nick('P')].sort())
+
+  const noRename = waitFor(denji, 'room_updated', 600)
+  power.emit('rename_room', { roomId: room.id, name: 'hijacked' })
+  assert.equal(await noRename, undefined)
+
+  const renamed = waitFor(power, 'room_updated')
+  denji.emit('rename_room', { roomId: room.id, name: 'new name' })
+  assert.equal((await renamed).name, '# NEW NAME')
+
+  const gone = waitFor(power, 'room_gone')
+  denji.emit('kick_member', { roomId: room.id, username: nick('P') })
+  assert.equal((await gone).reason, 'kicked')
+  const shut = waitFor(power, 'join_error')
+  power.emit('join_room', { roomId: room.id })
+  assert.equal(await shut, 'You are not in this room')
+
+  const deleted = waitFor(denji, 'room_gone')
+  denji.emit('delete_room', { roomId: room.id })
+  assert.equal((await deleted).reason, 'deleted')
+  await enter(denji, 'general')
+  await enter(power, 'general')
+})
+
 test('room codes can not be brute-forced', { skip }, async () => {
   const errors = []
   for (let i = 0; i < 10; i++) {

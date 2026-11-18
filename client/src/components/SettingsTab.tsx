@@ -1,6 +1,9 @@
 import React from 'react'
 import { motion } from 'framer-motion'
+import { enablePush, disablePush, pushSupported } from '../lib/push'
+import { getAccountToken } from '../lib/auth'
 import CsmIcon, { type CsmIconName } from './CsmIcon'
+import { useT, LANGS, setLang, getLang } from '../lib/i18n'
 
 // Reusing the same strict interface for settings structure
 export interface Settings {
@@ -14,6 +17,7 @@ export interface Settings {
   sfxEnabled: boolean
   desktopNotify: boolean
   berserk: boolean
+  push: boolean
 }
 
 interface SettingsTabProps {
@@ -55,6 +59,7 @@ function Panel({ title, icon, children, wide }: { title: string; icon: CsmIconNa
 
 // on/off switch that reads like an ink stamp
 function Stamp({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+  const t = useT()
   return (
     <button
       role="switch" aria-checked={checked} aria-label={label}
@@ -73,7 +78,7 @@ function Stamp({ checked, onChange, label }: { checked: boolean; onChange: (v: b
         fontFamily: 'BlambotClassic, sans-serif', fontSize: '12px', letterSpacing: '1px',
         color: checked ? paper : ink, opacity: 0.85,
       } as React.CSSProperties}>
-        {checked ? 'ON' : 'OFF'}
+        {checked ? t('ON') : t('OFF')}
       </span>
       <motion.span
         animate={{ x: checked ? 38 : 0 }}
@@ -155,6 +160,7 @@ function PagePreview({ mode }: { mode: 'light' | 'dark' | 'system' }) {
 
 // sticker density preview: little rotated squares
 function BombPreview({ level }: { level: 'off' | 'light' | 'full' }) {
+  const t = useT()
   const spots = level === 'off' ? [] : level === 'light'
     ? [[6, 8, -12], [70, 30, 14], [14, 62, 8]]
     : [[4, 6, -12], [38, 14, 10], [72, 4, -6], [10, 46, 16], [52, 40, -14], [80, 52, 9], [28, 70, -4], [64, 72, 12]]
@@ -168,7 +174,7 @@ function BombPreview({ level }: { level: 'off' | 'light' | 'full' }) {
         }} />
       ))}
       {level === 'off' && (
-        <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'AnimeAce', sans-serif", fontSize: '10px', opacity: 0.5 }}>clean page</span>
+        <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'AnimeAce', sans-serif", fontSize: '10px', opacity: 0.5 }}>{t('clean page')}</span>
       )}
     </div>
   )
@@ -179,6 +185,9 @@ const FONT_PX: Record<Settings['fontSize'], string> = { small: '12px', medium: '
 // ── the tab ──────────────────────────────────────────────────────
 
 export default function SettingsTab({ settings, onUpdate, onReplayTutorial }: SettingsTabProps) {
+  const t = useT()
+  const lang = getLang()
+  const [pushNote, setPushNote] = React.useState('')
   const bomb = settings.stickerBomb ?? 'light'
 
   return (
@@ -187,7 +196,7 @@ export default function SettingsTab({ settings, onUpdate, onReplayTutorial }: Se
 
         {/* title */}
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: '14px', marginBottom: '6px' }}>
-          <div style={{ fontFamily: 'BlambotClassic, sans-serif', fontSize: '40px', letterSpacing: '6px', lineHeight: 1 }}>SETTINGS</div>
+          <div style={{ fontFamily: 'BlambotClassic, sans-serif', fontSize: '40px', letterSpacing: '6px', lineHeight: 1 }}>{t('SETTINGS')}</div>
           <div style={{ fontFamily: 'serif', fontSize: '18px', opacity: 0.55, paddingBottom: '4px' }}>設定</div>
         </div>
         <div style={{ height: '4px', background: ink, marginBottom: '3px' }} />
@@ -195,21 +204,34 @@ export default function SettingsTab({ settings, onUpdate, onReplayTutorial }: Se
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', columnGap: '18px', rowGap: '14px' }}>
 
-          <Panel title="PAGE" icon={settings.theme === 'dark' ? 'moon' : 'sun'} wide>
+          <Panel title={t("PAGE")} icon={settings.theme === 'dark' ? 'moon' : 'sun'} wide>
             <div style={{ display: 'flex', gap: '12px' }}>
               {(['system', 'light', 'dark'] as const).map(m => (
                 <Tile key={m} selected={settings.theme === m} onClick={() => onUpdate('theme', m)}
-                  caption={m === 'system' ? 'SYSTEM' : m === 'light' ? 'PAPER' : 'NEGATIVE'}>
+                  caption={m === 'system' ? t('SYSTEM') : m === 'light' ? t('PAPER') : t('NEGATIVE')}>
                   <PagePreview mode={m} />
                 </Tile>
               ))}
             </div>
           </Panel>
 
-          <Panel title="LETTERING" icon="chat">
+          <Panel title={t("LANGUAGE")} icon="chat" wide>
+            <div role="radiogroup" aria-label={t('LANGUAGE')} style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {LANGS.map(l => (
+                <button key={l.id} role="radio" aria-checked={lang === l.id} onClick={() => setLang(l.id)}
+                  style={{
+                    padding: '8px 16px', cursor: 'pointer', fontFamily: 'BlambotClassic, sans-serif', letterSpacing: '2px', fontSize: '14px',
+                    background: lang === l.id ? 'var(--ink)' : 'transparent', color: lang === l.id ? 'var(--paper)' : 'var(--ink)', border: '3px solid var(--ink)',
+                  }}>
+                  {l.label}
+                </button>
+              ))}
+            </div>
+          </Panel>
+          <Panel title={t("LETTERING")} icon="chat">
             <div style={{ display: 'flex', gap: '10px' }}>
               {(['small', 'medium', 'large'] as const).map(sz => (
-                <Tile key={sz} selected={settings.fontSize === sz} onClick={() => onUpdate('fontSize', sz)} caption={sz.toUpperCase()}>
+                <Tile key={sz} selected={settings.fontSize === sz} onClick={() => onUpdate('fontSize', sz)} caption={t(sz.toUpperCase())}>
                   <div style={{ height: '54px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <span style={{
                       border: `2px solid ${ink}`, borderRadius: '50% / 50%', padding: '6px 10px',
@@ -221,42 +243,52 @@ export default function SettingsTab({ settings, onUpdate, onReplayTutorial }: Se
             </div>
           </Panel>
 
-          <Panel title="STICKERBOMB" icon="sfx">
+          <Panel title={t("STICKERBOMB")} icon="sfx">
             <div style={{ display: 'flex', gap: '10px' }}>
               {(['off', 'light', 'full'] as const).map(lv => (
-                <Tile key={lv} selected={bomb === lv} onClick={() => onUpdate('stickerBomb', lv)} caption={lv.toUpperCase()}>
+                <Tile key={lv} selected={bomb === lv} onClick={() => onUpdate('stickerBomb', lv)} caption={t(lv.toUpperCase())}>
                   <BombPreview level={lv} />
                 </Tile>
               ))}
             </div>
           </Panel>
 
-          <Panel title="SOUND & FX" icon="chainsaw">
-            <Row icon="chainsaw" label="CHAINSAW SOUNDS" desc="roar at startup and on CAPS LOCK">
+          <Panel title={t("SOUND & FX")} icon="chainsaw">
+            <Row icon="chainsaw" label={t("CHAINSAW SOUNDS")} desc={t("roar at startup and on CAPS LOCK")}>
               <Stamp label="Chainsaw sounds" checked={settings.soundEnabled} onChange={v => onUpdate('soundEnabled', v)} />
             </Row>
-            <Row icon="sfx" label="MANGA SFX" desc="DOOOM on caps, DON on send, ZAP! on join">
+            <Row icon="sfx" label={t("MANGA SFX")} desc={t("DOOOM on caps, DON on send, ZAP! on join")}>
               <Stamp label="Manga SFX" checked={settings.sfxEnabled ?? true} onChange={v => onUpdate('sfxEnabled', v)} />
             </Row>
-            <Row icon="chainsaw" label="BERSERK MODE" desc="message bursts rev a tachometer in the corner">
+            <Row icon="chainsaw" label={t("BERSERK MODE")} desc={t("message bursts rev a tachometer in the corner")}>
               <Stamp label="Berserk mode" checked={settings.berserk ?? true} onChange={v => onUpdate('berserk', v)} />
             </Row>
-            <Row icon="heart" label="POCHITA HEARTS" desc="hearts rain on cute words">
+            <Row icon="heart" label={t("POCHITA HEARTS")} desc={t("hearts rain on cute words")}>
               <Stamp label="Pochita hearts" checked={settings.pochitaEnabled ?? true} onChange={v => onUpdate('pochitaEnabled', v)} />
             </Row>
           </Panel>
 
-          <Panel title="CONTROLS & PRIVACY" icon="keyboard">
-            <Row icon="send" label="ENTER SENDS"
-              desc={settings.sendOnEnter ? 'Shift+Enter — new line' : 'Ctrl+Enter sends, Enter — new line'}>
+          <Panel title={t("CONTROLS & PRIVACY")} icon="keyboard">
+            <Row icon="send" label={t("ENTER SENDS")}
+              desc={settings.sendOnEnter ? t('Shift+Enter — new line') : t('Ctrl+Enter sends, Enter — new line')}>
               <Stamp label="Enter sends" checked={settings.sendOnEnter} onChange={v => onUpdate('sendOnEnter', v)} />
             </Row>
-            <Row icon="keyboard" label="SHOW I'M TYPING"
-              desc={settings.showTyping ? 'others see your thought balloon' : 'you type in secret'}>
+            <Row icon="keyboard" label={t("SHOW I'M TYPING")}
+              desc={settings.showTyping ? t('others see your thought balloon') : t('you type in secret')}>
               <Stamp label="Show typing" checked={settings.showTyping} onChange={v => onUpdate('showTyping', v)} />
             </Row>
-            <Row icon="bell" label="BACKGROUND ALERTS"
-              desc={settings.desktopNotify ? 'a notification when the tab is hidden' : 'only the (3) counter on the tab'}>
+            <Row icon="bell" label={t("PUSH WHEN CLOSED")}
+              desc={!getAccountToken() ? t('needs an account (guests vanish with the tab)') : !pushSupported() ? t('not in this browser — on iPhone add the app to the Home Screen') : t(pushNote || 'a ping on your phone even with the app closed')}>
+              <Stamp label="Push when closed" checked={settings.push ?? false} onChange={async v => {
+                if (!v) { await disablePush(); onUpdate('push', false); setPushNote(''); return }
+                if (!getAccountToken()) { setPushNote('sign in with an account first'); return }
+                const err = await enablePush().catch(() => 'Could not subscribe')
+                setPushNote(err ?? 'on — try it: close the tab and ask a friend to write')
+                if (!err) onUpdate('push', true)
+              }} />
+            </Row>
+            <Row icon="bell" label={t("BACKGROUND ALERTS")}
+              desc={settings.desktopNotify ? t('a notification when the tab is hidden') : t('only the (3) counter on the tab')}>
               <Stamp label="Background alerts" checked={settings.desktopNotify ?? false} onChange={async v => {
                 if (v && 'Notification' in window && Notification.permission !== 'granted') {
                   const ok = await Notification.requestPermission().catch(() => 'denied')
@@ -268,7 +300,7 @@ export default function SettingsTab({ settings, onUpdate, onReplayTutorial }: Se
           </Panel>
 
           {onReplayTutorial && (
-            <Panel title="TOUR" icon="book" wide>
+            <Panel title={t("TOUR")} icon="book" wide>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
                 <div style={{ flex: 1, minWidth: '200px', fontFamily: "'AnimeAce', sans-serif", fontSize: '11px', lineHeight: 1.6 }}>
                   Forgot where things are? The crew will walk you through the chat again.

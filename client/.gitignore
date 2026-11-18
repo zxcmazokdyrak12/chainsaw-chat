@@ -26,3 +26,8 @@ dist-ssr
 node_modules/
 server/sql.env
 
+
+# local render harness output (never commit)
+public/__h.*
+public/__f.css
+public/__i.css

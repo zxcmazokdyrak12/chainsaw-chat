@@ -4,6 +4,7 @@ import { renderMangaPages, PAGE_W, PAGE_H } from '../lib/mangaPage'
 import { jpegPagesToPdf } from '../lib/pdf'
 import type { MessageItem } from '../chatTypes'
 import CsmIcon from './CsmIcon'
+import { useT } from '../lib/i18n'
 
 type Scope = 'recent' | 'all'
 const RECENT = 12
@@ -26,6 +27,7 @@ export default function ExportDialog({ messages, roomName, chapter, me, onClose 
   me: string
   onClose: () => void
 }) {
+  const t = useT()
   const [scope, setScope] = useState<Scope>('recent')
   const [pages, setPages] = useState<HTMLCanvasElement[] | null>(null)
   const [preview, setPreview] = useState<string[]>([])
@@ -94,18 +96,18 @@ export default function ExportDialog({ messages, roomName, chapter, me, onClose 
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 id="export-title" style={{ margin: 0, fontFamily: 'BlambotClassic, sans-serif', letterSpacing: '3px', fontSize: '18px' }}>SAVE THE CHAPTER</h2>
+          <h2 id="export-title" style={{ margin: 0, fontFamily: 'BlambotClassic, sans-serif', letterSpacing: '3px', fontSize: '18px' }}>{t('SAVE THE CHAPTER')}</h2>
           <button onClick={onClose} aria-label="Close" style={{ background: 'none', border: 'none', color: 'var(--ink)', cursor: 'pointer' }}><CsmIcon name="close" size={20} /></button>
         </div>
 
         <div role="radiogroup" aria-label="What to save" style={{ display: 'flex', gap: '8px' }}>
-          <button role="radio" aria-checked={scope === 'recent'} onClick={() => setScope('recent')} style={btn(scope === 'recent')}>LAST {RECENT} LINES</button>
-          <button role="radio" aria-checked={scope === 'all'} onClick={() => setScope('all')} style={btn(scope === 'all')}>WHOLE CHAPTER ({real.length})</button>
+          <button role="radio" aria-checked={scope === 'recent'} onClick={() => setScope('recent')} style={btn(scope === 'recent')}>{t('LAST {n} LINES', { n: RECENT })}</button>
+          <button role="radio" aria-checked={scope === 'all'} onClick={() => setScope('all')} style={btn(scope === 'all')}>{t('WHOLE CHAPTER ({n})', { n: real.length })}</button>
         </div>
 
         {/* preview */}
         <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'color-mix(in srgb, var(--ink) 8%, transparent)', padding: '8px' }}>
-          {!pages && !error && <span style={{ padding: '120px 0' }}>Inking the panels…</span>}
+          {!pages && !error && <span style={{ padding: '120px 0' }}>{t('Inking the panels…')}</span>}
           {error && <span style={{ padding: '120px 0' }}>✕ {error}</span>}
           {pages && preview[at] && (
             <img src={preview[at]} alt={`Page ${at + 1} of ${pages.length}`}
@@ -115,14 +117,14 @@ export default function ExportDialog({ messages, roomName, chapter, me, onClose 
         {pages && pages.length > 1 && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
             <button onClick={() => setAt(a => Math.max(0, a - 1))} disabled={at === 0} aria-label="Previous page" style={btn(false)}>‹</button>
-            <span>page {at + 1} / {pages.length}</span>
+            <span>{t('page {a} / {b}', { a: at + 1, b: pages.length })}</span>
             <button onClick={() => setAt(a => Math.min(pages.length - 1, a + 1))} disabled={at === pages.length - 1} aria-label="Next page" style={btn(false)}>›</button>
           </div>
         )}
 
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
           <button onClick={savePng} disabled={!pages || busy || !!error} style={btn(false)}>PNG {pages && pages.length > 1 ? `(PAGE ${at + 1})` : ''}</button>
-          <button onClick={savePdf} disabled={!pages || busy || !!error} style={btn(true)}>{busy ? 'INKING…' : `PDF${pages ? ` · ${pages.length} PAGE${pages.length > 1 ? 'S' : ''}` : ''}`}</button>
+          <button onClick={savePdf} disabled={!pages || busy || !!error} style={btn(true)}>{busy ? t('INKING…') : `PDF${pages ? ` · ${pages.length} PAGE${pages.length > 1 ? 'S' : ''}` : ''}`}</button>
         </div>
       </motion.div>
     </motion.div>

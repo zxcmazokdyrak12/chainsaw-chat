@@ -12,6 +12,7 @@ export interface Settings {
   sfxEnabled: boolean
   desktopNotify: boolean
   berserk: boolean
+  push: boolean
 }
 
 const DEFAULTS: Settings = {
@@ -25,6 +26,7 @@ const DEFAULTS: Settings = {
   sfxEnabled: true,     // DOOOM / DON / ZAP! lettering pops over the feed
   desktopNotify: false, // system notifications while the tab is in the background
   berserk: true,        // a rev counter when messages fly in bursts
+  push: false,          // Web Push when every tab is closed (accounts only)
 }
 
 export function useSettings() {

@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import RichText from './RichText'
+import { useT } from '../lib/i18n'
 
 export interface PollData {
   kind: 'contract' | 'poll'
@@ -17,6 +18,7 @@ export default function ContractCard({ poll, me, isAuthor, onVote, onClose }: {
   onVote: (optionId: string) => void
   onClose: () => void
 }) {
+  const t = useT()
   const total = Object.values(poll.votes).reduce((n, l) => n + l.length, 0)
   const contract = poll.kind === 'contract'
 
@@ -35,9 +37,9 @@ export default function ContractCard({ poll, me, isAuthor, onVote, onClose }: {
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '8px', borderBottom: '2px solid var(--ink)', paddingBottom: '4px', marginBottom: '8px' }}>
         <span style={{ fontFamily: 'BlambotClassic, sans-serif', letterSpacing: '2px', fontSize: '13px' }}>
-          {contract ? 'CONTRACT 契約' : 'VOTE 投票'}
+          {contract ? t('CONTRACT 契約') : t('VOTE 投票')}
         </span>
-        <span style={{ fontSize: '9px', opacity: 0.6 }}>{poll.closed ? 'SEALED' : `${total} seal${total === 1 ? '' : 's'}`}</span>
+        <span style={{ fontSize: '9px', opacity: 0.6 }}>{poll.closed ? t('SEALED') : t(total === 1 ? '{n} seal' : '{n} seals', { n: total })}</span>
       </div>
 
       <div style={{ fontSize: '12px', lineHeight: 1.5, marginBottom: '10px' }}><RichText text={poll.title} /></div>
@@ -75,7 +77,7 @@ export default function ContractCard({ poll, me, isAuthor, onVote, onClose }: {
                 {mine ? '契' : ''}
               </span>
               <span style={{ position: 'relative', flex: 1, minWidth: 0 }}>
-                <b style={{ fontFamily: 'BlambotClassic, sans-serif', letterSpacing: '1px' }}>{contract ? (mine ? 'SIGNED' : 'SIGN IN BLOOD') : o.label}</b>
+                <b style={{ fontFamily: 'BlambotClassic, sans-serif', letterSpacing: '1px' }}>{contract ? (mine ? t('SIGNED') : t('SIGN IN BLOOD')) : o.label}</b>
                 {voters.length > 0 && (
                   <span style={{ display: 'block', fontSize: '9px', opacity: 0.7, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {voters.join(' · ')}
@@ -90,7 +92,7 @@ export default function ContractCard({ poll, me, isAuthor, onVote, onClose }: {
 
       {isAuthor && !poll.closed && (
         <button onClick={onClose} style={{ marginTop: '8px', background: 'none', border: 'none', color: 'var(--ink)', fontFamily: 'inherit', fontSize: '9px', textDecoration: 'underline', cursor: 'pointer', padding: 0, opacity: 0.7 }}>
-          close the {contract ? 'contract' : 'vote'}
+          {contract ? t('close the contract') : t('close the vote')}
         </button>
       )}
     </div>

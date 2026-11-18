@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import CsmIcon from './CsmIcon'
 import { useWindowSize } from '../hooks/useWindowSize'
+import { useT } from '../lib/i18n'
 
 export interface HeaderThemeTokens {
   headerBg: string
@@ -30,6 +31,7 @@ interface HeaderProps {
   onCall?: () => void
   onSearch?: () => void
   onExport?: () => void
+  onRoomInfo?: () => void
 }
 
 interface TabItem {
@@ -42,15 +44,16 @@ interface TabItem {
 export default function Header({
   T, theme, username, rooms, currentRoom,
   activeTab, onTabChange, onThemeToggle,
-  callCount = 0, inCall = false, onCall, onSearch, onExport,
+  callCount = 0, inCall = false, onCall, onSearch, onExport, onRoomInfo,
 }: HeaderProps) {
+  const t = useT()
   const { isMobile } = useWindowSize()
 
   const tabs: TabItem[] = [
-    { id: 'chat',     icon: '/icon_chat.png',     label: 'CHATS',    img: ''  },
-    { id: 'rooms',    icon: '/icon_rooms.png',    label: 'ROOMS',    img: ''    },
-    { id: 'settings', icon: '/icon_settings.png', label: 'SETTINGS', img: '' },
-    { id: 'profile',  icon: '/icon_profile.png',  label: 'PROFILE',  img: ''   },
+    { id: 'chat',     icon: '/icon_chat.png',     label: t('CHATS'),    img: ''  },
+    { id: 'rooms',    icon: '/icon_rooms.png',    label: t('ROOMS'),    img: ''    },
+    { id: 'settings', icon: '/icon_settings.png', label: t('SETTINGS'), img: '' },
+    { id: 'profile',  icon: '/icon_profile.png',  label: t('PROFILE'),  img: ''   },
   ]
 
   return (
@@ -82,17 +85,17 @@ export default function Header({
           </h1>
           {!isMobile && (
             // the room reads as a chapter of the story
-            <span style={{
-              fontSize: '12px', color: T.titleColor,
+            <button onClick={onRoomInfo} title={t('Room: cast, code, settings (Alt+I)')} style={{
+              fontSize: '12px', color: T.titleColor, background: 'transparent', cursor: onRoomInfo ? 'pointer' : 'default',
               fontFamily: "'AnimeAce', sans-serif", letterSpacing: '1px',
               border: `3px solid ${T.headerBorder}`, padding: '3px 10px',
               whiteSpace: 'nowrap',
             }}>
               {(() => {
                 const i = rooms.findIndex(r => r.id === currentRoom)
-                return i >= 0 ? `CHAPTER ${i + 1} — ${rooms[i]?.name ?? ''}` : ''
+                return i >= 0 ? t('CHAPTER {n} — {name}', { n: i + 1, name: rooms[i]?.name ?? '' }) : ''
               })()}
-            </span>
+            </button>
           )}
         </div>
 
@@ -109,7 +112,7 @@ export default function Header({
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={onExport}
-              title="Save the chapter as a manga page (Alt+E)"
+              title={t('Save the chapter as a manga page (Alt+E)')}
               aria-label="Save the chapter as a manga page"
               style={{
                 background: 'transparent', color: T.titleColor, border: `2px solid ${T.headerBorder}`,
@@ -124,7 +127,7 @@ export default function Header({
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={onSearch}
-              title="Search this room (Ctrl+K)"
+              title={t('Search this room (Ctrl+K)')}
               aria-label="Search messages"
               style={{
                 background: 'transparent', color: T.titleColor, border: `2px solid ${T.headerBorder}`,
@@ -158,7 +161,7 @@ export default function Header({
               {callCount > 0 && (
                 <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--blood)', marginRight: '6px', verticalAlign: '1px' }} />
               )}
-              {callCount ? (isMobile ? `JOIN (${callCount})` : `JOIN CALL (${callCount})`) : 'CALL'}
+              {callCount ? (isMobile ? t('JOIN ({n})', { n: callCount }) : t('JOIN CALL ({n})', { n: callCount })) : t('CALL')}
             </motion.button>
           )}
           <motion.button
@@ -179,7 +182,7 @@ export default function Header({
           >
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
               <CsmIcon name={theme === 'light' ? 'moon' : 'sun'} size={isMobile ? 15 : 14} strokeWidth={2.4} />
-              {!isMobile && (theme === 'light' ? 'NEGATIVE' : 'PAPER')}
+              {!isMobile && (theme === 'light' ? t('NEGATIVE') : t('PAPER'))}
             </span>
           </motion.button>
         </div>
