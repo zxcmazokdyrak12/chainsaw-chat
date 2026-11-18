@@ -1,0 +1,133 @@
+
+
+
+/* ── Soft buttons ────────────────────────────────────────────────
+   Components style buttons inline (slanted clip-path, square corners).
+   This rounds them globally: no slant cut, soft pill-ish corners, smooth colour changes.
+   Round buttons (border-radius: 50%) and buttons with their own radius keep their shape. */
+:root {
+  --soft-radius: 14px;
+}
+
+button:not([style*="border-radius"]),
+a[href*="/auth/"],
+input[type="text"],
+input[type="password"],
+input:not([type]),
+textarea {
+  clip-path: none !important;
+  border-radius: var(--soft-radius) !important;
+}
+
+button,
+a[href*="/auth/"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:not(:disabled):active,
+a[href*="/auth/"]:active {
+  filter: brightness(0.92);
+}
+
+button:focus-visible,
+a[href*="/auth/"]:focus-visible {
+  outline: 3px solid #cc2200;
+  outline-offset: 3px;
+}
+
+/* login screen: the overlay lets clicks through to the stickers, the form itself stays clickable */
+.login-overlay > * {
+  pointer-events: auto;
+}
+
+/* ── Manga palette ──────────────────────────────────────────────
+   Ink on newsprint. --accent is "the strong colour" (was red) and simply
+   flips with the page. Red survives only as --blood: recording, live call. */
+:root {
+  --ink: #111;
+  --paper: #f5f2ea;
+  --accent: #111;
+  --on-accent: #f5f2ea;
+  --blood: #b3140c;
+  --tone-dot: rgba(17, 17, 17, 0.9);
+}
+:root[data-theme="dark"] {
+  --ink: #f2efe6;
+  --paper: #0e0e0e;
+  --accent: #f2efe6;
+  --on-accent: #111;
+  --tone-dot: rgba(242, 239, 230, 0.85);
+}
+
+/* screentone: printed grey made of dots */
+.tone {
+  background-image: radial-gradient(var(--tone-dot) 0.9px, transparent 1.3px);
+  background-size: 5px 5px;
+}
+.tone-light {
+  background-image: radial-gradient(var(--tone-dot) 0.65px, transparent 1.05px);
+  background-size: 5px 5px;
+}
+
+/* newsprint grain over the whole app */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10000;
+  opacity: 0.06;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>");
+}
+
+/* nav tabs: hovering an inactive tab lets a faint tone show through */
+.manga-tab:not(.tone):hover {
+  background-image: radial-gradient(var(--tone-dot) 0.5px, transparent 0.9px) !important;
+  background-size: 5px 5px;
+}
+/* nav tabs are square panel cells — keep the global soft-button radius off them */
+button.manga-tab {
+  border-radius: 0 !important;
+}
+
+
+/* contents rows: a light tone shows through on hover */
+.toc-row:not(.tone-light):hover {
+  background-image: radial-gradient(var(--tone-dot) 0.55px, transparent 0.95px);
+  background-size: 5px 5px;
+}
+
+/* a message you jumped to (search / quote): brief ink outline */
+@keyframes csm-flash {
+  0%, 30% { outline: 3px dashed var(--ink); outline-offset: 6px; }
+  100%    { outline: 3px dashed transparent; outline-offset: 12px; }
+}
+
+/* ||spoiler||: black bar with rough diagonal hatching, like a censored panel */
+.csm-spoiler {
+  display: inline;
+  cursor: pointer;
+  border-radius: 2px;
+  padding: 0 2px;
+  background-color: var(--ink);
+  background-image:
+    repeating-linear-gradient(-55deg, transparent 0 3px, color-mix(in srgb, var(--paper) 28%, transparent) 3px 4px),
+    repeating-linear-gradient(35deg, transparent 0 6px, color-mix(in srgb, var(--paper) 14%, transparent) 6px 7px);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  transition: transform .12s;
+  user-select: none;
+}
+.csm-spoiler:hover { background-color: color-mix(in srgb, var(--ink) 85%, var(--paper)); }
+
+/* keyboard users always see where they are */
+:focus-visible {
+  outline: 3px dashed var(--ink);
+  outline-offset: 3px;
+}
+
+/* berserk tachometer: the needle trembles in the red zone */
+@keyframes csm-needle-shiver {
+  0% { transform: rotate(-3deg); } 50% { transform: rotate(2.5deg); } 100% { transform: rotate(-1.5deg); }
+}
+.csm-needle-shiver { animation: csm-needle-shiver .09s linear infinite alternate; }

@@ -58,12 +58,16 @@ export async function getUserRooms(username: string) {
   }))
 }
 
-export async function getRoomHistory(roomId: string) {
-  const messages = await prisma.message.findMany({
-    where:   { roomId },
-    orderBy: { createdAt: 'asc' },
-    take:    100,
+export const PAGE = 60
+
+// the newest PAGE messages (or the PAGE before `before`), oldest first
+export async function getRoomHistory(roomId: string, before?: bigint) {
+  const newestFirst = await prisma.message.findMany({
+    where:   { roomId, ...(before ? { id: { lt: before } } : {}) },
+    orderBy: { id: 'desc' },
+    take:    PAGE,
   })
+  const messages = newestFirst.reverse()
 
   const uniqueUsernames = Array.from(new Set(messages.map(m => m.username).filter(Boolean))) as string[]
   

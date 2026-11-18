@@ -8,6 +8,7 @@ import { mediaUrl } from '../lib/media'
 import { findCommand } from '../lib/commands'
 import { maskSpoilers } from '../lib/spoiler'
 import RichText from './RichText'
+import { mentions } from '../lib/mentions'
 import ContractCard, { type PollData } from './ContractCard'
 
 // kept for older imports
@@ -52,9 +53,10 @@ interface MessageBubbleProps {
   onVote?: (messageId: number, optionId: string) => void
   onPollClose?: (messageId: number) => void
   onReply?: (msg: MessageData) => void
+  onEdit?: (msg: MessageData) => void
 }
 
-export default function MessageBubble({ msg, index, isOwn, theme, T, username, seen, onReact, onContextMenu, onAvatarClick, onQuoteClick, onOpenImage, highlight, onVote, onPollClose, onReply }: MessageBubbleProps) {
+export default function MessageBubble({ msg, index, isOwn, theme, T, username, seen, onReact, onContextMenu, onAvatarClick, onQuoteClick, onOpenImage, highlight, onVote, onPollClose, onReply, onEdit }: MessageBubbleProps) {
   const reactions = Object.entries(msg.reactions ?? {}).filter(([, users]) => users.length > 0)
 
   // long-press → context menu on touch screens
@@ -68,6 +70,7 @@ export default function MessageBubble({ msg, index, isOwn, theme, T, username, s
   const contentStr = msg.content || ''
   const isImage = msg.type === 'image' && !!msg.media
   const poll = msg.type === 'contract' && msg.poll ? msg.poll : null
+  const forMe = !isOwn && !msg.system && mentions(contentStr, username)
   const command = msg.type === 'text' || !msg.type ? findCommand(contentStr) : null
   const isShout = !isImage && !poll && !command && looksLikeShout(contentStr)
   const isShort = msg.type !== 'audio' && !isImage && !poll && !msg.replyTo && contentStr.length <= 34 && !contentStr.includes('\n')
@@ -140,7 +143,11 @@ export default function MessageBubble({ msg, index, isOwn, theme, T, username, s
             flexDirection: isOwn ? 'row-reverse' : 'row',
           }}>
             <span><b style={{ fontWeight: 900 }}>{msg.username}</b> · {msg.time}</span>
-            {msg.isEdited && <span style={{ fontSize: '9px' }}>✏️</span>}
+            {msg.isEdited && <span title="edited" style={{ fontSize: '9px' }}>✎ edited</span>}
+            {forMe && (
+              // somebody called you: a blood-red tag on the caption
+              <span style={{ fontSize: '9px', fontWeight: 900, letterSpacing: '1px', padding: '0 4px', borderRadius: '2px', background: 'var(--blood)', color: '#fff' }}>@YOU</span>
+            )}
             {isOwn && (
               <span
                 title={seen ? 'Seen' : 'Sent'}
@@ -166,6 +173,7 @@ export default function MessageBubble({ msg, index, isOwn, theme, T, username, s
               onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
                 if (e.target !== e.currentTarget) return // keys inside (spoilers, buttons) handle themselves
                 if (e.key.toLowerCase() === 'r' && !e.ctrlKey && !e.metaKey && !e.altKey && onReply) { e.preventDefault(); onReply(msg); return }
+                if (e.key.toLowerCase() === 'e' && !e.ctrlKey && !e.metaKey && !e.altKey && isOwn && onEdit) { e.preventDefault(); onEdit(msg); return }
                 if (e.key === 'Enter' || e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) {
                   e.preventDefault()
                   const r = e.currentTarget.getBoundingClientRect()

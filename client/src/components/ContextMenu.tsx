@@ -27,6 +27,7 @@ interface ContextMenuProps {
   onCopy: (content: string) => void
   onReact: (id: number, emoji: string) => void
   onReply?: (msg: MessageData) => void
+  onEdit?: (msg: MessageData) => void
   onClose: () => void
 }
 
@@ -38,6 +39,7 @@ export default function ContextMenu({
   onCopy, 
   onReact,
   onReply,
+  onEdit,
   onClose 
 }: ContextMenuProps) {
   const ref = useRef<HTMLDivElement>(null)
@@ -129,6 +131,12 @@ export default function ContextMenu({
           {onReply && typeof contextMenu.msg.id === 'number' && (
             <button role="menuitem" onClick={() => onReply(contextMenu.msg)} style={{ ...item, fontWeight: 900 }}>
               REPLY ↩
+            </button>
+          )}
+
+          {onEdit && contextMenu.msg.username === username && typeof contextMenu.msg.id === 'number' && (!contextMenu.msg.type || contextMenu.msg.type === 'text') && (
+            <button role="menuitem" onClick={() => onEdit(contextMenu.msg)} style={{ ...item, fontWeight: 900 }}>
+              EDIT ✎
             </button>
           )}
 

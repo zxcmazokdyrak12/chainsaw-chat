@@ -30,6 +30,7 @@ interface HeaderProps {
   onCall?: () => void
   onSearch?: () => void
   onExport?: () => void
+  onRoomInfo?: () => void
 }
 
 interface TabItem {
@@ -42,7 +43,7 @@ interface TabItem {
 export default function Header({
   T, theme, username, rooms, currentRoom,
   activeTab, onTabChange, onThemeToggle,
-  callCount = 0, inCall = false, onCall, onSearch, onExport,
+  callCount = 0, inCall = false, onCall, onSearch, onExport, onRoomInfo,
 }: HeaderProps) {
   const { isMobile } = useWindowSize()
 
@@ -82,8 +83,8 @@ export default function Header({
           </h1>
           {!isMobile && (
             // the room reads as a chapter of the story
-            <span style={{
-              fontSize: '12px', color: T.titleColor,
+            <button onClick={onRoomInfo} title="Room: cast, code, settings (Alt+I)" style={{
+              fontSize: '12px', color: T.titleColor, background: 'transparent', cursor: onRoomInfo ? 'pointer' : 'default',
               fontFamily: "'AnimeAce', sans-serif", letterSpacing: '1px',
               border: `3px solid ${T.headerBorder}`, padding: '3px 10px',
               whiteSpace: 'nowrap',
@@ -92,7 +93,7 @@ export default function Header({
                 const i = rooms.findIndex(r => r.id === currentRoom)
                 return i >= 0 ? `CHAPTER ${i + 1} — ${rooms[i]?.name ?? ''}` : ''
               })()}
-            </span>
+            </button>
           )}
         </div>
 

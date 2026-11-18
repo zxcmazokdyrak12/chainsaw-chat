@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import CsmIcon from './CsmIcon'
 import { wrapSelection, maskSpoilers } from '../lib/spoiler'
+import { mentionQuery } from '../lib/mentions'
 import { useWindowSize } from '../hooks/useWindowSize'
 
 // Interface for the VoiceWave component props
@@ -92,15 +93,34 @@ interface InputBarProps {
   onCancelReply?: () => void
   onQuickReply?: () => void              // ↑ in an empty input
   onSetInput?: (value: string) => void   // replace the whole line (spoiler shortcut)
+  onEditLast?: () => void                // Ctrl+↑: edit your last line
+  editing?: { content: string } | null
+  onCancelEdit?: () => void
+  people?: string[]                      // names for the @ autocomplete
 }
 
 export default function InputBar({
   input, onInputChange, onSend,
   isRecording, onStartRecording, onStopRecording,
   T, theme, currentRoom, rooms,
-  sendOnEnter, onAttach, uploading = false, reply, onCancelReply, onQuickReply, onSetInput,
+  sendOnEnter, onAttach, uploading = false, reply, onCancelReply, onQuickReply, onSetInput, onEditLast, editing, onCancelEdit, people = [],
 }: InputBarProps) {
   const fileRef = useRef<HTMLInputElement>(null)
+  // @ autocomplete: what's typed after "@", and which suggestion is highlighted
+  const [caret, setCaret] = useState(0)
+  const [pick, setPick] = useState(0)
+  const [mentionOff, setMentionOff] = useState(false)
+  const mq = mentionQuery(input, caret)
+  const suggestions = mq && !mentionOff
+    ? people.filter(n => n.toUpperCase().startsWith(mq.query.toUpperCase()) && n.toUpperCase() !== mq.query.toUpperCase()).slice(0, 6)
+    : []
+  const choose = (name: string) => {
+    if (!mq || !onSetInput) return
+    const next = input.slice(0, mq.start) + '@' + name + ' ' + input.slice(caret)
+    onSetInput(next)
+    const pos = mq.start + name.length + 2
+    requestAnimationFrame(() => { const t = textareaRef.current; if (t) { t.focus(); t.selectionStart = t.selectionEnd = pos; setCaret(pos) } })
+  }
   const [dragOver, setDragOver] = useState(false)
   const firstImage = (list: FileList | DataTransferItemList | null | undefined): File | null => {
     if (!list) return null
@@ -110,7 +130,7 @@ export default function InputBar({
     }
     return null
   }
-  useEffect(() => { if (reply) textareaRef.current?.focus() }, [reply])
+  useEffect(() => { if (reply || editing) textareaRef.current?.focus() }, [reply, editing])
   // Specify that the ref points directly to an HTML textarea element
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const { isMobile } = useWindowSize()
@@ -119,7 +139,15 @@ export default function InputBar({
 
   // Explicitly type the keyboard event handler
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (suggestions.length) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && e.altKey)) { e.preventDefault(); const fwd = e.key === 'ArrowDown' || e.key === 'ArrowRight'; setPick(p => (p + (fwd ? 1 : suggestions.length - 1)) % suggestions.length); return }
+      if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); choose(suggestions[Math.min(pick, suggestions.length - 1)]!); return }
+      if (e.key === 'Escape') { e.preventDefault(); setMentionOff(true); return }
+    }
+    if (e.key === 'Escape' && editing) { e.preventDefault(); onCancelEdit?.(); return }
     if (e.key === 'Escape' && reply) { onCancelReply?.(); return }
+    // Ctrl+↑: edit your last line (like Telegram's ↑)
+    if (e.key === 'ArrowUp' && (e.ctrlKey || e.metaKey) && !input && onEditLast) { e.preventDefault(); onEditLast(); return }
     // Ctrl+Shift+S: hide the selection behind a ||spoiler||
     if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === 'KeyS' && onSetInput) {
       e.preventDefault()
@@ -130,7 +158,7 @@ export default function InputBar({
       return
     }
     // ↑ in an empty line: answer the last message
-    if (e.key === 'ArrowUp' && !input && !reply && onQuickReply) { e.preventDefault(); onQuickReply(); return }
+    if (e.key === 'ArrowUp' && !e.ctrlKey && !e.metaKey && !input && !reply && !editing && onQuickReply) { e.preventDefault(); onQuickReply(); return }
     if (sendOnEnter) {
       if (e.key === 'Enter' && !e.ctrlKey && !e.shiftKey) {
         e.preventDefault()
@@ -183,9 +211,55 @@ export default function InputBar({
         }}>DROP THE PANEL!</div>
       )}
 
+      {/* @ autocomplete: the cast, as chips in the strip above the balloon */}
+      {suggestions.length > 0 && (
+        <div role="listbox" aria-label="Mention someone" style={{
+          display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center',
+          paddingLeft: isMobile ? '58px' : '64px', paddingRight: '6px',
+          fontFamily: "'AnimeAce', sans-serif", fontSize: '11px',
+        }}>
+          <span aria-hidden style={{ color: 'var(--ink)', opacity: 0.7 }}>@</span>
+          {suggestions.map((n, i) => (
+            <span key={n} role="option" aria-selected={i === pick}
+              onMouseDown={(e) => { e.preventDefault(); choose(n) }}
+              style={{
+                padding: '2px 8px', cursor: 'pointer', borderRadius: '3px', border: '2px solid var(--ink)',
+                background: i === pick ? 'var(--ink)' : 'var(--paper)', color: i === pick ? 'var(--paper)' : 'var(--ink)',
+              }}>
+              {n}
+            </span>
+          ))}
+          <span style={{ color: 'var(--ink)', opacity: 0.55, fontSize: '9px' }}>Tab / Enter · ↑↓</span>
+        </div>
+      )}
+
+      {/* editing: the same strip, saying what you're changing */}
+      <AnimatePresence>
+        {editing && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+            style={{ overflow: 'hidden', paddingLeft: isMobile ? '58px' : '64px', paddingRight: '6px' }}
+          >
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 8px',
+              borderLeft: '4px dashed var(--ink)', background: 'var(--paper)', color: 'var(--ink)',
+              fontFamily: "'AnimeAce', sans-serif", fontSize: '10px',
+            }}>
+              <span aria-hidden>✎</span>
+              <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <b style={{ fontFamily: 'BlambotClassic, sans-serif', letterSpacing: '1px' }}>EDITING</b> {maskSpoilers(editing.content)}
+              </span>
+              <button onClick={onCancelEdit} aria-label="Cancel editing" style={{ background: 'none', border: 'none', color: 'var(--ink)', cursor: 'pointer', padding: 0, display: 'flex' }}>
+                <CsmIcon name="close" size={15} />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* replying to: a strip of the quoted line above the balloon */}
       <AnimatePresence>
-        {reply && (
+        {reply && !editing && (
           <motion.div
             initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
             style={{ overflow: 'hidden', paddingLeft: isMobile ? '58px' : '64px', paddingRight: '6px' }}
@@ -312,6 +386,9 @@ export default function InputBar({
                   value={input}
                   onChange={handleChange}
                   onKeyDown={handleKeyDown}
+                  onSelect={(e) => { setCaret(e.currentTarget.selectionStart); setMentionOff(false); setPick(0) }}
+                  aria-autocomplete="list"
+                  aria-expanded={suggestions.length > 0}
                   onPaste={onAttach ? (e) => { const f = firstImage(e.clipboardData?.items); if (f) { e.preventDefault(); onAttach(f) } } : undefined}
                   placeholder={isMobile ? 'Your line…' : `Your line in ${roomName || 'the room'}…`}
                 />

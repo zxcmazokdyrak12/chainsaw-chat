@@ -10,10 +10,12 @@ export const SHORTCUTS: [string, string][] = [
   [`${ALT} + C / R / S / P`, 'Chat · Rooms · Settings · Profile'],
   [`${CTRL} + K`, 'search this room'],
   [`${ALT} + E`, 'save the chapter as a manga page'],
+  [`${ALT} + I`, 'room: cast, invite code, rename / leave'],
   ['↑ in an empty line', 'reply to the last message'],
+  [`${CTRL} + ↑`, 'edit your last line'],
   ['Esc', 'cancel the reply / close a panel'],
   [`${CTRL} + Shift + S`, 'hide the selection as a ||spoiler||'],
-  ['Tab to a balloon, then R', 'reply to that balloon'],
+  ['Tab to a balloon, then R / E', 'reply to it / edit it (yours)'],
   ['Tab to a balloon, then Enter', 'its menu (react, copy, pin, delete)'],
   ['?', 'this page'],
 ]

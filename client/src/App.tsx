@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type ChangeEvent } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, type ChangeEvent } from 'react'
 import { motion } from 'framer-motion'
 import IntroScreen, { SlashOverlay } from './components/IntroScreen'
 import UsernameScreen, { AVATARS } from './components/UsernameScreen'
@@ -29,9 +29,11 @@ import { uploadMedia, preparePicture } from './lib/media'
 import { findCommand, HELP_TEXT, type ChatCommand } from './lib/commands'
 import { useUnreadBadge } from './hooks/useUnreadBadge'
 import { maskSpoilers } from './lib/spoiler'
+import { mentions, setMe } from './lib/mentions'
 import ShortcutsHelp from './components/ShortcutsHelp'
 import ExportDialog from './components/ExportDialog'
 import BerserkLayer from './components/BerserkLayer'
+import RoomPanel, { type Member } from './components/RoomPanel'
 import { useBerserk } from './hooks/useBerserk'
 import { API_URL } from './config'
 import { socket, connectSocket } from './lib/socket'
@@ -76,6 +78,21 @@ export default function App() {
   const [avatar, setAvatar] = useState<AvatarItem>(AVATARS[0] as AvatarItem)
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const joinSeen = useRef(new Map<string, number>()) // who was announced as joining, and when
+  // history paging: older pages load when you scroll to the top (or jump to an old line)
+  const feedRef = useRef<HTMLDivElement | null>(null)
+  const [hasMore, setHasMore] = useState<boolean>(false)
+  const loadingOlder = useRef<boolean>(false)
+  const historyAt = useRef<number>(0)              // the jump to the bottom after a load is not "scrolling up"
+  const keepScroll = useRef<number | null>(null)     // scrollHeight before a prepend
+  const pendingJump = useRef<{ id: number; pages: number } | null>(null)
+  // editing one of your lines
+  const [editing, setEditing] = useState<MessageItem | null>(null)
+  // the room's cast (for the room panel and the @ autocomplete)
+  const [members, setMembers] = useState<Member[]>([])
+  const [roomMeta, setRoomMeta] = useState<{ createdBy: string | null; code: string | null }>({ createdBy: null, code: null })
+  const [roomPanel, setRoomPanel] = useState<boolean>(false)
+  const currentRoomRef = useRef<string>('general')
+  currentRoomRef.current = currentRoom
   const [pinnedMsg, setPinnedMsg] = useState<MessageItem | null>(null)
 
   const [authError, setAuthError]     = useState<string>('')
@@ -101,6 +118,22 @@ export default function App() {
   berserkHit.current = berserk.hit
   const notifyRef = useRef(notify)
   notifyRef.current = notify
+  // somebody wrote @YOU: two short metallic pings (with the sound setting on)
+  const mentionPing = useRef(() => {})
+  mentionPing.current = () => {
+    if (!settings.soundEnabled) return
+    try {
+      const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      const ctx = new AC()
+      ;[0, 0.13].forEach((d, i) => {
+        const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = i ? 1568 : 1175
+        const g = ctx.createGain(); const t = ctx.currentTime + d
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.18, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25)
+        o.connect(g).connect(ctx.destination); o.start(t); o.stop(t + 0.3)
+      })
+      setTimeout(() => ctx.close(), 800)
+    } catch { /* no audio */ }
+  }
 
   // replies, pictures, search, lightbox, short notices
   const [replyTo, setReplyTo] = useState<MessageItem | null>(null)
@@ -116,7 +149,7 @@ export default function App() {
   // keyboard: the whole chat works without a mouse (see ShortcutsHelp for the list)
   const [keysOpen, setKeysOpen] = useState<boolean>(false)
   const [exportOpen, setExportOpen] = useState<boolean>(false)
-  const keyActions = useRef<{ room: (i: number) => void }>({ room: () => {} })
+  const keyActions = useRef<{ room: (i: number) => void; info: () => void }>({ room: () => {}, info: () => {} })
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (phase !== 'chat') return
@@ -130,6 +163,7 @@ export default function App() {
         const tab = ({ KeyC: 'chat', KeyR: 'rooms', KeyS: 'settings', KeyP: 'profile' } as Record<string, string>)[e.code]
         if (tab) { e.preventDefault(); setActiveTab(tab); return }
         if (e.code === 'KeyE') { e.preventDefault(); setActiveTab('chat'); setExportOpen(true); return }
+        if (e.code === 'KeyI') { e.preventDefault(); keyActions.current.info(); return }
         if (e.code === 'Slash') { e.preventDefault(); setKeysOpen(o => !o); return }
       }
       if (e.key === '?' && !typing) { e.preventDefault(); setKeysOpen(o => !o) }
@@ -140,6 +174,7 @@ export default function App() {
   const { pochitaVisible, hearts, triggerPochita } = usePochita(settings.pochitaEnabled ?? true)
   const meRef = useRef<string>('')
   meRef.current = username
+  setMe(username) // RichText highlights @YOUR-NAME
 
   const playSound = (src: string, volume: number = 0.4): void => {
     if (settings.soundEnabled) playSfx(src, volume)
@@ -193,6 +228,7 @@ export default function App() {
     socket.emit('get_rooms', { username: user.username })
     setTimeout(() => {
       socket.emit('join_room', { roomId: 'general', username: user.username, avatar: chosen.src })
+      socket.emit('room_members', { roomId: 'general' })
     }, 100)
   }
 
@@ -257,11 +293,44 @@ export default function App() {
     socket.on('rooms_list', (list: RoomItem[]) => setRooms(list))
     socket.on('poll_updated', ({ messageId, poll }: { messageId: number; poll: MessageItem['poll'] }) =>
       setMessages(p => p.map(m => (m.id === messageId ? { ...m, poll } : m))))
-    socket.on('room_history', (history: MessageItem[]) => setMessages(history))
+    socket.on('room_history', (history: MessageItem[]) => { setMessages(history); loadingOlder.current = false; historyAt.current = Date.now() })
+    socket.on('history_state', ({ hasMore: more }: { roomId: string; hasMore: boolean }) => setHasMore(more))
+    socket.on('older_messages', ({ messages: older, hasMore: more }: { roomId: string; messages: MessageItem[]; hasMore: boolean }) => {
+      loadingOlder.current = false
+      setHasMore(more)
+      if (!older.length) { pendingJump.current = null; return }
+      keepScroll.current = feedRef.current?.scrollHeight ?? null
+      setMessages(p => {
+        const have = new Set(p.map(m => m.id))
+        return [...older.filter(m => !have.has(m.id)), ...p]
+      })
+    })
+    socket.on('room_members', ({ roomId, members: list, createdBy, code }: { roomId: string; members: Member[]; createdBy: string | null; code: string | null }) => {
+      if (roomId !== currentRoomRef.current) return
+      setMembers(list)
+      setRoomMeta({ createdBy, code })
+    })
+    socket.on('room_updated', ({ id, name }: { id: string; name: string }) =>
+      setRooms(p => p.map(r => (r.id === id ? { ...r, name } : r))))
+    socket.on('user_left', ({ roomId, username: who, kicked }: { roomId: string; username: string; kicked?: boolean }) => {
+      if (roomId !== currentRoomRef.current) return
+      socket.emit('room_members', { roomId })
+      setMessages(p => [...p, { id: Date.now(), system: true, content: `${who} ${kicked ? 'was kicked out' : 'left the room'}`, time: new Date().toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' }) }])
+    })
+    // you left / were kicked / the room was deleted → back to the lobby
+    socket.on('room_gone', ({ roomId, reason, name }: { roomId: string; reason: 'left' | 'kicked' | 'deleted'; name?: string }) => {
+      if (roomId === currentRoomRef.current) joinRoomRef.current('general')
+      setRoomPanel(false)
+      if (reason === 'kicked') setNotice(`You were kicked out of ${name ?? 'the room'}`)
+      if (reason === 'deleted') setNotice(`${name ?? 'The room'} was deleted`)
+    })
+    socket.on('message_edited', ({ messageId, newContent }: { messageId: number; newContent: string }) =>
+      setMessages(p => p.map(m => (m.id === messageId ? { ...m, content: newContent, isEdited: true } : m))))
     socket.on('receive_message', (msg: MessageItem) => {
       setMessages(p => [...p, msg])
       berserkHit.current()
       const own = msg.username === meRef.current
+      if (!own && mentions(msg.content, meRef.current)) mentionPing.current()
       if (!own) notifyRef.current(msg.username ?? 'Chainsaw Chat', msg.type === 'image' ? '🖼 picture' : msg.type === 'audio' ? '🎤 voice message' : maskSpoilers(msg.content))
       const cmd = msg.type === 'text' || !msg.type ? findCommand(msg.content) : null
       if (cmd) { runCommandRef.current(cmd); return }
@@ -291,6 +360,7 @@ export default function App() {
       const now = Date.now()
       if (now - (joinSeen.current.get(key) ?? 0) < 10 * 60_000) return
       joinSeen.current.set(key, now)
+      socket.emit('room_members', { roomId: currentRoomRef.current })
       popSfx('join', false)
       setMessages(p => [...p, {
         id: now, system: true,
@@ -315,6 +385,13 @@ export default function App() {
       socket.off('rooms_list')
       socket.off('poll_updated')
       socket.off('room_history')
+      socket.off('history_state')
+      socket.off('older_messages')
+      socket.off('message_edited')
+      socket.off('room_members')
+      socket.off('room_updated')
+      socket.off('user_left')
+      socket.off('room_gone')
       socket.off('receive_message')
       socket.off('typing_update')
       socket.off('user_joined')
@@ -327,9 +404,38 @@ export default function App() {
 
   useRejoinOnReconnect({ phase, username, currentRoom, avatarSrc: avatar.src })
 
+  // new lines at the bottom → follow them; older pages on top → stay where you were
+  const lastIdRef = useRef<unknown>(null)
+  useLayoutEffect(() => {
+    const feed = feedRef.current
+    if (keepScroll.current !== null && feed) {
+      feed.scrollTop += feed.scrollHeight - keepScroll.current
+      keepScroll.current = null
+    }
+    const pj = pendingJump.current
+    if (pj && document.getElementById(`msg-${pj.id}`)) { pendingJump.current = null; requestAnimationFrame(() => jumpToRef.current(pj.id)) }
+    else if (pj) loadOlderRef.current()
+  }, [messages])
   useEffect(() => {
+    const last = messages[messages.length - 1]?.id ?? null
+    if (last === lastIdRef.current) return
+    lastIdRef.current = last
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, typingUsers])
+  }, [messages])
+  useEffect(() => {
+    if (typingUsers.length) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [typingUsers])
+
+  const loadOlder = (): void => {
+    if (loadingOlder.current || !hasMore) { if (!hasMore && pendingJump.current) { pendingJump.current = null; setNotice('That line is gone') } return }
+    const first = messages.find(m => typeof m.id === 'number')
+    if (!first) return
+    if (pendingJump.current && ++pendingJump.current.pages > 40) { pendingJump.current = null; return }
+    loadingOlder.current = true
+    socket.emit('load_older', { roomId: currentRoom, before: first.id })
+  }
+  const loadOlderRef = useRef(loadOlder)
+  loadOlderRef.current = loadOlder
 
   // tell the room which message we've seen last (only when the chat is actually on screen)
   useEffect(() => {
@@ -345,11 +451,24 @@ export default function App() {
     return () => document.removeEventListener('visibilitychange', markSeen)
   }, [messages, activeTab, currentRoom, phase])
 
+  keyActions.current.info = () => { socket.emit('room_members', { roomId: currentRoom }); setRoomPanel(true) }
   keyActions.current.room = (i: number) => {
     const room = rooms[i]
     if (!room) { setNotice(`There is no chapter ${i + 1}`); return }
     setActiveTab('chat')
     if (room.id !== currentRoom) joinRoom(room.id)
+  }
+
+  // edit one of your text lines: the input takes its text, Enter saves, Esc cancels
+  const startEdit = (m: MessageItem): void => {
+    if (m.username !== username || typeof m.id !== 'number' || (m.type && m.type !== 'text')) return
+    setReplyTo(null)
+    setEditing(m)
+    setInput(m.content)
+  }
+  const editLast = (): void => {
+    const mine = [...messages].reverse().find(m => !m.system && m.username === username && typeof m.id === 'number' && (!m.type || m.type === 'text'))
+    if (mine) startEdit(mine)
   }
 
   // ↑ in an empty input: reply to the newest real message
@@ -366,9 +485,17 @@ export default function App() {
     setReplyTo(null)
     setSearchOpen(false)
     berserk.reset()
+    setEditing(null)
+    setHasMore(false)
+    pendingJump.current = null
+    loadingOlder.current = true // until the new room's history arrives
     lastMarked.current = 0
     socket.emit('join_room', { roomId, username, avatar: avatar.src })
+    socket.emit('room_members', { roomId: roomId })
   }
+  const joinRoomRef = useRef(joinRoom)
+  joinRoomRef.current = joinRoom
+
 
   // guests get a signed name from the server (it refuses account names and names in use right now)
   const handleSetUsername = async (): Promise<string | null> => {
@@ -388,6 +515,7 @@ export default function App() {
       connectSocket()
       socket.emit('get_rooms', { username: data.user.username })
       socket.emit('join_room', { roomId: 'general', username: data.user.username, avatar: avatar.src })
+      socket.emit('room_members', { roomId: 'general' })
       return null
     } catch {
       return 'Server is sleeping, try again'
@@ -419,12 +547,21 @@ export default function App() {
   // scroll to a message (from the search or a quote) and flash it
   const jumpTo = (id: number): void => {
     const el = document.getElementById(`msg-${id}`)
-    if (!el) { setNotice('That line is older than the loaded history'); return }
+    if (!el) {
+      if (!hasMore) { setNotice('That line is gone'); return }
+      setNotice('Turning back the pages…')
+      pendingJump.current = { id, pages: 0 }
+      loadOlder()
+      return
+    }
     el.scrollIntoView({ behavior: 'smooth', block: 'center' })
     setHighlightId(null)
     requestAnimationFrame(() => setHighlightId(id))
     setTimeout(() => setHighlightId(h => (h === id ? null : h)), 1500)
   }
+  const jumpToRef = useRef(jumpTo)
+  jumpToRef.current = jumpTo
+
 
   // a picture: shrink → upload → message (the current line becomes its caption)
   const handleAttach = async (file: File): Promise<void> => {
@@ -448,6 +585,12 @@ export default function App() {
 
   const sendMessage = (): void => {
     if (!input.trim()) return
+    if (editing) {
+      if (input.trim() !== editing.content) socket.emit('edit_message', { messageId: editing.id, roomId: currentRoom, newContent: input.trim() })
+      setEditing(null)
+      setInput('')
+      return
+    }
     // /help is just for you — it never leaves the browser
     if (input.trim().toLowerCase() === '/help') {
       setMessages(p => [...p, { id: `help-${Date.now()}`, system: true, content: HELP_TEXT, time: '' }])
@@ -569,6 +712,7 @@ export default function App() {
         onCall={() => { setActiveTab('chat'); call.join() }}
         onSearch={() => { setActiveTab('chat'); setSearchOpen(o => !o) }}
         onExport={() => { setActiveTab('chat'); setExportOpen(true) }}
+        onRoomInfo={() => { socket.emit('room_members', { roomId: currentRoom }); setRoomPanel(true) }}
       />
 
       {/* main content */}
@@ -636,7 +780,11 @@ export default function App() {
                 aria-live="polite"
                 aria-relevant="additions"
                 aria-label={`Messages in ${rooms.find(r => r.id === currentRoom)?.name ?? 'the room'}`}
-                onScroll={() => setContextMenu(null)}
+                ref={feedRef}
+                onScroll={(e) => {
+                  setContextMenu(null)
+                  if (e.currentTarget.scrollTop < 120 && Date.now() - historyAt.current > 1500) loadOlder()
+                }}
                 style={{ 
                   position: 'relative', zIndex: 1,
                   flex: 1, 
@@ -733,7 +881,8 @@ export default function App() {
                       highlight={highlightId === msg.id}
                       onVote={(id, optionId) => socket.emit('poll_vote', { messageId: id, roomId: currentRoom, optionId })}
                       onPollClose={(id) => socket.emit('poll_close', { messageId: id, roomId: currentRoom })}
-                      onReply={(m) => setReplyTo(m as MessageItem)}
+                      onReply={(m) => { setEditing(null); setReplyTo(m as MessageItem) }}
+                      onEdit={(m) => startEdit(m as MessageItem)}
                     />
                   )
                 })}
@@ -747,7 +896,8 @@ export default function App() {
                   }}
                   onCopy={(content) => { navigator.clipboard.writeText(content); setContextMenu(null) }}
                   onReact={(msgId, emoji) => { reactTo(msgId, emoji); setContextMenu(null) }}
-                  onReply={(m) => { setReplyTo(m as MessageItem); setContextMenu(null) }}
+                  onReply={(m) => { setEditing(null); setReplyTo(m as MessageItem); setContextMenu(null) }}
+                  onEdit={(m) => { startEdit(m as MessageItem); setContextMenu(null) }}
                   onClose={() => setContextMenu(null)}
                 />
 
@@ -774,6 +924,10 @@ export default function App() {
                   reply={replyTo ? { username: replyTo.username ?? null, content: replyTo.content, type: replyTo.type } : null}
                   onCancelReply={() => setReplyTo(null)}
                   onQuickReply={quickReply}
+                  onEditLast={editLast}
+                  people={[...new Set([...messages.filter(m => !m.system && m.username && m.username !== username).map(m => m.username!), ...members.map(m => m.username).filter(n => n !== username)])]}
+                  editing={editing ? { content: editing.content } : null}
+                  onCancelEdit={() => { setEditing(null); setInput('') }}
                   onSetInput={setInput}
                 />
               </div>
@@ -844,6 +998,21 @@ export default function App() {
       <PochitaEgg visible={pochitaVisible} hearts={hearts} />
       {lightbox && <Lightbox src={lightbox} onClose={() => setLightbox(null)} />}
       {keysOpen && <ShortcutsHelp onClose={() => setKeysOpen(false)} />}
+      {roomPanel && (
+        <RoomPanel
+          roomId={currentRoom}
+          name={rooms.find(r => r.id === currentRoom)?.name ?? '# GENERAL'}
+          code={roomMeta.code}
+          createdBy={roomMeta.createdBy}
+          me={username}
+          members={members}
+          onRename={(name) => socket.emit('rename_room', { roomId: currentRoom, name })}
+          onKick={(who) => socket.emit('kick_member', { roomId: currentRoom, username: who })}
+          onLeave={() => socket.emit('leave_room', { roomId: currentRoom })}
+          onDelete={() => socket.emit('delete_room', { roomId: currentRoom })}
+          onClose={() => setRoomPanel(false)}
+        />
+      )}
       {exportOpen && (
         <ExportDialog
           messages={messages}

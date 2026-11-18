@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { splitSpoilers } from '../lib/spoiler'
+import { splitMentions, getMe } from '../lib/mentions'
 
 // one hidden part: rough ink hatching until clicked (or Enter / Space)
 function Spoiler({ text }: { text: string }) {
@@ -23,9 +24,22 @@ function Spoiler({ text }: { text: string }) {
   )
 }
 
-// message text with ||spoilers||
+// @NAME: an ink chip; your own name is inverted
+function Mentions({ text }: { text: string }) {
+  const parts = splitMentions(text)
+  if (parts.length === 1 && !parts[0]!.mention) return <>{text}</>
+  const me = getMe().toUpperCase()
+  return <>{parts.map((p, i) => (p.mention ? (
+    <span key={i} style={{
+      fontWeight: 900, borderRadius: '3px', padding: '0 3px',
+      background: p.mention === me ? 'var(--ink)' : 'transparent', color: p.mention === me ? 'var(--paper)' : 'inherit',
+      border: '1.5px solid currentColor', boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone',
+    }}>{p.text}</span>
+  ) : <span key={i}>{p.text}</span>))}</>
+}
+
+// message text with ||spoilers|| and @mentions
 export default function RichText({ text }: { text: string | null | undefined }) {
   const parts = splitSpoilers(text ?? '')
-  if (parts.length === 1 && !parts[0]!.spoiler) return <>{text}</>
-  return <>{parts.map((p, i) => (p.spoiler ? <Spoiler key={i} text={p.text} /> : <span key={i}>{p.text}</span>))}</>
+  return <>{parts.map((p, i) => (p.spoiler ? <Spoiler key={i} text={p.text} /> : <Mentions key={i} text={p.text} />))}</>
 }
