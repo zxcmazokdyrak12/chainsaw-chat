@@ -75,6 +75,7 @@ export default function App() {
   
   const [avatar, setAvatar] = useState<AvatarItem>(AVATARS[0] as AvatarItem)
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
+  const joinSeen = useRef(new Map<string, number>()) // who was announced as joining, and when
   const [pinnedMsg, setPinnedMsg] = useState<MessageItem | null>(null)
 
   const [authError, setAuthError]     = useState<string>('')
@@ -284,10 +285,15 @@ export default function App() {
       setJoinError(msg)
     })
     socket.on('typing_update', (users: string[]) => setTypingUsers(users))
-    socket.on('user_joined', ({ username: who }: { username: string }) => {
+    socket.on('user_joined', ({ username: who, roomId }: { username: string; roomId?: string }) => {
+      // the same person "joining" again within minutes (reconnect, second tab) is noise
+      const key = `${roomId ?? ''}:${who}`
+      const now = Date.now()
+      if (now - (joinSeen.current.get(key) ?? 0) < 10 * 60_000) return
+      joinSeen.current.set(key, now)
       popSfx('join', false)
       setMessages(p => [...p, {
-        id: Date.now(), system: true,
+        id: now, system: true,
         content: `${who} joined the room`,
         time: new Date().toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' })
       }])
@@ -519,6 +525,16 @@ export default function App() {
     .reduce<number>((max, [, id]) => Math.max(max, Number(id)), 0)
 
   const reactTo = (messageId: string | number, emoji: string): void => {
+    // optimistic: show it right away (Render can take a moment); message_reacted brings the truth
+    setMessages(p => p.map(m => {
+      if (m.id !== messageId || !username) return m
+      const reactions = { ...(m.reactions ?? {}) }
+      const list = reactions[emoji] ?? []
+      const next = list.includes(username) ? list.filter(u => u !== username) : [...list, username]
+      if (next.length) reactions[emoji] = next
+      else delete reactions[emoji]
+      return { ...m, reactions }
+    }))
     socket.emit('react_message', { messageId, roomId: currentRoom, emoji, username })
   }
 
