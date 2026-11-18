@@ -8,6 +8,9 @@
     "dev": "ts-node-esm src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node --test \"test/unit/*.test.mjs\"",
+    "test:integration": "node --test --test-concurrency=1 \"test/integration/*.test.mjs\"",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
     "prisma:studio": "prisma studio"
@@ -21,7 +24,9 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.5.1",
     "express-session": "^1.19.0",
+    "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "passport": "^0.7.0",
     "passport-github2": "^0.1.12",
@@ -39,7 +44,11 @@
     "@types/passport-github2": "^1.2.9",
     "@types/passport-google-oauth20": "^2.0.17",
     "prisma": "^5.22.0",
+    "socket.io-client": "^4.8.3",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

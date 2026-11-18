@@ -38,12 +38,15 @@ async function metered(): Promise<Ice[] | null> {
 }
 
 // coturn "TURN REST API": username = expiry:tag, credential = base64(HMAC-SHA1(secret, username))
+export function coturnCredentials(secret: string, nowMs: number, ttl = TTL) {
+  const username = `${Math.floor(nowMs / 1000) + ttl}:chainsaw`
+  return { username, credential: crypto.createHmac('sha1', secret).update(username).digest('base64') }
+}
+
 function coturn(): Ice[] | null {
   const urls = process.env.TURN_URLS, secret = process.env.TURN_SECRET
   if (!urls || !secret) return null
-  const username = `${Math.floor(Date.now() / 1000) + TTL}:chainsaw`
-  const credential = crypto.createHmac('sha1', secret).update(username).digest('base64')
-  return [...STUN, { urls: urls.split(',').map(u => u.trim()), username, credential }]
+  return [...STUN, { urls: urls.split(',').map(u => u.trim()), ...coturnCredentials(secret, Date.now()) }]
 }
 
 async function iceServers(): Promise<Ice[]> {

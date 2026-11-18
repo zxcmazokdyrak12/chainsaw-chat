@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  server:
+    name: Server — types, unit + integration tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    services:
+      # a throwaway database just for the integration tests
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: chainsaw
+          POSTGRES_PASSWORD: chainsaw
+          POSTGRES_DB: chainsaw_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U chainsaw" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://chainsaw:chainsaw@localhost:5432/chainsaw_test
+      TEST_DATABASE_URL: postgresql://chainsaw:chainsaw@localhost:5432/chainsaw_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - run: npm install --no-audit --no-fund
+      - run: npx prisma generate
+      - name: Type check
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm test
+      - name: Create the schema
+        run: npx prisma db push --skip-generate
+      - name: Integration tests (HTTP + Socket.IO + Postgres)
+        run: npm run test:integration
+
+  client:
+    name: Client — build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Production build
+        run: npm run build
+      # strict mode found older loose spots; reported, not blocking, until they're cleaned up
+      - name: Type check (report only)
+        run: npx tsc --noEmit -p tsconfig.json
+        continue-on-error: true
+      - name: Lint (report only)
+        run: npm run lint
+        continue-on-error: true
