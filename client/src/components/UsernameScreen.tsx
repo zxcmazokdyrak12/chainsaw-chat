@@ -43,7 +43,7 @@ interface UsernameScreenProps {
   onAvatarChange: (avatar: AvatarItem) => void
   usernameInput: string
   onUsernameInputChange: (value: string) => void
-  onSubmit: () => void
+  onSubmit: () => Promise<string | null>   // guest sign-in; resolves to an error message or null
   onAccountSubmit: (mode: 'login' | 'register', password: string) => void
   authError: string
   authLoading: boolean
@@ -67,16 +67,16 @@ export default function UsernameScreen({
   const [password, setPassword] = useState<string>('')
 
   const nameOk = usernameInput.trim().length >= 2
-  const passOk = password.length >= 6
+  const passOk = password.length >= 6 // old accounts may have 6-7; the server asks 8+ for new ones
   const canSubmitAccount = nameOk && passOk && !authLoading
 
   const switchMode = (m: 'guest' | 'account') => { setMode(m); onClearError() }
 
   return (
-    <div style={{ position:'relative', height:'100vh', overflow:'hidden', background:'#0d0d0d', '--accent': '#f2efe6', '--on-accent': '#111', '--paper': '#0e0e0e', '--ink': '#f2efe6' } as CSSProperties}>
+    <div style={{ position:'relative', height:'100vh', overflow:'clip', background:'#0d0d0d', '--accent': '#f2efe6', '--on-accent': '#111', '--paper': '#0e0e0e', '--ink': '#f2efe6' } as CSSProperties}>
     {/* login screen gets the full stickerbomb; stickers can be poked */}
     <StickerBomb density="full" dark mode="everywhere" seed="login" interactive />
-    <motion.div className="login-overlay" initial={{ opacity:0 }} animate={{ opacity:1 }} style={{ position:'relative', zIndex:1, height:'100vh', background:'radial-gradient(ellipse at center, rgba(13,13,13,0.9) 0%, rgba(13,13,13,0.6) 40%, transparent 75%)', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:'24px', fontFamily:'BlambotClassic, sans-serif', overflowY:'auto', padding:'20px', pointerEvents:'none' }}>
+    <motion.div className="login-overlay" initial={{ opacity:0 }} animate={{ opacity:1 }} style={{ position:'relative', zIndex:1, height:'100vh', boxSizing:'border-box', background:'radial-gradient(ellipse at center, rgba(13,13,13,0.9) 0%, rgba(13,13,13,0.6) 40%, transparent 75%)', display:'flex', alignItems:'center', justifyContent:'safe center', flexDirection:'column', gap:'24px', fontFamily:'BlambotClassic, sans-serif', overflowY:'auto', padding:'20px', pointerEvents:'none' }}>
 
       <h1 style={{ fontSize:'36px', color:'#fff', letterSpacing:'4px', textShadow:'4px 4px 0 var(--accent)', margin:0 }}>
         CHAINSAW <span style={{ color:'var(--accent)' }}>CHAT</span>
@@ -184,10 +184,15 @@ export default function UsernameScreen({
         ))}
       </div>
 
-      <p style={{ color:'#555', fontSize:'11px', letterSpacing:'3px', margin:0 }}>
-        {mode === 'guest' ? "WHAT'S YOUR NICKNAME?" : 'NICKNAME + PASSWORD'}
-      </p>
-
+      {mode === 'guest' ? (
+        <GuestContract
+          name={usernameInput}
+          onName={(v) => { onUsernameInputChange(v); onClearError() }}
+          onSign={onSubmit}
+        />
+      ) : (
+      <>
+      <p style={{ color:'#555', fontSize:'11px', letterSpacing:'3px', margin:0 }}>NICKNAME + PASSWORD</p>
       <div style={{ display:'flex', flexDirection:'column', gap:'10px', width:'280px' }}>
         <input
           style={{ padding:'12px 20px', background:'#1a1a1a', border:'3px solid #fff', color:'#fff', fontSize:'16px', outline:'none', fontFamily:'BlambotClassic, sans-serif', letterSpacing:'2px', textTransform:'uppercase', clipPath:SLANT, textAlign:'center' }}
@@ -195,23 +200,11 @@ export default function UsernameScreen({
           maxLength={14}
           value={usernameInput}
           onChange={e => { onUsernameInputChange(e.target.value); onClearError() }}
-          onKeyDown={e => e.key === 'Enter' && mode === 'guest' && onSubmit()}
           autoComplete="username"
           autoFocus
         />
 
         <AnimatePresence mode="wait">
-          {mode === 'guest' ? (
-            <motion.button
-              key="guest"
-              initial={{ opacity:0, x:-20 }} animate={{ opacity:1, x:0 }} exit={{ opacity:0, x:20 }}
-              whileTap={{ scale:0.95 }} whileHover={{ skewX:-5 }}
-              onClick={onSubmit}
-              style={{ padding:'12px', background: nameOk ? 'var(--accent)' : '#333', color:'var(--on-accent)', border:'none', fontFamily:'BlambotClassic, sans-serif', fontSize:'16px', letterSpacing:'3px', cursor: nameOk ? 'pointer' : 'default', clipPath:SLANT, transition:'background 0.2s' }}
-            >
-              ENTER ⛓
-            </motion.button>
-          ) : (
             <motion.div
               key="account"
               initial={{ opacity:0, x:-20 }} animate={{ opacity:1, x:0 }} exit={{ opacity:0, x:20 }}
@@ -247,11 +240,11 @@ export default function UsernameScreen({
                 ))}
               </div>
               <span style={{ fontFamily:"'AnimeAce', sans-serif", fontSize:'9px', color:'#444', letterSpacing:'1px', textAlign:'center' }}>
-                SIGN UP SAVES YOUR CHARACTER &amp; ROOMS · PASSWORD 6+ CHARS
+                SIGN UP SAVES YOUR CHARACTER &amp; ROOMS · PASSWORD 8+ CHARS
               </span>
             </motion.div>
-          )}
         </AnimatePresence>
+
 
         <AnimatePresence>
           {authError && (
@@ -269,7 +262,108 @@ export default function UsernameScreen({
           )}
         </AnimatePresence>
       </div>
+      </>
+      )}
     </motion.div>
     </div>
+  )
+}
+
+// ── guest entry as a devil contract ──────────────────────────────
+
+function GuestContract({ name, onName, onSign }: { name: string; onName: (v: string) => void; onSign: () => Promise<string | null> }) {
+  const [signed, setSigned] = useState(false)
+  const [error, setError] = useState('')
+  const ok = name.trim().length >= 2
+
+  const sign = () => {
+    if (signed) return
+    if (!ok) { setError('Write at least 2 letters on the line first'); return }
+    setSigned(true)
+    // ask the server while the seal lands; a refused name tears the seal off again
+    const landed = new Promise(r => setTimeout(r, 650))
+    Promise.all([onSign(), landed]).then(([err]) => {
+      if (err) { setSigned(false); setError(err) }
+    })
+  }
+
+  return (
+    <motion.div
+      initial={{ y: 30, rotate: 4, opacity: 0 }}
+      animate={{ y: 0, rotate: -1.5, opacity: 1 }}
+      transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+      style={{
+        position: 'relative', width: 'min(380px, 92vw)', boxSizing: 'border-box',
+        background: '#f5f2ea', color: '#111', border: '4px solid #111',
+        boxShadow: '6px 6px 0 #000, 6px 6px 0 2px #f2efe6',
+        padding: '16px 20px 18px', textAlign: 'left',
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <span style={{ fontFamily: 'BlambotClassic, sans-serif', fontSize: '30px', letterSpacing: '4px' }}>CONTRACT</span>
+        <span style={{ fontFamily: 'serif', fontSize: '20px', opacity: 0.6 }}>契約</span>
+      </div>
+      <div style={{ height: '3px', background: '#111', margin: '4px 0 12px' }} />
+
+      <div style={{ fontFamily: "'AnimeAce', sans-serif", fontSize: '13px', lineHeight: 2 }}>
+        I,{' '}
+        <input
+          value={name}
+          maxLength={14}
+          onChange={e => { onName(e.target.value); setError('') }}
+          onKeyDown={e => e.key === 'Enter' && sign()}
+          placeholder="nickname"
+          aria-label="Nickname"
+          autoComplete="username"
+          disabled={signed}
+          style={{
+            width: '150px', padding: '0 4px', margin: '0 2px',
+            border: 'none', borderBottom: '3px solid #111', borderRadius: 0,
+            background: 'transparent', color: '#111', outline: 'none',
+            fontFamily: 'BlambotClassic, sans-serif', fontSize: '20px', letterSpacing: '2px', textTransform: 'uppercase',
+          }}
+        />
+        , agree to speak in this chat, shout in CAPS only when it matters,
+        and never eat anyone's pudding.
+      </div>
+
+      <div style={{ color: 'var(--blood)', fontFamily: "'AnimeAce', sans-serif", fontSize: '11px', minHeight: '16px', marginTop: '6px' }}>
+        {error}
+      </div>
+
+      <motion.button
+        whileTap={{ scale: 0.95 }}
+        onClick={sign}
+        disabled={signed}
+        style={{
+          marginTop: '6px', padding: '8px 20px',
+          background: ok || signed ? '#111' : 'transparent', color: ok || signed ? '#f5f2ea' : '#111',
+          border: '3px solid #111', borderRadius: '12px',
+          fontFamily: 'BlambotClassic, sans-serif', fontSize: '17px', letterSpacing: '2px',
+          cursor: signed ? 'default' : 'pointer',
+        }}
+      >
+        {signed ? 'SIGNED' : 'SIGN IN BLOOD'}
+      </motion.button>
+
+      {/* the seal slams down once you sign — the only red on the page */}
+      <AnimatePresence>
+        {signed && (
+          <motion.div
+            initial={{ scale: 2.2, rotate: -30, opacity: 0 }}
+            animate={{ scale: 1, rotate: -14, opacity: 0.9 }}
+            transition={{ type: 'spring', stiffness: 520, damping: 16 }}
+            aria-hidden
+            style={{
+              position: 'absolute', right: '18px', bottom: '14px', width: '74px', height: '74px',
+              border: '4px solid #b3140c', borderRadius: '50%', color: '#b3140c',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'serif', fontSize: '32px',
+            }}
+          >
+            契
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   )
 }

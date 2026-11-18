@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, type ChangeEvent } from 'react'
-import { io, type Socket } from 'socket.io-client'
 import { motion } from 'framer-motion'
-import IntroScreen from './components/IntroScreen'
+import IntroScreen, { SlashOverlay } from './components/IntroScreen'
 import UsernameScreen, { AVATARS } from './components/UsernameScreen'
 import Header from './components/Header'
 import { ChapterRail, ChapterDrawer } from './components/ChapterDrawer'
@@ -22,92 +21,25 @@ import { useVideoCall } from './hooks/useVideoCall'
 import VideoCall from './components/VideoCall'
 import StickerBomb from './components/StickerBomb'
 import Tutorial from './components/Tutorial'
-import SfxLayer, { makeBurst, type SfxBurst } from './components/SfxLayer'
+import SfxLayer from './components/SfxLayer'
 import CharacterModal from './components/CharacterModal'
 import { API_URL } from './config'
+import { socket, connectSocket } from './lib/socket'
+import { getToken, getAccountToken, setAccountToken, setGuestToken, clearTokens } from './lib/auth'
+import { CHAINSAW_SFX, playSound as playSfx, isShout } from './lib/sound'
+import { useTheme } from './theme'
+import type { MessageItem, RoomItem, AvatarItem, ContextMenuState, GroupedItem } from './chatTypes'
+import { useVoiceRecorder } from './hooks/useVoiceRecorder'
+import { useSfx } from './hooks/useSfx'
+import { usePochita } from './hooks/usePochita'
+import { useTabs } from './hooks/useTabs'
+import { useChapterNav } from './hooks/useChapterNav'
+import { useTour } from './hooks/useTour'
+import { useRejoinOnReconnect } from './hooks/useRejoinOnReconnect'
 
-const socket: Socket = io(API_URL, {
-  transports: ['websocket', 'polling']
-})
-
-const CHAINSAW_SFX = '/chainsaw.mp3'
-const CUTE_WORDS = ['honey','baby','darling','sweetie','angel','sunshine','bunny','kitty', 'cute', 'love', 'sweet', 'aww', '❤️', '🥺', '💕', '😍', '🐾']
-
-export interface ThemeTokens {
-  [key: string]: string
-  appBg: string
-  headerBg: string
-  headerBorder: string
-  inputZoneBg: string
-  inputBorder: string
-  inputBg: string
-  inputColor: string
-  nameColor: string
-  sfxColor: string
-  titleColor: string
-  titleAccent: string
-  btnBg: string
-  btnColor: string
-  shadow: string
-  halftone: string
-  sidebarBg: string
-  sidebarBorder: string
-}
-
-// manga page: black ink on newsprint. Greys come from screentone (see index.css), not from flat fills.
-const LIGHT: ThemeTokens = {
-  appBg: '#f5f2ea', headerBg: '#f5f2ea', headerBorder: '#111',
-  inputZoneBg: '#f5f2ea', inputBorder: '#111', inputBg: '#fbf9f4', inputColor: '#111',
-  nameColor: '#111', sfxColor: '#111', titleColor: '#111', titleAccent: '#111',
-  btnBg: '#111', btnColor: '#f5f2ea', shadow: '4px 4px 0 #111',
-  halftone: 'rgba(0,0,0,0.07)', sidebarBg: '#f5f2ea', sidebarBorder: '#111',
-}
-
-// "negative" page: white ink on black, like Fujimoto's inverted spreads
-const DARK: ThemeTokens = {
-  appBg: '#0e0e0e', headerBg: '#0e0e0e', headerBorder: '#f2efe6',
-  inputZoneBg: '#0e0e0e', inputBorder: '#f2efe6', inputBg: '#161616', inputColor: '#f2efe6',
-  nameColor: '#f2efe6', sfxColor: '#f2efe6', titleColor: '#f2efe6', titleAccent: '#f2efe6',
-  btnBg: '#f2efe6', btnColor: '#111', shadow: '4px 4px 0 #f2efe6',
-  halftone: 'rgba(255,255,255,0.04)', sidebarBg: '#0e0e0e', sidebarBorder: '#f2efe6',
-}
-
-export interface MessageItem {
-  id: string | number
-  username?: string
-  content: string
-  avatar?: string
-  system?: boolean
-  time?: string
-  type?: 'text' | 'audio' | string
-  audioData?: string | ArrayBuffer | null
-  reactions?: Record<string, string[]>
-}
-
-export interface RoomItem {
-  id: string
-  name: string
-  count: number | string
-  code: string
-}
-
-export interface AvatarItem {
-  id: string
-  name: string
-  src: string
-}
-
-export interface ContextMenuState {
-  x: number
-  y: number
-  msg: any
-}
-
-interface GroupedItem {
-  type: 'divider' | 'message' | string
-  label?: string
-  data?: any
-}
+// types used to live here — re-exported so older imports keep working
+export type { MessageItem, RoomItem, AvatarItem, ContextMenuState } from './chatTypes'
+export type { ThemeTokens } from './theme'
 
 export default function App() {
   const [phase, setPhase]                   = useState<'intro' | 'slashing' | 'username' | 'chat' | string>('intro')
@@ -115,12 +47,10 @@ export default function App() {
   const [usernameInput, setUsernameInput]   = useState<string>('')
   const [messages, setMessages]             = useState<MessageItem[]>([])
   const [input, setInput]                   = useState<string>('')
-  const [activeTab, setActiveTab]           = useState<'chat' | 'rooms' | 'settings' | 'profile' | string>('chat')
+  const { activeTab, setActiveTab, toneCut, switchTab } = useTabs('chat')
   const [currentRoom, setCurrentRoom]       = useState<string>('general')
   const [rooms, setRooms]                   = useState<RoomItem[]>([])
   const [typingUsers, setTypingUsers]       = useState<string[]>([])
-  const [pochitaVisible, setPochitaVisible] = useState<boolean>(false)
-  const [hearts, setHearts]                 = useState<any[]>([])
   
   const bottomRef = useRef<HTMLDivElement | null>(null)
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -131,10 +61,7 @@ export default function App() {
   const [joinCode, setJoinCode]             = useState<string>('')
   const [joinError, setJoinError]           = useState<string>('')
   const [createdCode, setCreatedCode]       = useState<string>('')
-  const [isRecording, setIsRecording]       = useState<boolean>(false)
   const { isMobile } = useWindowSize()
-  const mediaRecorder = useRef<MediaRecorder | null>(null)
-  const audioChunks   = useRef<Blob[]>([])
   
   const [avatar, setAvatar] = useState<AvatarItem>(AVATARS[0] as AvatarItem)
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
@@ -147,103 +74,57 @@ export default function App() {
   const lastMarked = useRef<number>(0)
 
   const call = useVideoCall(socket, currentRoom, username)
-
-  // onboarding tour — shown once after the first time you get into the chat
-  const [tourOpen, setTourOpen] = useState<boolean>(false)
-  // tab switch = quick screentone cut: tone covers the page (90ms), page swaps, tone dissolves (120ms)
-  const [toneCut, setToneCut] = useState<boolean>(false)
-  const cutTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const switchTab = (tab: string): void => {
-    if (tab === activeTab) return
-    if (cutTimer.current) clearTimeout(cutTimer.current)
-    setToneCut(true)
-    cutTimer.current = setTimeout(() => { setActiveTab(tab); setToneCut(false) }, 90)
-  }
-  // chapters panel: rail on desktop (remembers open/closed), drawer on mobile
-  const [railOpen, setRailOpen] = useState<boolean>(() => {
-    try { return localStorage.getItem('chainsaw_rail') !== 'closed' } catch { return true }
-  })
-  const toggleRail = (): void => setRailOpen(o => {
-    try { localStorage.setItem('chainsaw_rail', o ? 'closed' : 'open') } catch { /* ignore */ }
-    return !o
-  })
-  const [drawerOpen, setDrawerOpen] = useState<boolean>(false)
+  const { isRecording, startRecording, stopRecording } = useVoiceRecorder(currentRoom, username, avatar.src)
+  const { railOpen, toggleRail, drawerOpen, setDrawerOpen } = useChapterNav()
+  const { tourOpen, startTour, closeTour } = useTour(phase === 'chat', () => setActiveTab('chat'))
   // whose character page is open (tap on an avatar in the chat)
   const [viewUser, setViewUser] = useState<{ name: string; avatar?: string } | null>(null)
 
-  const startTour = (): void => { setActiveTab('chat'); setTimeout(() => setTourOpen(true), 350) }
-  const closeTour = (): void => {
-    setTourOpen(false)
-    try { localStorage.setItem('chainsaw_tutorial_done', '1') } catch { /* private mode */ }
-  }
-  useEffect(() => {
-    if (phase !== 'chat') return
-    let done = false
-    try { done = localStorage.getItem('chainsaw_tutorial_done') === '1' } catch { /* ignore */ }
-    if (done) return
-    const t = setTimeout(() => setTourOpen(true), 1200) // let the room load first
-    return () => clearTimeout(t)
-  }, [phase])
-
   const { settings, update: updateSetting, resolveTheme } = useSettings()
-
-  // manga SFX bursts over the feed; refs keep socket handlers from reading stale values
-  const [sfx, setSfx] = useState<SfxBurst[]>([])
-  const sfxOn = useRef<boolean>(true)
-  sfxOn.current = settings.sfxEnabled ?? true
+  const { theme, T } = useTheme(settings.theme, resolveTheme)
+  const { sfx, popSfx } = useSfx(settings.sfxEnabled ?? true)
+  const { pochitaVisible, hearts, triggerPochita } = usePochita(settings.pochitaEnabled ?? true)
   const meRef = useRef<string>('')
   meRef.current = username
-  const popSfx = (kind: 'shout' | 'send' | 'join', own: boolean): void => {
-    if (!sfxOn.current) return
-    const b = makeBurst(kind, own)
-    setSfx(p => [...p.slice(-3), b])
-    setTimeout(() => setSfx(p => p.filter(x => x.id !== b.id)), kind === 'shout' ? 1100 : 750)
-  }
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark' | 'system'>(() => resolveTheme() as 'light' | 'dark' | 'system')
-
-  useEffect(() => {
-    setResolvedTheme(resolveTheme() as 'light' | 'dark' | 'system')
-  }, [settings.theme, resolveTheme])
-
-  useEffect(() => {
-    if (settings.theme !== 'system') return
-    const mq = window.matchMedia('(prefers-color-scheme: dark)')
-    const handler = (e: MediaQueryListEvent) => setResolvedTheme(e.matches ? 'dark' : 'light')
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
-  }, [settings.theme])
-
-  const theme = resolvedTheme
-  // css variables (--ink, --paper, --accent…) follow the theme
-  useEffect(() => { document.documentElement.dataset.theme = theme === 'dark' ? 'dark' : 'light' }, [theme])
-  const T: ThemeTokens = theme === 'light' ? LIGHT : DARK
 
   const playSound = (src: string, volume: number = 0.4): void => {
-    if (!settings.soundEnabled) return
-    const audio = new Audio(src)
-    audio.volume = volume
-    audio.play().catch(() => {})
+    if (settings.soundEnabled) playSfx(src, volume)
   }
 
+
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const token = params.get('token')
-    if (token) {
-      localStorage.setItem('token', token)
+    // OAuth comes back with #token=… (a fragment never reaches servers or logs); ?token= is the old form
+    const fromHash = new URLSearchParams(window.location.hash.slice(1)).get('token')
+    const fromQuery = new URLSearchParams(window.location.search).get('token')
+    const incoming = fromHash || fromQuery
+    if (incoming) {
+      setAccountToken(incoming)
       window.history.replaceState({}, '', '/')
     }
-    const saved = localStorage.getItem('token')
+    const saved = getToken()
     if (saved) {
       fetch(`${API_URL}/auth/me`, {
         headers: { Authorization: `Bearer ${saved}` }
       })
-        .then(r => r.json())
+        .then(r => (r.status === 401 ? null : r.json()))
         .then(user => {
-          if (user.username) enterChat(user)
-          else localStorage.removeItem('token')
+          if (user?.username) enterChat(user)
+          else if (user === null) clearTokens()
         })
-        .catch(() => localStorage.removeItem('token'))
+        .catch(() => { /* server asleep — keep the token, try again on reload */ })
     }
+  }, [])
+
+  // the server dropped our token (expired, secret rotated) → back to the login page
+  useEffect(() => {
+    const onErr = (err: Error) => {
+      if (err.message !== 'unauthorized') return
+      clearTokens()
+      setPhase('username')
+      setAuthError('Session expired — sign in again')
+    }
+    socket.on('connect_error', onErr)
+    return () => { socket.off('connect_error', onErr) }
   }, [])
 
   // shared entry point for OAuth tokens and login/password accounts
@@ -254,6 +135,7 @@ export default function App() {
     setUsername(user.username)
     setAvatar(chosen)
     setPhase('chat')
+    connectSocket()
     socket.emit('get_rooms', { username: user.username })
     setTimeout(() => {
       socket.emit('join_room', { roomId: 'general', username: user.username, avatar: chosen.src })
@@ -276,7 +158,7 @@ export default function App() {
         setAuthError(data.error || (res.status === 429 ? 'Too many tries, wait a bit' : 'Server error'))
         return
       }
-      localStorage.setItem('token', data.token)
+      setAccountToken(data.token)
       playSound(CHAINSAW_SFX, 0.4)
       enterChat(data.user, avatar)
     } catch {
@@ -289,7 +171,7 @@ export default function App() {
   // persist character choice for login/password accounts (OAuth accounts just ignore it)
   const handleAvatarChange = (newAv: { id: string | number; name: string; src: string }): void => {
     setAvatar({ id: String(newAv.id), name: newAv.name, src: newAv.src })
-    const token = localStorage.getItem('token')
+    const token = getAccountToken()
     if (!token) return
     fetch(`${API_URL}/auth/avatar`, {
       method: 'POST',
@@ -297,24 +179,10 @@ export default function App() {
       body: JSON.stringify({ avatar: newAv.src }),
     })
       .then(r => (r.ok ? r.json() : null))
-      .then(data => { if (data?.token) localStorage.setItem('token', data.token) })
+      .then(data => { if (data?.token) setAccountToken(data.token) })
       .catch(() => {})
   }
 
-  const triggerPochita = (text: string): void => {
-    if (!settings.pochitaEnabled) return
-    const lower = text.toLowerCase()
-    const isCute = CUTE_WORDS.some(w => lower.includes(w))
-    if (!isCute || Math.random() > 0.4) return
-    const newHearts = Array.from({ length: 9 }, (_, i) => ({
-      id: i, x: 10 + Math.random() * 75,
-      delay: Math.random() * 0.5, size: 40 + Math.random() * 40,
-      rotate: -40 + Math.random() * 80,
-    }))
-    setPochitaVisible(true)
-    setHearts(newHearts)
-    setTimeout(() => { setPochitaVisible(false); setHearts([]) }, 2500)
-  }
 
   useEffect(() => {
     socket.on('message_pinned', ({ messageId, pinStatus }: { messageId: string | number, pinStatus: boolean }) => {
@@ -337,10 +205,8 @@ export default function App() {
     socket.on('receive_message', (msg: MessageItem) => {
       setMessages(p => [...p, msg])
       triggerPochita(msg.content)
-      const text = msg.content || ''
       const own = msg.username === meRef.current
-      const shout = text === text.toUpperCase() && text.replace(/[^a-zA-Zа-яА-Я]/g, '').length > 2
-      if (shout) popSfx('shout', own)
+      if (isShout(msg.content || '')) popSfx('shout', own)
       else if (own) popSfx('send', true)
     })
     socket.on('room_created', ({ id }: { id: string, code: string, name: string }) => {
@@ -393,25 +259,7 @@ export default function App() {
     }
   }, [username, avatar])
 
-  // socket.io reconnects by itself (Render naps, phone goes to background), but the new socket
-  // is not in any room — rejoin, otherwise reactions / calls / messages silently go nowhere
-  const sessionRef = useRef({ phase, username, currentRoom, avatarSrc: avatar.src })
-  sessionRef.current = { phase, username, currentRoom, avatarSrc: avatar.src }
-  useEffect(() => {
-    let firstConnect = true
-    const onConnect = () => {
-      if (firstConnect) { firstConnect = false; return }
-      const s = sessionRef.current
-      if (s.phase !== 'chat' || !s.username) return
-      socket.emit('get_rooms', { username: s.username })
-      socket.emit('join_room', { roomId: s.currentRoom, username: s.username, avatar: s.avatarSrc })
-    }
-    const onReactError = (msg: string) => console.warn('[reaction]', msg)
-    if (socket.connected) firstConnect = false
-    socket.on('connect', onConnect)
-    socket.on('react_error', onReactError)
-    return () => { socket.off('connect', onConnect); socket.off('react_error', onReactError) }
-  }, [])
+  useRejoinOnReconnect({ phase, username, currentRoom, avatarSrc: avatar.src })
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -440,27 +288,38 @@ export default function App() {
     socket.emit('join_room', { roomId, username, avatar: avatar.src })
   }
 
-  const handleSetUsername = (): void => {
-    if (usernameInput.trim().length < 2) return
+  // guests get a signed name from the server (it refuses account names and names in use right now)
+  const handleSetUsername = async (): Promise<string | null> => {
     const name = usernameInput.trim().toUpperCase()
-    setUsername(name)
-    setPhase('chat')
-    setTimeout(() => {
-      socket.emit('join_room', { roomId: 'general', username: name, avatar: avatar.src })
-    }, 100)
+    if (name.length < 2) return 'Write at least 2 letters on the line first'
+    try {
+      const res = await fetch(`${API_URL}/auth/guest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: name, avatar: avatar.src }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.token) return data.error || (res.status === 429 ? 'Too many tries, wait a bit' : 'Server error')
+      setGuestToken(data.token)
+      setUsername(data.user.username)
+      setPhase('chat')
+      connectSocket()
+      socket.emit('get_rooms', { username: data.user.username })
+      socket.emit('join_room', { roomId: 'general', username: data.user.username, avatar: avatar.src })
+      return null
+    } catch {
+      return 'Server is sleeping, try again'
+    }
   }
 
-  const handleStart = (): void => {
-    playSound(CHAINSAW_SFX, 0.5)
-    setPhase('slashing')
-    setTimeout(() => setPhase('username'), 1200)
-  }
+  // chapter 0: the intro roars, then the cut plays over the login page
+  const [slashing, setSlashing] = useState<boolean>(false)
+  const finishIntro = (): void => { setPhase('username'); setSlashing(true) }
+
 
   const sendMessage = (): void => {
     if (!input.trim()) return
-    const isAllCaps = input.trim() === input.trim().toUpperCase()
-      && input.trim().replace(/[^a-zA-Zа-яА-Я]/g, '').length > 2
-    if (isAllCaps && Math.random() < 0.1) {
+    if (isShout(input.trim()) && Math.random() < 0.1) {
       playSound(CHAINSAW_SFX, 0.4)
     }
     socket.emit('send_message', { roomId: currentRoom, username, content: input.trim(), avatar: avatar.src })
@@ -479,107 +338,6 @@ export default function App() {
     }
   }
 
-  const startRecording = async (): Promise<void> => {
-    try {
-      if (window && (window as any).Capacitor && (window as any).Capacitor.isNativePlatform) {
-        try {
-          await (window as any).Capacitor.Plugins.Permissions.requestPermission({ name: 'microphone' });
-        } catch (pe) {
-          console.warn(pe);
-        }
-      }
-
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
-      // Настройка для Firefox с resistFingerprinting: 
-      // Не перебираем mimeType вручную, а даем браузеру использовать дефолтный системный контейнер
-      let options = {};
-      
-      // Если это Firefox/Линукс/Мак с защитой, принудительный opus в webm может ломаться.
-      // Проверяем только самый базовый вариант, иначе оставляем пустой объект
-      if (MediaRecorder.isTypeSupported('audio/webm')) {
-        options = { mimeType: 'audio/webm' };
-      } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
-        options = { mimeType: 'audio/ogg' };
-      }
-   
-      mediaRecorder.current = new MediaRecorder(stream, options);
-      audioChunks.current = [];
-   
-      mediaRecorder.current.ondataavailable = (e: BlobEvent) => {
-        if (e.data && e.data.size > 0) {
-          audioChunks.current.push(e.data);
-        }
-      };
-   
-      mediaRecorder.current.onstop = async () => {
-        if (audioChunks.current.length === 0) {
-          console.error("Чанки аудио пусты!");
-          return;
-        }
-   
-        const finalType = mediaRecorder.current?.mimeType || 'audio/webm';
-        const blob = new Blob(audioChunks.current, { type: finalType });
-
-        if (blob.size > 3 * 1024 * 1024) { 
-          alert('Voice message too long!');
-          stream.getTracks().forEach(t => t.stop());
-          return;
-        }
-   
-        // Обернем FileReader в Promise, чтобы гарантировать отправку ТЕКСТА, а не битого объекта
-        const readBlobAsBase64 = (audioBlob: Blob): Promise<string> => {
-          return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-              let res = reader.result as string;
-              if (res && res.includes('data:application/octet-stream;base64,')) {
-                res = res.replace('data:application/octet-stream;base64,', `data:${finalType};base64,`);
-              }
-              resolve(res);
-            };
-            reader.onerror = () => reject(reader.error);
-            reader.readAsDataURL(audioBlob);
-          });
-        };
-
-        try {
-          const base64Audio = await readBlobAsBase64(blob);
-
-          if (!base64Audio || base64Audio.length < 100) {
-            console.error('Сгенерирована слишком короткая или пустая Base64 строка');
-            return;
-          }
-
-          socket.emit('send_message', {
-            roomId: currentRoom,
-            username,
-            avatar: avatar.src,
-            content: '🎤 voice message',
-            type: 'audio',
-            audioData: base64Audio,
-          });
-        } catch (err) {
-          console.error('Ошибка при чтении Blob в Base64:', err);
-        }
-
-        // Выключаем микрофон
-        stream.getTracks().forEach(t => t.stop());
-      };
-   
-      // Запускаем без параметров времени
-      mediaRecorder.current.start();
-      setIsRecording(true);
-    } catch (e) {
-      console.error(e);
-      alert('Microphone access denied');
-    }
-  }
-
-  const stopRecording = (): void => {
-    mediaRecorder.current?.stop()
-    setIsRecording(false)
-  }
 
   const createRoom = (): void => {
     socket.emit('create_room', { username, roomName: newRoomName })
@@ -592,17 +350,19 @@ export default function App() {
 
   const handleLogout = (): void => {
     call.leave()
-    localStorage.removeItem('token')
-    document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"
+    clearTokens()
+    socket.disconnect()
     window.location.href = '/'
   }
 
   if (phase === 'intro' || phase === 'slashing') {
-    return <IntroScreen phase={phase} onStart={handleStart} />
+    return <IntroScreen soundOn={settings.soundEnabled} onRoar={() => playSound(CHAINSAW_SFX, 0.5)} onDone={finishIntro} />
   }
 
   if (phase === 'username') {
     return (
+      <>
+      {slashing && <SlashOverlay onEnd={() => setSlashing(false)} />}
       <UsernameScreen
         avatar={avatar}
         onAvatarChange={setAvatar}
@@ -614,6 +374,7 @@ export default function App() {
         authLoading={authLoading}
         onClearError={() => setAuthError('')}
       />
+      </>
     )
   }
 

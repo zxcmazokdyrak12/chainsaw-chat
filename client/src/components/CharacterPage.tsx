@@ -1,3 +1,4 @@
+import { getAccountToken } from '../lib/auth'
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import CsmIcon from './CsmIcon'
@@ -33,7 +34,7 @@ export default function CharacterPage({ username, avatarSrc, page, stats, editab
   const [saving, setSaving] = useState<boolean>(false)
   useEffect(() => { setDraft(page) }, [page])
 
-  const loggedIn = (() => { try { return !!localStorage.getItem('token') } catch { return false } })()
+  const loggedIn = (() => { try { return !!getAccountToken() } catch { return false } })()
   const canEdit = !!editable && loggedIn
   const dirty = FIELDS.some(f => draft[f.key] !== page[f.key])
   const rank = stats ? rankOf(stats.lines) : null

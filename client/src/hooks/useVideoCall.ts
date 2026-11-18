@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import type { Socket } from 'socket.io-client'
 import { ICE_SERVERS } from '../config'
+import { getIceServers } from '../lib/ice'
 
 // Mesh WebRTC: every participant holds a direct RTCPeerConnection to every other one.
 // The server only relays signaling (offer / answer / ICE) — media never touches it.
@@ -44,6 +45,7 @@ export function useVideoCall(socket: Socket, roomId: string, username: string): 
   const [error, setError]               = useState<string>('')
 
   const pcs      = useRef<Map<string, RTCPeerConnection>>(new Map())
+  const iceRef   = useRef<RTCIceServer[]>(ICE_SERVERS) // TURN creds from the server, fetched on join
   const localRef = useRef<MediaStream | null>(null)
   const roomRef  = useRef<string>(roomId)
   const inCallRef = useRef<boolean>(false)
@@ -79,7 +81,7 @@ export function useVideoCall(socket: Socket, roomId: string, username: string): 
 
   const createPeer = (socketId: string, username: string, initiator: boolean): RTCPeerConnection => {
     pcs.current.get(socketId)?.close()
-    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS })
+    const pc = new RTCPeerConnection({ iceServers: iceRef.current })
     pcs.current.set(socketId, pc)
     upsertRemote(socketId, username, null)
 
@@ -133,6 +135,8 @@ export function useVideoCall(socket: Socket, roomId: string, username: string): 
     if (inCallRef.current || joining) return
     setError('')
     setJoining(true)
+    // TURN credentials load while the camera permission prompt is up
+    const icePromise = getIceServers().then(servers => { iceRef.current = servers })
     let stream: MediaStream
     try {
       stream = await navigator.mediaDevices.getUserMedia({
@@ -150,6 +154,7 @@ export function useVideoCall(socket: Socket, roomId: string, username: string): 
         return
       }
     }
+    await icePromise
     localRef.current = stream
     inCallRef.current = true
     setLocalStream(stream)

@@ -1,3 +1,4 @@
+import { getAccountToken } from './lib/auth'
 import { API_URL } from './config'
 
 // Shapes returned by GET /profile/:username, plus rank and achievement rules.
@@ -39,7 +40,7 @@ export async function fetchProfile(username: string): Promise<ProfileData | null
 }
 
 export async function saveCharacterPage(fields: CharacterFields): Promise<{ ok: boolean; error?: string }> {
-  const token = localStorage.getItem('token')
+  const token = getAccountToken()
   if (!token) return { ok: false, error: 'Log in with an account to fill in your page' }
   try {
     const r = await fetch(`${API_URL}/profile`, {

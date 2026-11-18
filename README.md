@@ -203,21 +203,26 @@ npm run dev
 ```text
 chainsaw-chat/
 ├── server/
-│   ├── prisma/
-│   │   └── schema.prisma      ← Prisma relational models (User, Room, Message)
-│   ├── src/
-│   │   ├── index.ts           ← Strictly typed Express server entrypoint
-│   │   └── passport.ts        ← OAuth 2.0 Security Strategies
-│   └── package.json
+│   ├── prisma/schema.prisma   ← models: users, rooms, messages, read marks, profiles
+│   └── src/
+│       ├── index.ts           ← entry point: middleware + routes + sockets wiring
+│       ├── config.ts          ← env (.env), URLs, build tag
+│       ├── passport.ts        ← GitHub / Google OAuth strategies
+│       ├── types.ts           ← shared types (JWT payload, socket data, reactions)
+│       ├── lib/               ← prisma client, JWT helpers, room/message helpers
+│       ├── routes/            ← auth.ts, profile.ts, meta.ts (/ping, /version)
+│       └── sockets/           ← rooms, messages, calls (WebRTC signaling), presence
 └── client/
     ├── src/
-    │   ├── components/        ← Modular UI Blocks (InputBar, ProfileTab, RoomsTab, etc.)
-    │   ├── hooks/             ← Custom React Hooks (useSettings tracking)
-    │   ├── utils/             ← Helper modules (date processing pipelines)
-    │   ├── App.tsx            ← Central reactive Hub (TypeScript-managed)
-    │   ├── fonts.css          ← @font-face declarations
-    │   └── main.tsx           ← Virtual DOM target mounting
-    └── public/                ← Binary audio clips, assets & manga frames
+    │   ├── App.tsx            ← screen layout; state lives in hooks
+    │   ├── hooks/             ← useSettings, useVideoCall, useVoiceRecorder, useTabs, useTour, …
+    │   ├── components/        ← balloons, chapters drawer, ID card, settings, stickerbomb, …
+    │   ├── lib/               ← socket singleton, sounds
+    │   ├── theme.ts           ← ink / newsprint theme tokens
+    │   ├── profileData.ts     ← service record, ranks, achievements
+    │   ├── stickers.ts        ← stickerbomb pack
+    │   └── index.css          ← manga palette, screentone, soft buttons
+    └── public/                ← stickers, avatars, fonts, sounds
 ```
 
 🛤 Road Map

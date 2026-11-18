@@ -62,6 +62,9 @@ function VoiceWave({ isRecording, theme }: VoiceWaveProps) {
 
 // ─────────────────────────────────────────────────────────────────
 
+// jagged SFX burst outline for the send button (viewBox 120×70)
+const BURST_POINTS = '8,22 30,24 34,4 52,20 66,2 74,20 96,8 92,28 116,32 96,42 112,62 86,52 80,68 62,52 48,68 42,52 20,64 26,46 2,44 22,34'
+
 // Interface representing the shape of a Room object
 interface Room {
   id: string
@@ -93,6 +96,8 @@ export default function InputBar({
   // Specify that the ref points directly to an HTML textarea element
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const { isMobile } = useWindowSize()
+  // bumps on every send so the burst re-plays its slam-in
+  const [burstKey, setBurstKey] = useState<number>(0)
 
   // Explicitly type the keyboard event handler
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -259,30 +264,50 @@ export default function InputBar({
           </AnimatePresence>
         </div>
 
-        {/* send: a chainsaw guide bar — the chain starts running once there's something to send */}
+        {/* send: an ink SFX burst — "GO!!" — that slams in again every time you send */}
         <motion.button
-          whileTap={{ scale: 0.94, x: 3 }}
-          whileHover={{ x: 2 }}
-          onClick={onSend}
+          whileHover={hasText ? { scale: 1.06, rotate: -2 } : undefined}
+          whileTap={{ scale: 0.88, rotate: -12 }}
+          onClick={() => { if (!hasText) return; setBurstKey(k => k + 1); onSend() }}
           data-tour="send"
           aria-label="Send"
-          className={hasText ? 'chain-bar chain-run' : 'chain-bar'}
+          title="Send"
           style={{
-            position: 'relative',
-            height: '44px', padding: isMobile ? '0 16px 0 12px' : '0 20px 0 14px',
-            background: T.btnBg, color: T.btnColor,
-            border: `3px solid ${T.inputBorder}`,
-            borderRadius: '10px 999px 999px 10px',
-            fontFamily: 'BlambotClassic, sans-serif',
-            fontSize: '15px', letterSpacing: '2px',
-            cursor: 'pointer',
-            flexShrink: 0, whiteSpace: 'nowrap',
-            display: 'flex', alignItems: 'center', gap: '8px',
-            opacity: hasText ? 1 : 0.8,
+            position: 'relative', flexShrink: 0,
+            width: isMobile ? '86px' : '108px', height: isMobile ? '52px' : '64px',
+            margin: '-6px -4px -4px 0',
+            padding: 0, border: 'none', borderRadius: 0, background: 'transparent',
+            cursor: hasText ? 'pointer' : 'default',
+            rotate: '-6deg',
           }}
         >
-          <CsmIcon name="send" size={isMobile ? 20 : 18} strokeWidth={2.3} />
-          {!isMobile && 'VROOM'}
+          <motion.span
+            key={burstKey}
+            initial={burstKey ? { scale: 1.35, rotate: -18 } : false}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: 'spring', stiffness: 520, damping: 13 }}
+            style={{ position: 'absolute', inset: 0, display: 'block' }}
+          >
+            <svg viewBox="0 0 120 70" preserveAspectRatio="none" aria-hidden style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'visible' }}>
+              <polygon
+                points={BURST_POINTS}
+                fill={hasText ? 'var(--ink)' : 'var(--paper)'}
+                stroke="var(--ink)" strokeWidth="3" strokeLinejoin="round"
+                vectorEffect="non-scaling-stroke"
+              />
+            </svg>
+            <span style={{
+              position: 'absolute', inset: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              paddingTop: '3px',
+              fontFamily: "'DeathRattle', 'BlambotClassic', sans-serif",
+              fontSize: isMobile ? '20px' : '25px', letterSpacing: '1px',
+              color: hasText ? 'var(--paper)' : 'var(--ink)',
+              opacity: hasText ? 1 : 0.55,
+            }}>
+              GO!!
+            </span>
+          </motion.span>
         </motion.button>
       </div>
 
