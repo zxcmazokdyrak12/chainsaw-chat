@@ -15,8 +15,9 @@ const PORT = 3998
 const URL = EXTERNAL ?? `http://localhost:${PORT}`
 let server
 
-before(async () => {
-  if (skip || EXTERNAL) return
+// one hook, in order: root-level `before` hooks of node:test may run concurrently
+async function startServer() {
+  if (EXTERNAL) return
   server = spawn(process.execPath, ['dist/index.js'], {
     env: { ...process.env, DATABASE_URL: DB, PORT: String(PORT), JWT_SECRET: 'integration-secret-'.padEnd(40, 'x'), CLIENT_URL: 'http://localhost:5173', NODE_ENV: 'test' },
     stdio: ['ignore', 'inherit', 'inherit'],
@@ -26,7 +27,7 @@ before(async () => {
     await new Promise(r => setTimeout(r, 250))
   }
   throw new Error('server did not start')
-})
+}
 after(() => server?.kill())
 
 // ── helpers ───────────────────────────────────────────────────────
@@ -73,6 +74,7 @@ async function say(s, roomId, content, extra = {}) {
 let denji, power, denjiTok, powerTok
 before(async () => {
   if (skip) return
+  await startServer()
   const reg = await post('/auth/register', { username: nick('D'), password: 'pochita-1234' })
   assert.equal(reg.status, 200, JSON.stringify(reg.body))
   denjiTok = reg.body.token
