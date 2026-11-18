@@ -43,7 +43,7 @@ interface UsernameScreenProps {
   onAvatarChange: (avatar: AvatarItem) => void
   usernameInput: string
   onUsernameInputChange: (value: string) => void
-  onSubmit: () => void
+  onSubmit: () => Promise<string | null>   // guest sign-in; resolves to an error message or null
   onAccountSubmit: (mode: 'login' | 'register', password: string) => void
   authError: string
   authLoading: boolean
@@ -67,7 +67,7 @@ export default function UsernameScreen({
   const [password, setPassword] = useState<string>('')
 
   const nameOk = usernameInput.trim().length >= 2
-  const passOk = password.length >= 6
+  const passOk = password.length >= 6 // old accounts may have 6-7; the server asks 8+ for new ones
   const canSubmitAccount = nameOk && passOk && !authLoading
 
   const switchMode = (m: 'guest' | 'account') => { setMode(m); onClearError() }
@@ -200,7 +200,6 @@ export default function UsernameScreen({
           maxLength={14}
           value={usernameInput}
           onChange={e => { onUsernameInputChange(e.target.value); onClearError() }}
-          onKeyDown={e => e.key === 'Enter' && mode === 'guest' && onSubmit()}
           autoComplete="username"
           autoFocus
         />
@@ -241,7 +240,7 @@ export default function UsernameScreen({
                 ))}
               </div>
               <span style={{ fontFamily:"'AnimeAce', sans-serif", fontSize:'9px', color:'#444', letterSpacing:'1px', textAlign:'center' }}>
-                SIGN UP SAVES YOUR CHARACTER &amp; ROOMS · PASSWORD 6+ CHARS
+                SIGN UP SAVES YOUR CHARACTER &amp; ROOMS · PASSWORD 8+ CHARS
               </span>
             </motion.div>
         </AnimatePresence>
@@ -272,7 +271,7 @@ export default function UsernameScreen({
 
 // ── guest entry as a devil contract ──────────────────────────────
 
-function GuestContract({ name, onName, onSign }: { name: string; onName: (v: string) => void; onSign: () => void }) {
+function GuestContract({ name, onName, onSign }: { name: string; onName: (v: string) => void; onSign: () => Promise<string | null> }) {
   const [signed, setSigned] = useState(false)
   const [error, setError] = useState('')
   const ok = name.trim().length >= 2
@@ -281,7 +280,11 @@ function GuestContract({ name, onName, onSign }: { name: string; onName: (v: str
     if (signed) return
     if (!ok) { setError('Write at least 2 letters on the line first'); return }
     setSigned(true)
-    setTimeout(onSign, 650) // let the seal land
+    // ask the server while the seal lands; a refused name tears the seal off again
+    const landed = new Promise(r => setTimeout(r, 650))
+    Promise.all([onSign(), landed]).then(([err]) => {
+      if (err) { setSigned(false); setError(err) }
+    })
   }
 
   return (

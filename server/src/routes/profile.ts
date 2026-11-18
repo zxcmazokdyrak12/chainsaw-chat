@@ -63,6 +63,7 @@ export function registerProfileRoutes(app: Express) {
     if (!req.headers.authorization) { res.status(401).json({ error: 'Log in to edit your page' }); return }
     const payload = readToken(req)
     if (!payload) { res.status(401).json({ error: 'Invalid token' }); return }
+    if (payload.guest) { res.status(403).json({ error: 'Guests can only read pages' }); return }
 
     const body = (req.body ?? {}) as Partial<Record<PageField, unknown>>
     const data: Partial<Record<PageField, string>> = {}

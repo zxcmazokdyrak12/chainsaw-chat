@@ -53,6 +53,59 @@ function useSputter(enabled: boolean) {
   }, [enabled])
 }
 
+// the rope: a dry rasp while it's pulled out, a whip + clack when it snaps back
+export interface RopeSound { rasp: (len: number) => void; snap: () => void; whoosh: () => void }
+function useRopeSound(enabled: boolean): RopeSound {
+  const ctxRef = useRef<AudioContext | null>(null)
+  const noiseRef = useRef<AudioBuffer | null>(null)
+  const get = () => {
+    const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+    const ctx = ctxRef.current ?? (ctxRef.current = new AC())
+    if (!noiseRef.current) {
+      const b = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate)
+      const d = b.getChannelData(0)
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1
+      noiseRef.current = b
+    }
+    return { ctx, noise: noiseRef.current }
+  }
+  // band-passed noise burst; freq can glide from f0 to f1
+  const burst = (dur: number, f0: number, f1: number, vol: number, q = 1.2, delay = 0) => {
+    if (!enabled) return
+    try {
+      const { ctx, noise } = get()
+      const t = ctx.currentTime + delay
+      const src = ctx.createBufferSource(); src.buffer = noise
+      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = q
+      bp.frequency.setValueAtTime(f0, t); bp.frequency.exponentialRampToValueAtTime(f1, t + dur)
+      const g = ctx.createGain()
+      g.gain.setValueAtTime(0.0001, t)
+      g.gain.exponentialRampToValueAtTime(vol, t + Math.min(0.02, dur / 4))
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur)
+      src.connect(bp).connect(g).connect(ctx.destination)
+      src.start(t, Math.random() * 0.5); src.stop(t + dur + 0.02)
+    } catch { /* no audio — fine */ }
+  }
+  const click = (delay: number, vol = 0.4) => {
+    if (!enabled) return
+    try {
+      const { ctx } = get()
+      const t = ctx.currentTime + delay
+      const o = ctx.createOscillator(); o.type = 'square'
+      o.frequency.setValueAtTime(1900, t); o.frequency.exponentialRampToValueAtTime(300, t + 0.03)
+      const g = ctx.createGain()
+      g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05)
+      o.connect(g).connect(ctx.destination); o.start(t); o.stop(t + 0.06)
+    } catch { /* no audio — fine */ }
+  }
+  return {
+    // pitch climbs as more rope comes out
+    rasp: (len) => burst(0.07, 900 + len * 9, 1300 + len * 9, 0.12, 2.5),
+    snap: () => { burst(0.22, 3200, 700, 0.18, 0.9); click(0.21) },
+    whoosh: () => { burst(0.35, 5200, 500, 0.3, 0.7); click(0.17, 0.55); click(0.24, 0.3) },
+  }
+}
+
 function shake(el: HTMLElement | null, px: number, ms = 60, times = 5) {
   el?.animate(
     [
@@ -212,8 +265,9 @@ function StarterGrip() {
   )
 }
 
-function Starter({ onPull, pulls }: { onPull: () => void; pulls: number }) {
+function Starter({ onPull, pulls, rope, roaring }: { onPull: () => void; pulls: number; rope: RopeSound; roaring: boolean }) {
   const [pos, setPos] = useState({ x: 0, y: 0 })
+  const lastRasp = useRef(0)
   const drag = useRef<{ x: number; y: number } | null>(null)
   const anim = useRef<number | null>(null)
   const EYE = 78     // eyelet centre inside the port
@@ -230,14 +284,39 @@ function Starter({ onPull, pulls }: { onPull: () => void; pulls: number }) {
       if (k < 1) anim.current = requestAnimationFrame(back)
     }
     back()
+    lastRasp.current = 0
+    const last = pulled && pulls + 1 >= PULLS_TO_START // the roar has its own whoosh
+    if (from.y > 25 && !last) rope.snap()
     if (pulled) onPull()
   }
   useEffect(() => () => { if (anim.current) cancelAnimationFrame(anim.current) }, [])
 
+  // 3rd pull: the engine catches and the rope whips back into the port
+  const posRef = useRef(pos)
+  posRef.current = pos
+  useEffect(() => {
+    if (!roaring) return
+    if (anim.current) cancelAnimationFrame(anim.current)
+    drag.current = null
+    rope.whoosh()
+    if (prefersReducedMotion()) { setPos({ x: 0, y: 0 }); return }
+    const from = posRef.current
+    const to = -BASE + 6
+    const t0 = performance.now()
+    const step = () => {
+      const k = Math.min(1, (performance.now() - t0) / 170)
+      const e = k * k
+      setPos({ x: from.x * (1 - e), y: from.y + (to - from.y) * e })
+      if (k < 1) anim.current = requestAnimationFrame(step)
+    }
+    step()
+  }, [roaring]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // keyboard: Enter / Space does a full pull
   const keyPull = () => {
     setPos({ x: 0, y: PULL_DISTANCE + 20 })
-    setTimeout(() => { drag.current = null; setPos({ x: 0, y: 0 }); onPull() }, 140)
+    rope.rasp(PULL_DISTANCE)
+    setTimeout(() => { drag.current = null; setPos({ x: 0, y: 0 }); if (pulls + 1 < PULLS_TO_START) rope.snap(); onPull() }, 140)
   }
 
   const hint = pulls === 0 ? 'drag the handle down and let go'
@@ -262,6 +341,13 @@ function Starter({ onPull, pulls }: { onPull: () => void; pulls: number }) {
             <line x1="110" y1={EYE} x2={endX} y2={endY} stroke={INK} strokeWidth="5" strokeLinecap="butt"
               strokeDasharray="2.5 3.5" strokeDashoffset={-y} />
           </g>
+          {roaring && !prefersReducedMotion() && (
+            <g stroke={INK} strokeLinecap="round" strokeWidth="2.5" opacity=".85">
+              {[-26, -16, 16, 26].map((dx, i) => (
+                <line key={dx} x1={110 + dx} y1={EYE + 30 + i * 6} x2={110 + dx} y2={EYE + 120 + i * 10} />
+              ))}
+            </g>
+          )}
         </svg>
 
         <button
@@ -269,10 +355,10 @@ function Starter({ onPull, pulls }: { onPull: () => void; pulls: number }) {
           onPointerDown={(e) => { drag.current = { x: e.clientX - x, y: e.clientY - y }; (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId) }}
           onPointerMove={(e) => {
             if (!drag.current) return
-            setPos({
-              x: Math.max(-40, Math.min(40, e.clientX - drag.current.x)),
-              y: Math.max(0, Math.min(170, e.clientY - drag.current.y)),
-            })
+            const ny = Math.max(0, Math.min(170, e.clientY - drag.current.y))
+            if (ny - lastRasp.current > 16) { lastRasp.current = ny; rope.rasp(ny) }
+            else if (ny < lastRasp.current) lastRasp.current = ny
+            setPos({ x: Math.max(-40, Math.min(40, e.clientX - drag.current.x)), y: ny })
           }}
           onPointerUp={() => { if (!drag.current) return; drag.current = null; release(y > PULL_DISTANCE) }}
           onPointerCancel={() => { drag.current = null; release(false) }}
@@ -280,7 +366,7 @@ function Starter({ onPull, pulls }: { onPull: () => void; pulls: number }) {
           style={{
             position: 'absolute', left: `${endX - 80}px`, top: `${endY - 2}px`, width: '160px', height: '64px',
             padding: 0, border: 'none', background: 'transparent', borderRadius: '18px',
-            transform: `rotate(${tilt}deg)`, transformOrigin: '80px 2px',
+            transform: `rotate(${tilt}deg) scale(${roaring ? 0.82 : 1})`, transformOrigin: '80px 2px', pointerEvents: roaring ? 'none' : undefined,
             cursor: drag.current ? 'grabbing' : 'grab', touchAction: 'none',
           }}
         >
@@ -288,7 +374,7 @@ function Starter({ onPull, pulls }: { onPull: () => void; pulls: number }) {
         </button>
       </div>
 
-      <div style={{ position: 'absolute', bottom: '7%', left: 0, right: 0, textAlign: 'center', color: INK, opacity: 0.75, fontFamily: "'AnimeAce', sans-serif", fontSize: '13px', letterSpacing: '1px' }}>
+      <div style={{ position: 'absolute', bottom: '7%', left: 0, right: 0, textAlign: 'center', color: INK, opacity: roaring ? 0 : 0.75, transition: 'opacity .2s', fontFamily: "'AnimeAce', sans-serif", fontSize: '13px', letterSpacing: '1px' }}>
         {hint}
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '10px' }}>
           {Array.from({ length: PULLS_TO_START }, (_, i) => (
@@ -310,6 +396,7 @@ export default function IntroScreen({ soundOn, onRoar, onDone }: IntroScreenProp
   const [sfx, setSfx] = useState<{ key: number; text: string; size: number } | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
   const sputter = useSputter(soundOn)
+  const rope = useRopeSound(soundOn)
   const doneRef = useRef(false)
 
   const toCord = useCallback(() => setStage(s => (s === 'panels' ? 'cord' : s)), [])
@@ -354,7 +441,7 @@ export default function IntroScreen({ soundOn, onRoar, onDone }: IntroScreenProp
       } as CSSProperties}
     >
       {stage === 'panels' && <Panels onNext={toCord} />}
-      {stage !== 'panels' && <Starter onPull={pull} pulls={pulls} />}
+      {stage !== 'panels' && <Starter onPull={pull} pulls={pulls} rope={rope} roaring={stage === 'roar'} />}
       {stage === 'roar' && !reduced && <motion.div initial={{ opacity: 0 }} animate={{ opacity: [0, 0.9, 0.4] }} transition={{ duration: 0.6 }} style={SPEED_LINES} />}
       {sfx && <Sfx key={sfx.key} text={sfx.text} size={sfx.size} side={stage !== 'roar'} />}
 

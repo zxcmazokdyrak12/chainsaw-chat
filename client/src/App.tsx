@@ -24,7 +24,8 @@ import Tutorial from './components/Tutorial'
 import SfxLayer from './components/SfxLayer'
 import CharacterModal from './components/CharacterModal'
 import { API_URL } from './config'
-import { socket } from './lib/socket'
+import { socket, connectSocket } from './lib/socket'
+import { getToken, getAccountToken, setAccountToken, setGuestToken, clearTokens } from './lib/auth'
 import { CHAINSAW_SFX, playSound as playSfx, isShout } from './lib/sound'
 import { useTheme } from './theme'
 import type { MessageItem, RoomItem, AvatarItem, ContextMenuState, GroupedItem } from './chatTypes'
@@ -92,24 +93,38 @@ export default function App() {
 
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const token = params.get('token')
-    if (token) {
-      localStorage.setItem('token', token)
+    // OAuth comes back with #token=… (a fragment never reaches servers or logs); ?token= is the old form
+    const fromHash = new URLSearchParams(window.location.hash.slice(1)).get('token')
+    const fromQuery = new URLSearchParams(window.location.search).get('token')
+    const incoming = fromHash || fromQuery
+    if (incoming) {
+      setAccountToken(incoming)
       window.history.replaceState({}, '', '/')
     }
-    const saved = localStorage.getItem('token')
+    const saved = getToken()
     if (saved) {
       fetch(`${API_URL}/auth/me`, {
         headers: { Authorization: `Bearer ${saved}` }
       })
-        .then(r => r.json())
+        .then(r => (r.status === 401 ? null : r.json()))
         .then(user => {
-          if (user.username) enterChat(user)
-          else localStorage.removeItem('token')
+          if (user?.username) enterChat(user)
+          else if (user === null) clearTokens()
         })
-        .catch(() => localStorage.removeItem('token'))
+        .catch(() => { /* server asleep — keep the token, try again on reload */ })
     }
+  }, [])
+
+  // the server dropped our token (expired, secret rotated) → back to the login page
+  useEffect(() => {
+    const onErr = (err: Error) => {
+      if (err.message !== 'unauthorized') return
+      clearTokens()
+      setPhase('username')
+      setAuthError('Session expired — sign in again')
+    }
+    socket.on('connect_error', onErr)
+    return () => { socket.off('connect_error', onErr) }
   }, [])
 
   // shared entry point for OAuth tokens and login/password accounts
@@ -120,6 +135,7 @@ export default function App() {
     setUsername(user.username)
     setAvatar(chosen)
     setPhase('chat')
+    connectSocket()
     socket.emit('get_rooms', { username: user.username })
     setTimeout(() => {
       socket.emit('join_room', { roomId: 'general', username: user.username, avatar: chosen.src })
@@ -142,7 +158,7 @@ export default function App() {
         setAuthError(data.error || (res.status === 429 ? 'Too many tries, wait a bit' : 'Server error'))
         return
       }
-      localStorage.setItem('token', data.token)
+      setAccountToken(data.token)
       playSound(CHAINSAW_SFX, 0.4)
       enterChat(data.user, avatar)
     } catch {
@@ -155,7 +171,7 @@ export default function App() {
   // persist character choice for login/password accounts (OAuth accounts just ignore it)
   const handleAvatarChange = (newAv: { id: string | number; name: string; src: string }): void => {
     setAvatar({ id: String(newAv.id), name: newAv.name, src: newAv.src })
-    const token = localStorage.getItem('token')
+    const token = getAccountToken()
     if (!token) return
     fetch(`${API_URL}/auth/avatar`, {
       method: 'POST',
@@ -163,7 +179,7 @@ export default function App() {
       body: JSON.stringify({ avatar: newAv.src }),
     })
       .then(r => (r.ok ? r.json() : null))
-      .then(data => { if (data?.token) localStorage.setItem('token', data.token) })
+      .then(data => { if (data?.token) setAccountToken(data.token) })
       .catch(() => {})
   }
 
@@ -272,14 +288,28 @@ export default function App() {
     socket.emit('join_room', { roomId, username, avatar: avatar.src })
   }
 
-  const handleSetUsername = (): void => {
-    if (usernameInput.trim().length < 2) return
+  // guests get a signed name from the server (it refuses account names and names in use right now)
+  const handleSetUsername = async (): Promise<string | null> => {
     const name = usernameInput.trim().toUpperCase()
-    setUsername(name)
-    setPhase('chat')
-    setTimeout(() => {
-      socket.emit('join_room', { roomId: 'general', username: name, avatar: avatar.src })
-    }, 100)
+    if (name.length < 2) return 'Write at least 2 letters on the line first'
+    try {
+      const res = await fetch(`${API_URL}/auth/guest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: name, avatar: avatar.src }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.token) return data.error || (res.status === 429 ? 'Too many tries, wait a bit' : 'Server error')
+      setGuestToken(data.token)
+      setUsername(data.user.username)
+      setPhase('chat')
+      connectSocket()
+      socket.emit('get_rooms', { username: data.user.username })
+      socket.emit('join_room', { roomId: 'general', username: data.user.username, avatar: avatar.src })
+      return null
+    } catch {
+      return 'Server is sleeping, try again'
+    }
   }
 
   // chapter 0: the intro roars, then the cut plays over the login page
@@ -320,8 +350,8 @@ export default function App() {
 
   const handleLogout = (): void => {
     call.leave()
-    localStorage.removeItem('token')
-    document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"
+    clearTokens()
+    socket.disconnect()
     window.location.href = '/'
   }
 

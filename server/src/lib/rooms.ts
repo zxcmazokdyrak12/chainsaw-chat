@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import { prisma } from './prisma.js'
 import type { Reactions } from '../types.js'
 
@@ -6,10 +7,11 @@ const SYLLABLES = [
   'REZ','POW','CUT','SAW','DEV','HUN','CHI','BLO',
 ]
 
+// 2 syllables + 4 digits ≈ 2.5 million codes; with the per-socket try limit that's not guessable
 export const generateCode = (): string => {
-  const a = SYLLABLES[Math.floor(Math.random() * SYLLABLES.length)]
-  const b = SYLLABLES[Math.floor(Math.random() * SYLLABLES.length)]
-  const n = Math.floor(Math.random() * 99).toString().padStart(2, '0')
+  const a = SYLLABLES[crypto.randomInt(SYLLABLES.length)]
+  const b = SYLLABLES[crypto.randomInt(SYLLABLES.length)]
+  const n = crypto.randomInt(10_000).toString().padStart(4, '0')
   return `${a}${b}${n}`
 }
 
