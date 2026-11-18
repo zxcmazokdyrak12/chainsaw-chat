@@ -3,3 +3,6 @@ node_modules
 .env
 
 /generated/prisma
+
+# dependencies are installed with npm install, never committed
+node_modules/
