@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { AudioPlayer } from './AudioPlayer'
 import { BalloonTail, ShoutBalloon } from './Balloon'
 import { isShout as looksLikeShout } from '../lib/sound'
+import { reactionInfo } from '../config'
 
 // kept for older imports
 export { AudioPlayer }
@@ -131,7 +132,7 @@ export default function MessageBubble({ msg, index, isOwn, theme, T, username, s
             <div
               data-tour="bubble"
               className={isOwn && !isShout ? 'tone-light' : undefined}
-              onDoubleClick={() => onReact?.('🔥')}
+              onDoubleClick={() => onReact?.('like')}
               onContextMenu={(e: React.MouseEvent<HTMLDivElement>) => {
                 e.preventDefault()
                 if (longPressFired.current) return
@@ -205,7 +206,7 @@ export default function MessageBubble({ msg, index, isOwn, theme, T, username, s
                     whileHover={{ scale: 1.12, rotate: 0 }}
                     whileTap={{ scale: 0.85 }}
                     onClick={() => onReact?.(emoji)}
-                    title={users.join(', ')}
+                    title={`${reactionInfo(emoji)?.label ?? emoji}: ${users.join(', ')}`}
                     style={{
                       display: 'flex', alignItems: 'center', gap: '3px',
                       padding: '1px 7px',
@@ -216,7 +217,12 @@ export default function MessageBubble({ msg, index, isOwn, theme, T, username, s
                       cursor: 'pointer', lineHeight: 1.6,
                     }}
                   >
-                    <span style={{ fontSize: '13px', filter: 'grayscale(1) contrast(1.3)' }}>{emoji}</span>
+                    {reactionInfo(emoji) ? (
+                      <img src={reactionInfo(emoji)!.src} alt={reactionInfo(emoji)!.label}
+                        style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid currentColor', background: '#fff', margin: '1px 0 1px -5px' }} />
+                    ) : (
+                      <span style={{ fontSize: '13px', filter: 'grayscale(1) contrast(1.3)' }}>{emoji}</span>
+                    )}
                     {users.length}
                   </motion.button>
                 )

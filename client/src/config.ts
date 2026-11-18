@@ -14,5 +14,18 @@ export const ICE_SERVERS: RTCIceServer[] = [
   ...(TURN_URL ? [{ urls: TURN_URL.split(',').map(u => u.trim()), username: TURN_USER ?? '', credential: TURN_PASS ?? '' }] : []),
 ]
 
-// must match REACTIONS on the server
-export const REACTIONS = ['🔥', '🩸', '😂', '❤️', '😱', '🪚'] as const
+// manga reaction stickers — ids must match REACTIONS on the server
+export const REACTIONS = [
+  { id: 'like',    label: 'Like',    src: '/reactions/like.webp' },
+  { id: 'fuck',    label: 'F*** off', src: '/reactions/fuck.webp' },
+  { id: 'sad',     label: 'Sad',     src: '/reactions/sad.webp' },
+  { id: 'neutral', label: 'Neutral', src: '/reactions/neutral.webp' },
+  { id: 'sly',     label: 'Sly',     src: '/reactions/sly.webp' },
+  { id: 'angry',   label: 'Angry',   src: '/reactions/angry.webp' },
+  { id: 'joy',     label: 'Joy',     src: '/reactions/joy.webp' },
+] as const
+
+export type ReactionId = typeof REACTIONS[number]['id']
+
+// old messages may still carry emoji keys (🔥, 😂 …) — those render as text
+export const reactionInfo = (key: string) => REACTIONS.find(r => r.id === key) ?? null

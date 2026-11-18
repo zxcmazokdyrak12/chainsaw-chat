@@ -55,7 +55,7 @@ export default function ContextMenu({
             boxShadow: theme === 'dark' ? '4px 4px 0 #fff' : '4px 4px 0 #111',
             fontFamily: "'AnimeAce', sans-serif",
             fontSize: '12px',
-            width: '176px',
+            width: '282px',
             cursor: 'default'
           }}
           onClick={onClose}
@@ -68,16 +68,21 @@ export default function ContextMenu({
             borderBottom: `2px solid ${theme === 'dark' ? '#fff' : '#111'}`,
             marginBottom: '2px',
           }}>
-            {REACTIONS.map(emoji => (
-              <motion.span
-                key={emoji}
-                whileHover={{ scale: 1.35, rotate: -8 }}
+            {REACTIONS.map(r => (
+              <motion.img
+                key={r.id}
+                src={r.src}
+                alt={r.label}
+                title={r.label}
+                whileHover={{ scale: 1.5, rotate: -8, zIndex: 2 }}
                 whileTap={{ scale: 0.8 }}
-                onClick={(e) => { e.stopPropagation(); onReact(contextMenu.msg.id, emoji) }}
-                style={{ cursor: 'pointer', fontSize: '17px', lineHeight: 1 }}
-              >
-                {emoji}
-              </motion.span>
+                onClick={(e) => { e.stopPropagation(); onReact(contextMenu.msg.id, r.id) }}
+                style={{
+                  cursor: 'pointer', width: '34px', height: '34px', borderRadius: '50%',
+                  objectFit: 'cover', border: `2px solid ${theme === 'dark' ? '#fff' : '#111'}`,
+                  position: 'relative', background: '#fff',
+                }}
+              />
             ))}
           </div>
 

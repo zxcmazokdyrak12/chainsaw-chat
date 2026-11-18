@@ -25,7 +25,8 @@ export interface SocketData {
 export type Reactions = Record<string, string[]>
 
 // allowed reaction set — keeps the payload small and on-theme
-export const REACTIONS = ['🔥', '🩸', '😂', '❤️', '😱', '🪚'] as const
+// reaction ids (the client draws them as manga stickers)
+export const REACTIONS = ['like', 'fuck', 'sad', 'neutral', 'sly', 'angry', 'joy'] as const
 
 export interface SendMessagePayload {
   roomId: string

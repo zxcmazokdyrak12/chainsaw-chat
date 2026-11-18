@@ -42,7 +42,7 @@ export const TOUR_STEPS: TourStep[] = [
     target: 'bubble,messages',
     pick: 'last',
     title: 'REACT & MORE',
-    text: 'Right-click a message (long-press on phone) to react, edit, pin or delete. Double-click drops a 🔥.',
+    text: 'Right-click a message (long-press on phone) to react, edit, pin or delete. Double-click to give a like.',
     sticker: '/stickers/makima_sit.webp',
   },
   {
