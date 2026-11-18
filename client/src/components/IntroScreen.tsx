@@ -10,6 +10,7 @@ import { motion } from 'framer-motion'
 
 const INK = '#f2efe6'
 const BG = '#0e0e0e'
+const PLATE = '#1b1b1b'
 const SEEN_KEY = 'chainsaw_intro_seen'
 const PULLS_TO_START = 3
 const PULL_DISTANCE = 100 // px the handle has to travel to count
@@ -133,18 +134,99 @@ function Panels({ onNext }: { onNext: () => void }) {
 
 // ── the starter ──────────────────────────────────────────────────
 
+// The starter port: a recoil-start housing with a flanged eyelet the cord comes out of.
+function StarterPort({ taut }: { taut: boolean }) {
+  return (
+    <svg viewBox="0 0 220 120" width="220" height="120" aria-hidden style={{ position: 'absolute', left: 0, top: 0, overflow: 'visible' }}>
+      <defs>
+        <clipPath id="sp-ring"><path d="M110 40a38 38 0 1 0 0.01 0zM110 52a26 26 0 1 1-0.01 0z" fillRule="evenodd" /></clipPath>
+      </defs>
+      <g stroke={INK} strokeLinecap="round" strokeLinejoin="round">
+        {/* housing plate */}
+        <path d="M30 8h160a22 22 0 0 1 22 22v62a22 22 0 0 1-22 22H30A22 22 0 0 1 8 92V30A22 22 0 0 1 30 8z" fill={PLATE} strokeWidth="5" />
+        <path d="M26 18h168" strokeWidth="1.5" opacity=".45" />
+        {/* cooling slots */}
+        {[0, 1, 2, 3].map(i => (
+          <g key={i}>
+            <path d={`M${24 + i * 9} 42l8 38`} strokeWidth="5" />
+            <path d={`M${170 + i * 9} 42l8 38`} strokeWidth="5" />
+          </g>
+        ))}
+        {/* corner bolts */}
+        {[[24, 24], [196, 24], [24, 98], [196, 98]].map(([x, y], i) => (
+          <g key={i}>
+            <circle cx={x} cy={y} r="7" fill={BG} strokeWidth="3" />
+            <path d={`M${x - 4} ${y + 2}l8 -4`} strokeWidth="2.5" />
+          </g>
+        ))}
+        {/* flange with hatched ring */}
+        <circle cx="110" cy="78" r="38" fill={BG} strokeWidth="5" />
+        <g clipPath="url(#sp-ring)" strokeWidth="1.6" opacity=".7">
+          {Array.from({ length: 16 }, (_, i) => <path key={i} d={`M${66 + i * 6} 120l30 -84`} />)}
+        </g>
+        <circle cx="110" cy="78" r="26" fill={BG} strokeWidth="3.5" />
+        {Array.from({ length: 6 }, (_, i) => {
+          const a = (i / 6) * Math.PI * 2 + 0.5
+          return <circle key={i} cx={110 + Math.cos(a) * 32} cy={78 + Math.sin(a) * 32} r="2.6" fill={INK} strokeWidth="0" />
+        })}
+        {/* eyelet */}
+        <circle cx="110" cy="78" r="13" fill="#000" strokeWidth="4" />
+        <path d="M101 72a11 11 0 0 1 9-5" strokeWidth="2" opacity=".8" />
+        {/* stamped label */}
+        <text x="110" y="33" textAnchor="middle" fill={INK} stroke="none"
+          style={{ fontFamily: 'BlambotClassic, sans-serif', fontSize: '11px', letterSpacing: '3px' }}>STARTER</text>
+        {/* strain marks when the cord is pulled far */}
+        {taut && (
+          <g strokeWidth="2.5">
+            <path d="M84 122l-9 10" /><path d="M136 122l9 10" /><path d="M66 112l-12 4" /><path d="M154 112l12 4" />
+          </g>
+        )}
+      </g>
+    </svg>
+  )
+}
+
+// The T-grip: dog-bone bar with finger scallops, rubber ribs, a boss where the knotted rope enters.
+function StarterGrip() {
+  const bar = 'M20 18C50 14 110 14 140 18C157 20 158 51 142 53C127 55 121 46 111 50C101 54 96 47 87 50C82 52 78 52 73 50C64 47 59 54 49 50C39 46 33 55 18 53C2 51 3 20 20 18Z'
+  return (
+    <svg viewBox="0 0 160 64" width="160" height="64" aria-hidden style={{ display: 'block', overflow: 'visible' }}>
+      <defs><clipPath id="sg-bar"><path d={bar} /></clipPath></defs>
+      <g stroke={INK} strokeLinecap="round" strokeLinejoin="round">
+        {/* boss + knot */}
+        <path d="M65 19L70 2h20l5 17" fill={PLATE} strokeWidth="4" />
+        <path d="M73 9h14" strokeWidth="1.6" opacity=".6" />
+        <ellipse cx="80" cy="3" rx="6" ry="4" fill={BG} strokeWidth="3" />
+        {/* bar */}
+        <path d={bar} fill={PLATE} strokeWidth="4.5" />
+        <g clipPath="url(#sg-bar)" strokeWidth="1.5" opacity=".75">
+          {Array.from({ length: 30 }, (_, i) => <path key={i} d={`M${i * 6 - 10} 60l14 -22`} />)}
+        </g>
+        <path d="M24 25C60 21 100 21 136 25" strokeWidth="1.8" opacity=".55" />
+        {/* rubber ribs on both ends */}
+        {[22, 27, 32, 128, 133, 138].map(x => <path key={x} d={`M${x} 27v15`} strokeWidth="2.6" />)}
+        <text x="80" y="38" textAnchor="middle" fill={INK} stroke="none"
+          style={{ fontFamily: 'BlambotClassic, sans-serif', fontSize: '12px', letterSpacing: '3px' }}>PULL</text>
+      </g>
+    </svg>
+  )
+}
+
 function Starter({ onPull, pulls }: { onPull: () => void; pulls: number }) {
-  const [y, setY] = useState(0)
-  const drag = useRef<number | null>(null)
+  const [pos, setPos] = useState({ x: 0, y: 0 })
+  const drag = useRef<{ x: number; y: number } | null>(null)
   const anim = useRef<number | null>(null)
-  const BASE = 150
+  const EYE = 78     // eyelet centre inside the port
+  const BASE = 70    // resting rope length below the eyelet
+  const { x, y } = pos
 
   const release = (pulled: boolean) => {
-    const from = y
+    const from = pos
     const t0 = performance.now()
     const back = () => {
       const k = Math.min(1, (performance.now() - t0) / 260)
-      setY(from * (1 - k) * (1 - k))
+      const e = (1 - k) * (1 - k)
+      setPos({ x: from.x * e, y: from.y * e })
       if (k < 1) anim.current = requestAnimationFrame(back)
     }
     back()
@@ -154,47 +236,55 @@ function Starter({ onPull, pulls }: { onPull: () => void; pulls: number }) {
 
   // keyboard: Enter / Space does a full pull
   const keyPull = () => {
-    setY(PULL_DISTANCE + 20)
-    setTimeout(() => { drag.current = null; setY(0); onPull() }, 140)
+    setPos({ x: 0, y: PULL_DISTANCE + 20 })
+    setTimeout(() => { drag.current = null; setPos({ x: 0, y: 0 }); onPull() }, 140)
   }
 
   const hint = pulls === 0 ? 'drag the handle down and let go'
     : pulls === 1 ? 'it sputters… again!'
     : 'almost! one more pull'
 
+  // rope runs from the eyelet to the grip's knot
+  const endX = 110 + x
+  const endY = EYE + BASE + y
+  const tilt = Math.max(-14, Math.min(14, x / 4))
+
   return (
     <div style={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center' }}>
-      {/* engine */}
-      <svg viewBox="0 0 200 110" aria-hidden style={{ position: 'absolute', top: '9%', width: '210px' }}>
-        <g fill="none" stroke={INK} strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="40" y="30" width="120" height="70" rx="12" />
-          <path d="M60 30V14h80v16" />
-          <circle cx="100" cy="65" r="14" />
-          <path d="M160 52h30a8 8 0 0 1 0 16h-30" />
-          <path d="M162 52l3-5 3 5 3-5 3 5 3-5 3 5 3-5 3 5 3-5 3 5" />
-        </g>
-      </svg>
+      <div style={{ position: 'absolute', top: '10%', width: '220px', height: `${EYE + BASE + y + 70}px` }}>
+        <StarterPort taut={y > PULL_DISTANCE} />
 
-      {/* cord + handle */}
-      <div style={{ position: 'absolute', top: 'calc(9% + 112px)', width: '120px', height: `${BASE + y + 40}px` }}>
+        {/* braided rope: outline, light core, twist ticks */}
         <svg aria-hidden style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'visible' }}>
-          <line x1="60" y1="0" x2="60" y2={BASE + y} stroke={INK} strokeWidth="3" strokeDasharray="6 5" />
+          <g strokeLinecap="round">
+            <line x1="110" y1={EYE} x2={endX} y2={endY} stroke={INK} strokeWidth="10" />
+            <line x1="110" y1={EYE} x2={endX} y2={endY} stroke={BG} strokeWidth="5" />
+            <line x1="110" y1={EYE} x2={endX} y2={endY} stroke={INK} strokeWidth="5" strokeLinecap="butt"
+              strokeDasharray="2.5 3.5" strokeDashoffset={-y} />
+          </g>
         </svg>
+
         <button
           aria-label={`Pull the starter cord (${pulls} of ${PULLS_TO_START})`}
-          onPointerDown={(e) => { drag.current = e.clientY - y; (e.target as HTMLElement).setPointerCapture(e.pointerId) }}
-          onPointerMove={(e) => { if (drag.current !== null) setY(Math.max(0, Math.min(160, e.clientY - drag.current))) }}
-          onPointerUp={() => { if (drag.current === null) return; drag.current = null; release(y > PULL_DISTANCE) }}
+          onPointerDown={(e) => { drag.current = { x: e.clientX - x, y: e.clientY - y }; (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId) }}
+          onPointerMove={(e) => {
+            if (!drag.current) return
+            setPos({
+              x: Math.max(-40, Math.min(40, e.clientX - drag.current.x)),
+              y: Math.max(0, Math.min(170, e.clientY - drag.current.y)),
+            })
+          }}
+          onPointerUp={() => { if (!drag.current) return; drag.current = null; release(y > PULL_DISTANCE) }}
           onPointerCancel={() => { drag.current = null; release(false) }}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); keyPull() } }}
           style={{
-            position: 'absolute', left: 0, top: `${BASE + y}px`, width: '120px', height: '40px',
-            border: `4px solid ${INK}`, borderRadius: '999px', background: BG, color: INK,
-            fontFamily: 'BlambotClassic, sans-serif', fontSize: '20px', letterSpacing: '3px',
-            cursor: drag.current !== null ? 'grabbing' : 'grab', touchAction: 'none',
+            position: 'absolute', left: `${endX - 80}px`, top: `${endY - 2}px`, width: '160px', height: '64px',
+            padding: 0, border: 'none', background: 'transparent', borderRadius: '18px',
+            transform: `rotate(${tilt}deg)`, transformOrigin: '80px 2px',
+            cursor: drag.current ? 'grabbing' : 'grab', touchAction: 'none',
           }}
         >
-          PULL
+          <StarterGrip />
         </button>
       </div>
 
