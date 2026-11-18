@@ -13,6 +13,7 @@ export interface Settings {
   stickerBomb: 'off' | 'light' | 'full'
   sfxEnabled: boolean
   desktopNotify: boolean
+  berserk: boolean
 }
 
 interface SettingsTabProps {
@@ -236,6 +237,9 @@ export default function SettingsTab({ settings, onUpdate, onReplayTutorial }: Se
             </Row>
             <Row icon="sfx" label="MANGA SFX" desc="DOOOM on caps, DON on send, ZAP! on join">
               <Stamp label="Manga SFX" checked={settings.sfxEnabled ?? true} onChange={v => onUpdate('sfxEnabled', v)} />
+            </Row>
+            <Row icon="chainsaw" label="BERSERK MODE" desc="message bursts: ink splatters, chain scratches, a rev counter">
+              <Stamp label="Berserk mode" checked={settings.berserk ?? true} onChange={v => onUpdate('berserk', v)} />
             </Row>
             <Row icon="heart" label="POCHITA HEARTS" desc="hearts rain on cute words">
               <Stamp label="Pochita hearts" checked={settings.pochitaEnabled ?? true} onChange={v => onUpdate('pochitaEnabled', v)} />

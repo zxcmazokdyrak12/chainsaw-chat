@@ -31,6 +31,8 @@ import { useUnreadBadge } from './hooks/useUnreadBadge'
 import { maskSpoilers } from './lib/spoiler'
 import ShortcutsHelp from './components/ShortcutsHelp'
 import ExportDialog from './components/ExportDialog'
+import BerserkLayer from './components/BerserkLayer'
+import { useBerserk } from './hooks/useBerserk'
 import { API_URL } from './config'
 import { socket, connectSocket } from './lib/socket'
 import { getToken, getAccountToken, setAccountToken, setGuestToken, clearTokens } from './lib/auth'
@@ -92,6 +94,21 @@ export default function App() {
   const { theme, T } = useTheme(settings.theme, resolveTheme)
   const { sfx, popSfx, popText } = useSfx(settings.sfxEnabled ?? true)
   const { notify } = useUnreadBadge({ desktop: settings.desktopNotify ?? false })
+  // message bursts → berserk mode; a short shake each time it reaches a new tier
+  const berserk = useBerserk({
+    enabled: settings.berserk ?? true,
+    sound: settings.soundEnabled,
+    onTierUp: (tier) => {
+      if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+      const px = 2 + tier * 2
+      rootRef.current?.animate(
+        [{ transform: 'translate(0,0)' }, { transform: `translate(${px}px,${-px}px)` }, { transform: `translate(${-px}px,${px / 2}px)` }, { transform: 'translate(0,0)' }],
+        { duration: 60, iterations: 3 },
+      )
+    },
+  })
+  const berserkHit = useRef(berserk.hit)
+  berserkHit.current = berserk.hit
   const notifyRef = useRef(notify)
   notifyRef.current = notify
 
@@ -253,6 +270,7 @@ export default function App() {
     socket.on('room_history', (history: MessageItem[]) => setMessages(history))
     socket.on('receive_message', (msg: MessageItem) => {
       setMessages(p => [...p, msg])
+      berserkHit.current()
       const own = msg.username === meRef.current
       if (!own) notifyRef.current(msg.username ?? 'Chainsaw Chat', msg.type === 'image' ? '🖼 picture' : msg.type === 'audio' ? '🎤 voice message' : maskSpoilers(msg.content))
       const cmd = msg.type === 'text' || !msg.type ? findCommand(msg.content) : null
@@ -352,6 +370,7 @@ export default function App() {
     setSeenMarks({})
     setReplyTo(null)
     setSearchOpen(false)
+    berserk.reset()
     lastMarked.current = 0
     socket.emit('join_room', { roomId, username, avatar: avatar.src })
   }
@@ -583,6 +602,7 @@ export default function App() {
             {/* feed panel */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', border: `4px solid ${T.headerBorder}`, borderRadius: '4px', overflow: 'hidden', background: T.appBg }}>
               <SfxLayer bursts={sfx} />
+              <BerserkLayer combo={berserk.combo} active={berserk.active} tier={berserk.tier} splats={berserk.splats} cooling={berserk.cooling} />
               {searchOpen && (
                 <SearchPanel
                   roomId={currentRoom}

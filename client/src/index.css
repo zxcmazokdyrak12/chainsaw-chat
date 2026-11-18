@@ -125,3 +125,9 @@ button.manga-tab {
   outline: 3px dashed var(--ink);
   outline-offset: 3px;
 }
+
+/* berserk tachometer: the needle trembles in the red zone */
+@keyframes csm-needle-shiver {
+  0% { transform: rotate(-3deg); } 50% { transform: rotate(2.5deg); } 100% { transform: rotate(-1.5deg); }
+}
+.csm-needle-shiver { animation: csm-needle-shiver .09s linear infinite alternate; }
