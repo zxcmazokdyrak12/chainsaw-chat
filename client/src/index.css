@@ -90,28 +90,6 @@ button.manga-tab {
   border-radius: 0 !important;
 }
 
-/* send button: a guide bar with a strip of chain teeth on top that runs when armed */
-.chain-bar::before {
-  content: "";
-  position: absolute;
-  left: 6px;
-  right: 18px;
-  top: -8px;
-  height: 6px;
-  background:
-    linear-gradient(135deg, transparent 50%, var(--ink) 50%) 0 0 / 8px 6px repeat-x,
-    linear-gradient(225deg, transparent 50%, var(--ink) 50%) 0 0 / 8px 6px repeat-x;
-  pointer-events: none;
-}
-.chain-run::before {
-  animation: chain-run 0.28s linear infinite;
-}
-@keyframes chain-run {
-  to { background-position: 8px 0, 8px 0; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .chain-run::before { animation: none; }
-}
 
 /* contents rows: a light tone shows through on hover */
 .toc-row:not(.tone-light):hover {

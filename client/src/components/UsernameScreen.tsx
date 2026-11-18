@@ -73,10 +73,10 @@ export default function UsernameScreen({
   const switchMode = (m: 'guest' | 'account') => { setMode(m); onClearError() }
 
   return (
-    <div style={{ position:'relative', height:'100vh', overflow:'hidden', background:'#0d0d0d', '--accent': '#f2efe6', '--on-accent': '#111', '--paper': '#0e0e0e', '--ink': '#f2efe6' } as CSSProperties}>
+    <div style={{ position:'relative', height:'100vh', overflow:'clip', background:'#0d0d0d', '--accent': '#f2efe6', '--on-accent': '#111', '--paper': '#0e0e0e', '--ink': '#f2efe6' } as CSSProperties}>
     {/* login screen gets the full stickerbomb; stickers can be poked */}
     <StickerBomb density="full" dark mode="everywhere" seed="login" interactive />
-    <motion.div className="login-overlay" initial={{ opacity:0 }} animate={{ opacity:1 }} style={{ position:'relative', zIndex:1, height:'100vh', background:'radial-gradient(ellipse at center, rgba(13,13,13,0.9) 0%, rgba(13,13,13,0.6) 40%, transparent 75%)', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:'24px', fontFamily:'BlambotClassic, sans-serif', overflowY:'auto', padding:'20px', pointerEvents:'none' }}>
+    <motion.div className="login-overlay" initial={{ opacity:0 }} animate={{ opacity:1 }} style={{ position:'relative', zIndex:1, height:'100vh', boxSizing:'border-box', background:'radial-gradient(ellipse at center, rgba(13,13,13,0.9) 0%, rgba(13,13,13,0.6) 40%, transparent 75%)', display:'flex', alignItems:'center', justifyContent:'safe center', flexDirection:'column', gap:'24px', fontFamily:'BlambotClassic, sans-serif', overflowY:'auto', padding:'20px', pointerEvents:'none' }}>
 
       <h1 style={{ fontSize:'36px', color:'#fff', letterSpacing:'4px', textShadow:'4px 4px 0 var(--accent)', margin:0 }}>
         CHAINSAW <span style={{ color:'var(--accent)' }}>CHAT</span>

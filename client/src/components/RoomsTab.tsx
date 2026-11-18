@@ -67,7 +67,7 @@ export default function RoomsTab({
 }: RoomsTabProps) {
   const ink = 'var(--ink)'
   const panel = (open: boolean) => ({
-    flex: 1, minWidth: 0,
+    flex: '1 1 230px', minWidth: 0,
     padding: '14px 16px',
     backgroundColor: open ? 'var(--ink)' : 'var(--paper)',
     color: open ? 'var(--paper)' : ink,
@@ -94,10 +94,10 @@ export default function RoomsTab({
 
       {/* title: like the contents page of a tankōbon */}
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: '14px', marginBottom: '6px' }}>
-        <div style={{ fontFamily: 'BlambotClassic, sans-serif', fontSize: '40px', letterSpacing: '6px', lineHeight: 1 }}>CONTENTS</div>
-        <div style={{ fontFamily: 'serif', fontSize: '18px', opacity: 0.55, paddingBottom: '4px' }}>目次</div>
+        <div style={{ fontFamily: 'BlambotClassic, sans-serif', fontSize: 'clamp(30px, 8vw, 40px)', letterSpacing: '6px', lineHeight: 1 }}>CONTENTS</div>
+        <div style={{ fontFamily: 'serif', fontSize: '18px', opacity: 0.55, paddingBottom: '4px', whiteSpace: 'nowrap' }}>目次</div>
         <div style={{ flex: 1 }} />
-        <div style={{ fontFamily: "'AnimeAce', sans-serif", fontSize: '11px', letterSpacing: '1px', paddingBottom: '6px', opacity: 0.7 }}>
+        <div style={{ fontFamily: "'AnimeAce', sans-serif", fontSize: '11px', letterSpacing: '1px', paddingBottom: '6px', opacity: 0.7, whiteSpace: 'nowrap' }}>
           {rooms.length} {rooms.length === 1 ? 'CHAPTER' : 'CHAPTERS'}
         </div>
       </div>
@@ -227,15 +227,15 @@ export default function RoomsTab({
               style={{
                 position: 'relative',
                 display: 'flex', alignItems: 'center', gap: '16px',
-                padding: '12px 56px 12px 14px',
+                padding: '12px 48px 12px 12px',
                 backgroundColor: 'var(--paper)',
                 border: `3px solid ${ink}`, borderRadius: '12px',
                 color: ink, cursor: 'pointer', textAlign: 'left',
               }}
             >
               <span style={{
-                fontFamily: 'BlambotClassic, sans-serif', fontSize: '34px', lineHeight: 1,
-                letterSpacing: '1px', minWidth: '62px',
+                fontFamily: 'BlambotClassic, sans-serif', fontSize: 'clamp(26px, 7vw, 34px)', lineHeight: 1,
+                letterSpacing: '1px', minWidth: '48px',
                 backgroundColor: 'var(--paper)', padding: '0 4px', borderRadius: '6px',
               }}>
                 <span style={{ fontSize: '12px', letterSpacing: '2px', display: 'block', opacity: 0.6 }}>CH.</span>
@@ -244,8 +244,8 @@ export default function RoomsTab({
               <span style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
                   <span style={{
-                    fontFamily: 'BlambotClassic, sans-serif', fontSize: '20px', letterSpacing: '1.5px',
-                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                    fontFamily: 'BlambotClassic, sans-serif', fontSize: 'clamp(16px, 4.5vw, 20px)', letterSpacing: '1.5px',
+                    overflowWrap: 'anywhere', minWidth: 0,
                     backgroundColor: 'var(--paper)', padding: '0 4px', borderRadius: '4px',
                   }}>
                     {room.name}
