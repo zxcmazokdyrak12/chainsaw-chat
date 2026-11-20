@@ -1,4 +1,4 @@
-import { CLIENT_URL, IS_PROD, PORT, SESSION_SECRET } from './config.js'
+import { ALLOWED_ORIGINS, IS_PROD, PORT, SESSION_SECRET } from './config.js'
 import express from 'express'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
@@ -25,7 +25,7 @@ const app = express()
 app.set('trust proxy', 1)
 app.disable('x-powered-by')
 
-app.use(cors({ origin: CLIENT_URL, credentials: true }))
+app.use(cors({ origin: ALLOWED_ORIGINS, credentials: true }))
 app.use(helmet())
 app.use(rateLimit({ windowMs: 60_000, max: 120, standardHeaders: true, legacyHeaders: false }))
 app.use(express.json({ limit: '20kb' }))
@@ -56,7 +56,7 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 
 const httpServer = createServer(app)
 const io = new Server(httpServer, {
-  cors: { origin: CLIENT_URL, methods: ['GET', 'POST'], credentials: true },
+  cors: { origin: ALLOWED_ORIGINS, methods: ['GET', 'POST'], credentials: true },
   maxHttpBufferSize: 5e6, // voice messages
 })
 registerSockets(io)

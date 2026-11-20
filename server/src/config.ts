@@ -24,6 +24,11 @@ function jwtSecret(): string {
 export const JWT_SECRET = jwtSecret()
 export const SESSION_SECRET = process.env.SESSION_SECRET || JWT_SECRET
 export const CLIENT_URL = process.env.CLIENT_URL ?? 'http://localhost:5173'
+// the Android app (Capacitor) talks to the API from https://localhost (iOS: capacitor://localhost);
+// override with APP_ORIGINS="https://localhost,capacitor://localhost" or set it empty to turn this off
+export const APP_ORIGINS = (process.env.APP_ORIGINS ?? 'https://localhost,capacitor://localhost')
+  .split(',').map(s => s.trim()).filter(Boolean)
+export const ALLOWED_ORIGINS = [CLIENT_URL, ...APP_ORIGINS]
 export const SERVER_URL = process.env.SERVER_URL ?? 'https://chainsaw-chat.onrender.com'
 export const PORT = process.env.PORT ?? 3001
 
@@ -31,4 +36,4 @@ export const PORT = process.env.PORT ?? 3001
 export const PUBLIC_ROOM = 'general'
 
 // open /version after a deploy to make sure Render runs the fresh build
-export const BUILD = 'secure-v5'
+export const BUILD = 'manga-v7'
