@@ -121,7 +121,7 @@ export default function App() {
   const wake = useServerWake()
   const { notify } = useUnreadBadge({ desktop: settings.desktopNotify ?? false })
   // message bursts → berserk mode: a rev counter + the engine revving up
-  // "дом" / "семья" / "ужин" → peaceful life: the saw goes quiet until somebody shouts
+  // "дом" / "семья" / "ужин" → peaceful life: the chat goes dark, a quiet panel, sparrows, then back
   const peace = usePeace({ enabled: settings.peaceEnabled ?? true, sound: settings.soundEnabled })
   const peaceRef = useRef(peace)
   peaceRef.current = peace
@@ -363,10 +363,8 @@ export default function App() {
       if (!own) notifyRef.current(msg.username ?? 'Chainsaw Chat', msg.type === 'image' ? '🖼 picture' : msg.type === 'audio' ? '🎤 voice message' : maskSpoilers(msg.content))
       const cmd = msg.type === 'text' || !msg.type ? findCommand(msg.content) : null
       if (cmd) { runCommandRef.current(cmd); return }
-      // peaceful life: starts on дом / семья / ужин; a shout ends it and the saw roars back
-      if (msg.type === 'text' || !msg.type) {
-        if (peaceRef.current.feel(msg.content) === 'break') { sawReturnsRef.current(); return }
-      }
+      // peaceful life: дом / семья / ужин plays the quiet scene for everyone in the room
+      if ((msg.type === 'text' || !msg.type) && peaceRef.current.feel(msg.content)) return
       triggerPochita(msg.content)
       if (isShout(msg.content || '')) popSfx('shout', own)
       else if (own) popSfx('send', true)
@@ -564,7 +562,6 @@ export default function App() {
 
   // a /command plays for everyone in the room
   const runCommand = (cmd: ChatCommand): void => {
-    if (cmd.roar) peace.shatter() // the saw roars — the quiet evening is over
     popText(cmd.sfx, cmd.sfx.length > 12 ? 44 : 72)
     if (cmd.hearts) triggerPochita('', true)
     if (cmd.roar) playSound(CHAINSAW_SFX, 0.45)
@@ -580,13 +577,6 @@ export default function App() {
   const runCommandRef = useRef(runCommand)
   runCommandRef.current = runCommand
 
-  // a shout ended the peaceful life: the saw is back, loud
-  const sawReturns = (): void => {
-    popText('BRRRRRM!', 72)
-    playSound(CHAINSAW_SFX, 0.45)
-  }
-  const sawReturnsRef = useRef(sawReturns)
-  sawReturnsRef.current = sawReturns
 
   // scroll to a message (from the search or a quote) and flash it
   const jumpTo = (id: number): void => {
@@ -641,7 +631,6 @@ export default function App() {
       setInput('')
       return
     }
-    // (during peaceful life the shout itself breaks the quiet and roars for everyone — see sawReturns)
     if (isShout(input.trim()) && !peace.activeRef.current && Math.random() < 0.1) {
       playSound(CHAINSAW_SFX, 0.4)
     }
@@ -799,7 +788,6 @@ export default function App() {
               <SfxLayer bursts={sfx} />
               <ConnectionBanner />
               <BerserkLayer combo={berserk.combo} active={berserk.active} tier={berserk.tier} cooling={berserk.cooling} />
-              <PeaceLayer active={peace.active} isMobile={isMobile} onOpen={setLightbox} />
               {searchOpen && (
                 <SearchPanel
                   roomId={currentRoom}
@@ -1044,6 +1032,7 @@ export default function App() {
       <VideoCall call={call} theme={theme} username={username} avatar={avatar.src} isMobile={isMobile} />
 
       <PochitaEgg visible={pochitaVisible} hearts={hearts} />
+      <PeaceLayer active={peace.active} onSkip={peace.skip} />
       {lightbox && <Lightbox src={lightbox} onClose={() => setLightbox(null)} />}
       {keysOpen && <ShortcutsHelp onClose={() => setKeysOpen(false)} />}
       {roomPanel && (

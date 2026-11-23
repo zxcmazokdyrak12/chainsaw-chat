@@ -22,7 +22,7 @@ const DEFAULTS: Settings = {
   sendOnEnter: true,    // true = Enter sends, Ctrl+Enter = new line
   soundEnabled: true,   // sounds chainsaw on startup and when CAPS LOCK is on
   pochitaEnabled: true, // show Pochita hearts on cute words
-  peaceEnabled: true,   // дом / семья / ужин → peaceful life until somebody shouts
+  peaceEnabled: true,   // дом / семья / ужин → the chat goes dark for a quiet panel
   showTyping: true,     // send typing events
   stickerBomb: 'light', // manga stickers slapped on the chat background
   sfxEnabled: true,     // DOOOM / DON / ZAP! lettering pops over the feed
