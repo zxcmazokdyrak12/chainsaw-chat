@@ -267,7 +267,7 @@ export default function SettingsTab({ settings, onUpdate, onReplayTutorial }: Se
             <Row icon="heart" label={t("POCHITA HEARTS")} desc={t("hearts rain on cute words")}>
               <Stamp label="Pochita hearts" checked={settings.pochitaEnabled ?? true} onChange={v => onUpdate('pochitaEnabled', v)} />
             </Row>
-            <Row icon="heart" label={t("PEACEFUL LIFE")} desc={t("say home, family or dinner — the saw goes quiet until someone shouts")}>
+            <Row icon="heart" label={t("PEACEFUL LIFE")} desc={t("home, family or dinner — the chat goes dark for a quiet moment")}>
               <Stamp label="Peaceful life" checked={settings.peaceEnabled ?? true} onChange={v => onUpdate('peaceEnabled', v)} />
             </Row>
           </Panel>

@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
-import { isShout } from '../lib/sound'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { startBirds, type Ambience } from '../lib/birds'
 
-// "Peaceful life": somebody in the room says дом / семья / ужин and, for everyone in it, the saw goes quiet —
-// warm evening light, photos of the three of them on the fridge. It lasts until someone SHOUTS:
-// the photos peel off, the light goes out and the chainsaw is back.
+// "Peaceful life": somebody in the room says дом / семья / ужин and, for everyone in it,
+// the chat goes dark, a beat of silence, then a quiet panel — a table, three mugs, sparrows outside.
+// After a few seconds it fades and the chat comes back by itself.
 const WORDS = new Set([
   'дом', 'дома', 'домой', 'семья', 'семьёй', 'семьей', 'ужин',
   'home', 'family', 'dinner',
@@ -17,75 +17,54 @@ export function isPeaceWord(text: string): boolean {
   return lower.split(/[^\p{L}]+/u).some(w => WORDS.has(w))
 }
 
-// Optional quiet background: drop a file at client/public/peace/ambient.mp3 and it loops softly.
-// No file — no sound (the error is swallowed), nothing else changes.
-const AMBIENT_SRC = '/peace/ambient.mp3'
-const AMBIENT_VOLUME = 0.18
-
-function fade(audio: HTMLAudioElement, to: number, ms: number, done?: () => void) {
-  const from = audio.volume
-  const start = performance.now()
-  const step = (now: number) => {
-    const k = Math.min(1, (now - start) / ms)
-    audio.volume = from + (to - from) * k
-    if (k < 1) requestAnimationFrame(step)
-    else done?.()
-  }
-  requestAnimationFrame(step)
-}
+// the timeline, ms from the trigger
+export const SCENE = {
+  dark: 1200,     // the chat fades to black
+  panelIn: 2800,  // silence, then the panel starts to appear (and the birds)
+  fadeOut: 11000, // the panel and the dark fade away
+  end: 12400,     // the chat is back
+} as const
+const COOLDOWN = 30_000 // the same room can't replay it right away
 
 export function usePeace(opts: { enabled: boolean; sound: boolean }) {
   const [active, setActive] = useState(false)
   const activeRef = useRef(false)
   const optsRef = useRef(opts)
   optsRef.current = opts
-  const audio = useRef<HTMLAudioElement | null>(null)
+  const lastAt = useRef(0)
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([])
+  const birds = useRef<Ambience | null>(null)
 
-  const stopAmbient = (ms = 500) => {
-    const a = audio.current
-    audio.current = null
-    if (!a) return
-    fade(a, 0, ms, () => a.pause())
+  const clear = () => { timers.current.forEach(clearTimeout); timers.current = [] }
+  const stopBirds = (ms?: number) => { birds.current?.stop(ms); birds.current = null }
+
+  // stable identity: the scene's timers depend on it
+  const finish = useCallback(() => {
+    timers.current.forEach(clearTimeout); timers.current = []
+    birds.current?.stop(400); birds.current = null
+    activeRef.current = false
+    setActive(false)
+  }, [])
+
+  // feed every text message that lands in the room
+  const feel = (text: string | undefined): boolean => {
+    if (!optsRef.current.enabled || activeRef.current) return false
+    if (Date.now() - lastAt.current < COOLDOWN || !isPeaceWord(text ?? '')) return false
+    lastAt.current = Date.now()
+    activeRef.current = true
+    setActive(true)
+    timers.current.push(
+      setTimeout(() => { if (optsRef.current.sound) birds.current = startBirds() }, SCENE.panelIn),
+      setTimeout(() => stopBirds(1300), SCENE.fadeOut),
+      setTimeout(finish, SCENE.end),
+    )
+    return true
   }
 
-  const startAmbient = () => {
-    if (!optsRef.current.sound || audio.current) return
-    const a = new Audio(AMBIENT_SRC)
-    a.loop = true
-    a.volume = 0
-    a.addEventListener('error', () => { if (audio.current === a) audio.current = null })
-    audio.current = a
-    a.play().then(() => fade(a, AMBIENT_VOLUME, 2500)).catch(() => { if (audio.current === a) audio.current = null })
-  }
+  useEffect(() => { if (!opts.enabled) finish() }, [opts.enabled]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!opts.sound) stopBirds(300) }, [opts.sound])
+  useEffect(() => () => { clear(); stopBirds(0) }, [])
 
-  const set = (on: boolean) => { activeRef.current = on; setActive(on) }
-
-  // feed every message that lands in the room. Returns 'start' | 'break' | null so the caller can add the roar.
-  const feel = (text: string | undefined): 'start' | 'break' | null => {
-    if (!optsRef.current.enabled) return null
-    if (!activeRef.current) {
-      if (!isPeaceWord(text ?? '')) return null
-      set(true)
-      startAmbient()
-      return 'start'
-    }
-    if (isShout(text ?? '')) { shatter(); return 'break' }
-    return null
-  }
-
-  // the saw comes back (a shout, /roar…)
-  const shatter = () => {
-    if (!activeRef.current) return
-    set(false)
-    stopAmbient(250)
-  }
-
-  // leaving the room / switching it off: just quietly gone
-  const reset = () => { set(false); stopAmbient(400) }
-
-  useEffect(() => { if (!opts.enabled) reset() }, [opts.enabled]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (!opts.sound) stopAmbient(300); else if (activeRef.current) startAmbient() }, [opts.sound]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => () => { audio.current?.pause() }, [])
-
-  return { active, activeRef, feel, shatter, reset }
+  // reset: leaving the room. skip: Esc during the scene.
+  return { active, activeRef, feel, reset: finish, skip: finish }
 }
